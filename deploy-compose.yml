@@ -2,6 +2,8 @@
 # proxies to 127.0.0.1:3080. The port is bound to loopback, so the app is reachable only
 # through Caddy. Configuration lives in .env next to this file (see .env.production.example).
 #   docker compose -f deploy-compose.yml up -d --build
+# Its own project name, so its volumes never collide with the retired "orbytlink" stack's.
+name: orbytlink-gateway
 services:
   api:
     build: .
