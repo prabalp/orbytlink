@@ -1,4 +1,6 @@
-import { Ajv } from "ajv";
+import { Ajv, type ValidateFunction } from "ajv";
+import { Ajv2019 } from "ajv/dist/2019.js";
+import { Ajv2020 } from "ajv/dist/2020.js";
 import { lookup } from "node:dns/promises";
 import { BlockList, isIP } from "node:net";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
@@ -259,6 +261,48 @@ async function apiProbe(c: Row, secret?: string) {
     inputSchema: { type: "object" },
   }));
 }
+// Upstream schemas declare their own JSON Schema draft (zod 4 and the MCP SDK emit 2020-12),
+// so each is checked by a validator for that draft. A schema no draft can compile is left to
+// the upstream server to enforce: the gateway's check is a courtesy, never a reason to fail.
+const ajvOptions = { strict: false, allErrors: false, validateFormats: false } as const;
+const validators = {
+  "2020-12": new Ajv2020(ajvOptions),
+  "2019-09": new Ajv2019(ajvOptions),
+  "draft-07": new Ajv(ajvOptions),
+};
+const compiled = new Map<string, ValidateFunction | null>();
+export function inputValidator(schema: unknown): (args: unknown) => boolean {
+  const s = schema && typeof schema === "object" ? (schema as Record<string, unknown>) : { type: "object" };
+  const key = JSON.stringify(s);
+  if (!compiled.has(key)) {
+    const declared = String(s.$schema || "");
+    const draft = declared.includes("2020-12") ? "2020-12" : declared.includes("2019-09") ? "2019-09" : "draft-07";
+    // Older or unknown drafts are read as draft-07, the closest Ajv knows.
+    const { $schema: _ignored, ...body } = s;
+    let fn: ValidateFunction | null = null;
+    try {
+      fn = validators[draft].compile(draft === "draft-07" ? body : s);
+    } catch (error) {
+      console.warn(`Skipping gateway-side input check for an uncompilable tool schema: ${String((error as Error).message).slice(0, 200)}`);
+    }
+    if (compiled.size >= 2000) compiled.clear();
+    compiled.set(key, fn);
+  }
+  const fn = compiled.get(key);
+  return fn ? (args) => fn(args) as boolean : () => true;
+}
+// Which input is wrong and why, so the agent can correct its call. Names fields, never values.
+export function inputProblem(schema: unknown, args: unknown): string | null {
+  const check = inputValidator(schema) as ((a: unknown) => boolean) & { errors?: unknown };
+  if (check(args)) return null;
+  const fn = compiled.get(JSON.stringify(schema && typeof schema === "object" ? schema : { type: "object" }));
+  const e = fn?.errors?.[0];
+  if (!e) return "invalid input";
+  const where = e.instancePath ? e.instancePath.slice(1).replace(/\//g, ".") : "input";
+  const extra = e.keyword === "additionalProperties" ? ` (${String((e.params as any).additionalProperty).slice(0, 64)})`
+    : e.keyword === "enum" ? ` (${((e.params as any).allowedValues || []).slice(0, 10).join(", ")})` : "";
+  return `${where} ${e.message || "is invalid"}${extra}`.slice(0, 300);
+}
 export const adapters: ServiceAdapters = {
   async test(c, secret) {
     if (!c.endpoint) throw new Error("Endpoint is not configured");
@@ -281,13 +325,8 @@ export const adapters: ServiceAdapters = {
     }
     const definition = c.tools.find((t: any) => t.name === tool);
     if (!definition) throw new Error("Tool is not registered");
-    const ajv = new Ajv({
-      strict: false,
-      allErrors: false,
-      validateFormats: false,
-    });
-    if (!ajv.validate(definition.inputSchema || { type: "object" }, args))
-      throw new Error("Tool inputs do not match its discovered schema");
+    const problem = inputProblem(definition.inputSchema, args);
+    if (problem) throw new Error(`Tool inputs do not match its discovered schema: ${problem}`);
     return withMcp(
       c,
       secret,

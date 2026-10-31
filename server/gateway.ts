@@ -133,7 +133,7 @@ export function gatewayServer(
       console.warn(`[${new Date().toISOString()}] tool ${target} failed: ${String(message).slice(0, 300)}`);
       // Our own adapter messages are safe to show; anything else stays generic.
       return fail(
-        /^(Authorization (required|expired|denied)|Missing path input|Tool inputs do not match|API request failed with status \d+|Response too large|Tool response too large|Operation path leaves)/.test(
+        /^(Authorization (required|expired|denied)|Missing path input|Tool inputs do not match|Tool is not registered|API request failed with status \d+|Response too large|Tool response too large|Operation path leaves)/.test(
           message,
         )
           ? message

@@ -5,7 +5,7 @@ import { join } from "node:path";
 vi.mock("node:dns/promises", () => ({
   lookup: vi.fn(async () => [{ address: "93.184.216.34", family: 4 }]),
 }));
-import { adapters } from "../server/adapters.js";
+import { adapters, inputProblem, inputValidator } from "../server/adapters.js";
 import { Store } from "../server/store.js";
 import { connectionSchema } from "../server/schema.js";
 const base = {
@@ -142,5 +142,46 @@ describe("legacy connection migration", () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe("tool input validation", () => {
+  // Shaped like Mail Orbyt's tools: zod 4 / the MCP SDK emit draft 2020-12 schemas.
+  const modern = {
+    $schema: "https://json-schema.org/draft/2020-12/schema",
+    type: "object",
+    properties: {
+      pageSize: { type: "integer", exclusiveMinimum: 0, maximum: 200 },
+      status: { type: "string", enum: ["ACTIVE", "ARCHIVED"] },
+      ids: { type: "array", prefixItems: [{ type: "string" }] },
+    },
+    additionalProperties: false,
+  };
+  it("checks draft 2020-12 schemas instead of failing every call", () => {
+    const check = inputValidator(modern);
+    expect(check({})).toBe(true);
+    expect(check({ pageSize: 50, status: "ACTIVE" })).toBe(true);
+    expect(check({ pageSize: 0 })).toBe(false);
+    expect(check({ status: "DELETED" })).toBe(false);
+    expect(check({ unknown: 1 })).toBe(false);
+  });
+  it("names the wrong input so the agent can fix its call", () => {
+    expect(inputProblem(modern, { pageSize: 10 })).toBeNull();
+    expect(inputProblem(modern, { status: "DELETED" })).toBe("status must be equal to one of the allowed values (ACTIVE, ARCHIVED)");
+    expect(inputProblem(modern, { pageSize: 500 })).toBe("pageSize must be <= 200");
+    expect(inputProblem(modern, { secretish: 1 })).toBe("input must NOT have additional properties (secretish)");
+  });
+  it("checks 2019-09, draft-07, older and undeclared drafts", () => {
+    const body = { type: "object", properties: { q: { type: "string" } }, required: ["q"] };
+    for (const $schema of ["https://json-schema.org/draft/2019-09/schema", "http://json-schema.org/draft-07/schema#", "http://json-schema.org/draft-04/schema#", undefined]) {
+      const check = inputValidator({ ...body, ...($schema ? { $schema } : {}) });
+      expect(check({ q: "acme" })).toBe(true);
+      expect(check({})).toBe(false);
+    }
+  });
+  it("leaves a schema it cannot compile to the upstream server", () => {
+    const check = inputValidator({ type: "object", properties: { a: { $ref: "#/missing" } } });
+    expect(check({ a: 1 })).toBe(true);
+    expect(inputValidator(undefined)({ any: "thing" })).toBe(true);
   });
 });
