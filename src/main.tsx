@@ -366,10 +366,10 @@ export function App() {
     setBusy(true);
     setError("");
     try {
-      await fn();
+      const result = await fn();
       await refresh();
       if (close) setDialog(null);
-      setToast(success);
+      setToast((result as { toast?: string } | undefined)?.toast || success);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -707,8 +707,16 @@ export function App() {
                         throw e;
                       }
                     }
+                    // Tools reach /mcp only after a successful test, so test right away instead of leaving it "Not tested".
+                    if (!row.enabled || !row.endpoint || (d.auth === "oauth" && !row.oauthState)) return;
+                    const tested = await api(`/connections/${row.id}/test`, {});
+                    return {
+                      toast: tested.status === "Connected"
+                        ? `Connected. ${tested.tools.length} tools are now available in Claude.`
+                        : `Saved, but the test failed: ${tested.error || "check the connection below."}`,
+                    };
                   },
-                  dialog.data?.id ? "Connection saved. Test it to make its tools available." : "Connection saved.",
+                  "Connection saved.",
                 )
               }
             />
@@ -1036,7 +1044,18 @@ function EmailLogin({
   dark: boolean;
   onToggleTheme: () => void;
 }) {
-  const [register, setRegister] = useState(false),
+  // The landing page's early-access form links to #signup=<email>: open on registration with it filled in.
+  const [invitedEmail] = useState(() => {
+    const raw = /^#signup=([^&]*)$/.exec(location.hash)?.[1];
+    if (raw === undefined) return null;
+    history.replaceState(null, "", location.pathname);
+    try {
+      return decodeURIComponent(raw).slice(0, 254);
+    } catch {
+      return "";
+    }
+  });
+  const [register, setRegister] = useState(invitedEmail !== null),
     [signup, setSignup] = useState(true),
     [mismatch, setMismatch] = useState(false),
     [oauthError] = useState(() => {
@@ -1048,7 +1067,10 @@ function EmailLogin({
     });
   useEffect(() => {
     void api("/auth/config")
-      .then((data) => setSignup(data.signupEnabled))
+      .then((data) => {
+        setSignup(data.signupEnabled);
+        if (!data.signupEnabled) setRegister(false);
+      })
       .catch(() => setSignup(false));
   }, []);
   const switchMode = () => {
@@ -1089,7 +1111,7 @@ function EmailLogin({
             }}
           >
             {register && <AuthInput id="name" label="Full name" autoComplete="name" minLength={2} maxLength={80} />}
-            <AuthInput id="email" label="Email address" type="email" autoComplete="email" maxLength={254} />
+            <AuthInput id="email" label="Email address" type="email" autoComplete="email" maxLength={254} defaultValue={invitedEmail || undefined} />
             <AuthInput id="password" label="Password" secret autoComplete={register ? "new-password" : "current-password"} minLength={12} maxLength={128} />
             {register && (
               <AuthInput id="confirm_password" label="Confirm password" secret autoComplete="new-password" minLength={12} maxLength={128} error={mismatch ? "Passwords do not match" : undefined} />
@@ -1140,6 +1162,7 @@ function AuthInput({
   autoComplete?: string;
   minLength?: number;
   maxLength?: number;
+  defaultValue?: string;
 }) {
   const [visible, setVisible] = useState(false);
   return (

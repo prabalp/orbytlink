@@ -20,6 +20,13 @@ test("navigates the gateway and issues a token for Claude", async ({ page }) => 
   await page.locator(".modal").getByRole("button", { name: "Create token" }).click();
   await expect(page.locator("textarea.token")).toHaveValue(/^ol_/);
 });
+test("opens sign-up with the email from the landing page's early-access link", async ({ browser, baseURL }) => {
+  const visitor = await (await browser.newContext({ baseURL })).newPage();
+  await visitor.goto("/#signup=ada%40example.invalid");
+  await expect(visitor.getByRole("heading", { name: "Create your account" })).toBeVisible();
+  await expect(visitor.locator("#email")).toHaveValue("ada@example.invalid");
+  expect(new URL(visitor.url()).hash).toBe("");
+});
 test("creates an organization, invites a teammate by link, and promotes them to admin", async ({ page, browser, baseURL }) => {
   await page.locator(".sidebar nav").getByRole("link", { name: "Team" }).click();
   await page.getByRole("button", { name: "Create organization" }).first().click();
