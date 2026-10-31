@@ -518,21 +518,29 @@ export function App() {
               <Toolbar search={search} setSearch={setSearch} placeholder="Search connections…" count={`${s.connections.length} connections`} />
               <section className="panel">
                 {filtered.length > 0 && <div className="table-scroll">
-                  <table>
-                    <thead><tr><th>Connection</th><th>Endpoint</th><th>Status</th><th>Tools in Claude</th><th>Actions</th></tr></thead>
+                  <table className="conn-table">
+                    <thead><tr><th>Connection</th><th>Endpoint</th><th>Status</th><th>Tools in Claude</th><th><span className="sr-only">Actions</span></th></tr></thead>
                     <tbody>
                       {filtered.map((c: Data) => (
                         <tr key={c.id}>
                           <td><div className="table-name"><AppLogo preset={presetFor(c)} kind={c.protocol || c.kind} /><div><strong>{c.name}</strong><small>{connectorType(c)}</small></div></div></td>
-                          <td><span className="endpoint">{c.endpoint || "Endpoint not configured"}</span><small>{c.hasSecret ? "Credential stored · encrypted" : c.auth === "none" ? "No authentication" : "Credential missing"}</small></td>
-                          <td><Status value={!c.enabled ? "Disabled" : c.auth === "oauth" && !c.oauthState?.connected && c.status !== "Error" ? "Authorization needed" : c.status} /><small className="muted">{when(c.lastChecked)}</small></td>
-                          <td>{c.tools.length ? (canConfigure ? <button className="text-button" onClick={() => setDialog({ type: "tools", data: c })}>{exposed(c)} of {c.tools.length} on</button> : <span>{exposed(c)} of {c.tools.length} on</span>) : <span className="muted">{canConfigure ? "Test to discover" : "Not tested"}</span>}</td>
+                          <td>
+                            {c.endpoint ? <span className="conn-url" title={c.endpoint}>{c.endpoint.replace(/^https?:\/\//, "")}</span> : <span className="conn-url muted">Not configured</span>}
+                            <small>{c.hasSecret ? "Credential stored" : c.auth === "none" ? "No authentication" : c.auth === "oauth" ? (c.oauthState?.connected ? "Signed in" : "Not signed in") : "Credential missing"}</small>
+                          </td>
+                          <td><Status value={!c.enabled ? "Disabled" : c.auth === "oauth" && !c.oauthState?.connected && c.status !== "Error" ? "Authorization needed" : c.status} /><small>{c.lastChecked ? `Checked ${when(c.lastChecked)}` : "Never checked"}</small></td>
+                          <td>
+                            {c.tools.length
+                              ? (canConfigure ? <button className="text-button conn-tools" onClick={() => setDialog({ type: "tools", data: c })}>{exposed(c)} of {c.tools.length}</button> : <span className="conn-tools">{exposed(c)} of {c.tools.length}</span>)
+                              : <span className="conn-tools muted">None yet</span>}
+                            <small>{c.tools.length ? (exposed(c) === c.tools.length ? "All tools on" : `${c.tools.length - exposed(c)} turned off`) : canConfigure ? "Test to discover" : "Not tested"}</small>
+                          </td>
                           <td>
                             {canConfigure ? <div className="row-actions">
                               {c.auth === "oauth" && !c.oauthState?.connected
                                 ? <button className="secondary compact" disabled={busy || !c.enabled} onClick={() => void connectOAuth(c.id)}>Connect</button>
                                 : <button className="secondary compact" disabled={busy || !c.enabled} onClick={() => act(() => api(`/connections/${c.id}/test`, {}), "Connection test complete", false)}>Test</button>}
-                              <button className="text-button" onClick={() => setDialog({ type: "connection", data: c })}>Configure</button>
+                              <button className="secondary compact" onClick={() => setDialog({ type: "connection", data: c })}>Configure</button>
                               <button className="icon-button" aria-label={`Remove ${c.name}`} onClick={() => setDialog({ type: "delete", data: c })}><Trash2 size={15} /></button>
                             </div> : <span className="muted">Admins only</span>}
                           </td>
