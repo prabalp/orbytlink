@@ -1,0 +1,14 @@
+<svg width="512" height="512" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" role="img">
+<title>OrbytLink</title>
+<rect width="32" height="32" rx="7" fill="#000000"/>
+<g transform="translate(4 4) scale(0.857)" stroke="#000000" stroke-width="1.1" stroke-linejoin="round">
+<polygon points="14,14 14,1 23.19,4.81" fill="#FFFFFF"/>
+<polygon points="14,14 23.19,4.81 27,14" fill="#EDF2F5" fill-opacity="0.72"/>
+<polygon points="14,14 27,14 23.19,23.19" fill="#EDF2F5" fill-opacity="0.72"/>
+<polygon points="14,14 23.19,23.19 14,27" fill="#EDF2F5" fill-opacity="0.72"/>
+<polygon points="14,14 14,27 4.81,23.19" fill="#EDF2F5" fill-opacity="0.72"/>
+<polygon points="14,14 4.81,23.19 1,14" fill="#EDF2F5" fill-opacity="0.72"/>
+<polygon points="14,14 1,14 4.81,4.81" fill="#EDF2F5" fill-opacity="0.72"/>
+<polygon points="14,14 4.81,4.81 14,1" fill="#EDF2F5" fill-opacity="0.72"/>
+</g>
+</svg>
