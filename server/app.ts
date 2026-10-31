@@ -21,6 +21,7 @@ import {
   connectionSchema,
   settingsSchema,
   tokenSchema,
+  tokenUpdateSchema,
   allPermissions,
   type Identity,
 } from "./schema.js";
@@ -204,7 +205,15 @@ export function createApp(
       return;
     }
     const input = tokenSchema.parse(req.body);
-    res.json(emailAuth.createToken(req, input.name, input.expiresInDays));
+    res.json(emailAuth.createToken(req, input.name, input.expiresInDays, input.toolMode));
+  });
+  app.put("/api/tokens/:id", permit("call"), (req, res) => {
+    if (identity(res).authMethod !== "email") {
+      res.status(403).json({ error: "Sign in with your account to change gateway tokens." });
+      return;
+    }
+    emailAuth.updateToken(req, String(req.params.id), tokenUpdateSchema.parse(req.body).toolMode);
+    res.json({ ok: true });
   });
   app.delete("/api/tokens/:id", permit("call"), (req, res) => {
     emailAuth.revokeToken(req, String(req.params.id));

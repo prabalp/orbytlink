@@ -15,6 +15,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { Store } from "./store.js";
 import { gatewayPermissions, type Identity } from "./schema.js";
 import { identityFor, initializeOrgTables } from "./orgs.js";
+import type { ToolMode } from "./gateway.js";
 import { configureGoogleAuth, googleConfigured } from "./google.js";
 const scryptAsync = (password: string, salt: string) =>
   new Promise<Buffer>((resolve, reject) =>
@@ -93,6 +94,11 @@ CREATE UNIQUE INDEX IF NOT EXISTS tokens_id ON access_tokens(id);`);
   if (!accountColumns.includes("google_sub"))
     store.db.exec(`ALTER TABLE accounts ADD COLUMN google_sub TEXT;
 CREATE UNIQUE INDEX IF NOT EXISTS accounts_google ON accounts(google_sub) WHERE google_sub IS NOT NULL;`);
+  // How each token's client sees app tools (see ToolMode in gateway.ts). Existing tokens become "auto".
+  if (
+    !(store.db.prepare("PRAGMA table_info(access_tokens)").all() as { name: string }[]).some((c) => c.name === "tool_mode")
+  )
+    store.db.exec("ALTER TABLE access_tokens ADD COLUMN tool_mode TEXT NOT NULL DEFAULT 'auto'");
   initializeOrgTables(store);
 }
 export async function createAccount(store: Store, input: unknown) {
@@ -500,10 +506,10 @@ export function configureEmailAuth(app: Express, store: Store) {
       const hash = digest(token);
       const row = store.db
         .prepare(
-          "SELECT a.*,t.permissions,t.last_used,t.workspace AS token_workspace FROM access_tokens t JOIN accounts a ON a.id=t.account_id WHERE t.token_hash=? AND t.expires>? AND a.disabled=0",
+          "SELECT a.*,t.permissions,t.last_used,t.tool_mode,t.workspace AS token_workspace FROM access_tokens t JOIN accounts a ON a.id=t.account_id WHERE t.token_hash=? AND t.expires>? AND a.disabled=0",
         )
         .get(hash, Date.now()) as
-        | (Account & { permissions: string; last_used: number | null; token_workspace: string | null })
+        | (Account & { permissions: string; last_used: number | null; tool_mode: string; token_workspace: string | null })
         | undefined;
       if (!row) return;
       // A token works only while its owner is still a member of the workspace it was made for.
@@ -519,9 +525,10 @@ export function configureEmailAuth(app: Express, store: Store) {
         ...who,
         permissions: granted.filter((p) => who.permissions.includes(p)),
         authMethod: "token",
+        toolMode: row.tool_mode === "all" || row.tool_mode === "search" ? row.tool_mode : "auto",
       };
     },
-    createToken: (req: Request, name: string, days: number) => {
+    createToken: (req: Request, name: string, days: number, toolMode: ToolMode = "auto") => {
       const user = req.user as any;
       if (!user?.id) throw new Error("Email session required to create a token");
       const token = `ol_${randomBytes(32).toString("base64url")}`,
@@ -530,12 +537,12 @@ export function configureEmailAuth(app: Express, store: Store) {
         expires = now + days * 24 * 60 * 60 * 1000;
       store.db
         .prepare(
-          "INSERT INTO access_tokens(token_hash,account_id,expires,permissions,id,name,created_at,last_used,workspace) VALUES(?,?,?,?,?,?,?,NULL,?)",
+          "INSERT INTO access_tokens(token_hash,account_id,expires,permissions,id,name,created_at,last_used,workspace,tool_mode) VALUES(?,?,?,?,?,?,?,NULL,?,?)",
         )
-        .run(digest(token), user.id, expires, JSON.stringify(gatewayPermissions), id, name, now, user.workspace);
+        .run(digest(token), user.id, expires, JSON.stringify(gatewayPermissions), id, name, now, user.workspace, toolMode);
       store.audit(user.workspace, user.email, "token.created", name);
       // The plaintext token is returned once and never stored.
-      return { id, name, token, createdAt: now, expiresAt: expires };
+      return { id, name, token, createdAt: now, expiresAt: expires, toolMode };
     },
     // Your own tokens in this workspace; organization admins also see everyone else's.
     listTokens: (req: Request) => {
@@ -545,7 +552,7 @@ export function configureEmailAuth(app: Express, store: Store) {
       return (
         store.db
           .prepare(
-            "SELECT t.id,t.name,t.created_at,t.expires,t.last_used,t.account_id,a.email FROM access_tokens t JOIN accounts a ON a.id=t.account_id WHERE t.workspace=? AND t.expires>? AND t.id IS NOT NULL AND (t.account_id=? OR ?) ORDER BY t.created_at DESC",
+            "SELECT t.id,t.name,t.created_at,t.expires,t.last_used,t.tool_mode,t.account_id,a.email FROM access_tokens t JOIN accounts a ON a.id=t.account_id WHERE t.workspace=? AND t.expires>? AND t.id IS NOT NULL AND (t.account_id=? OR ?) ORDER BY t.created_at DESC",
           )
           .all(user.workspace, Date.now(), user.id, all) as any[]
       ).map((t) => ({
@@ -554,9 +561,22 @@ export function configureEmailAuth(app: Express, store: Store) {
         createdAt: t.created_at,
         expiresAt: t.expires,
         lastUsedAt: t.last_used,
+        toolMode: t.tool_mode,
         owner: t.email,
         mine: t.account_id === user.id,
       }));
+    },
+    // The owner, or an organization admin, picks how the token's client sees app tools.
+    updateToken: (req: Request, id: string, toolMode: ToolMode) => {
+      const user = req.user as any;
+      if (!user?.id) throw Object.assign(new Error("Authentication required"), { status: 401 });
+      const row = store.db
+        .prepare("SELECT name,account_id FROM access_tokens WHERE id=? AND workspace=? AND expires>?")
+        .get(id, user.workspace, Date.now()) as { name: string; account_id: string } | undefined;
+      if (!row || (row.account_id !== user.id && !(user.org && user.role === "admin")))
+        throw Object.assign(new Error("Record not found"), { status: 404 });
+      store.db.prepare("UPDATE access_tokens SET tool_mode=? WHERE id=?").run(toolMode, id);
+      store.audit(user.workspace, user.email, "token.updated", `${row.name} · tools ${toolMode}`);
     },
     revokeToken: (req: Request, id: string) => {
       const user = req.user as any;

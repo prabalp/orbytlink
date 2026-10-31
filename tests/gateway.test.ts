@@ -182,3 +182,142 @@ describe("gateway tokens", () => {
     expect((await api("/api/tokens", { name: "Forever", expiresInDays: 10000 })).status).toBe(400);
   });
 });
+
+// Many apps and tools: the agent searches instead of loading every schema.
+const mailTools = [
+  "list_leads", "get_lead", "find_lead", "delete_lead", "list_campaigns", "create_campaign", "update_campaign",
+  "archive_campaign", "enroll_leads_in_campaign", "send_campaign_test", "list_conversations", "get_conversation",
+  "list_inboxes", "connect_inbox", "list_signatures", "create_signature", "list_members", "invite_member",
+  "list_suppressions", "add_suppression", "remove_suppression", "approve_email_draft", "delete_email_draft",
+  "list_meetings", "create_meeting", "list_my_organisations", "get_organisation", "check_domain_dns",
+];
+const crmTools = ["create_contact", "find_contact", "update_deal", "list_deals", "log_call"];
+async function addMany() {
+  vi.mocked(services.test).mockResolvedValueOnce({
+    protocol: "mcp",
+    tools: mailTools.map((t) => ({
+      name: t,
+      description: `${t.replace(/_/g, " ")} in Mail Orbyt`,
+      inputSchema: t === "enroll_leads_in_campaign"
+        ? { $schema: "https://json-schema.org/draft/2020-12/schema", type: "object", properties: { campaignId: { type: "string" }, leadIds: { type: "array", items: { type: "string" } } }, required: ["campaignId", "leadIds"] }
+        : { type: "object" },
+    })),
+  });
+  const row = (await api("/api/connections", { name: "Mail Orbyt", kind: "mcp", endpoint: "https://mail.example/mcp", auth: "none" })).data;
+  await api(`/api/connections/${row.id}/test`, {});
+  await addConnected("CRM", crmTools);
+}
+const token = async (toolMode?: string) => (await api("/api/tokens", { name: "Claude", ...(toolMode ? { toolMode } : {}) })).data;
+const text = (r: any) => r.content[0].text as string;
+
+describe("tool discovery", () => {
+  it("auto lists every tool for a small workspace", async () => {
+    await addConnected("GitHub", ["create_issue"]);
+    const client = await connect((await token()).token);
+    try {
+      const names = (await client.listTools()).tools.map((t) => t.name);
+      expect(names).toContain("github__create_issue");
+      expect(names).not.toContain("orbytlink__find_tools");
+    } finally {
+      await client.close();
+    }
+  });
+  it("auto switches to search above 30 tools: find, then call", async () => {
+    await addMany();
+    const client = await connect((await token()).token);
+    try {
+      const listed = (await client.listTools()).tools.map((t) => t.name);
+      expect(listed).toEqual(expect.arrayContaining(["orbytlink__find_tools", "orbytlink__call_tool", "orbytlink__list_apps"]));
+      expect(appTools((await client.listTools()).tools)).toEqual([]);
+      expect(client.getInstructions()).toContain("orbytlink__find_tools");
+
+      const apps = JSON.parse(text(await client.callTool({ name: "orbytlink__list_apps", arguments: {} })));
+      expect(apps.apps.map((a: any) => [a.app, a.tools])).toEqual(expect.arrayContaining([["Mail Orbyt", mailTools.length], ["CRM", crmTools.length]]));
+
+      const found = JSON.parse(text(await client.callTool({ name: "orbytlink__find_tools", arguments: { query: "enroll leads in a campaign" } })));
+      expect(found.tools[0].name).toBe("mail_orbyt__enroll_leads_in_campaign");
+      // The schema the agent needs, without the $schema noise.
+      expect(found.tools[0].inputSchema).toEqual({ type: "object", properties: { campaignId: { type: "string" }, leadIds: { type: "array", items: { type: "string" } } }, required: ["campaignId", "leadIds"] });
+      expect(found.tools.length).toBeLessThanOrEqual(8);
+
+      const scoped = JSON.parse(text(await client.callTool({ name: "orbytlink__find_tools", arguments: { query: "create", app: "crm" } })));
+      expect(scoped.tools.map((t: any) => t.name)).toEqual(["crm__create_contact"]);
+      const directory = JSON.parse(text(await client.callTool({ name: "orbytlink__find_tools", arguments: { app: "CRM" } })));
+      expect(directory.tools.map((t: any) => t.name)).toHaveLength(crmTools.length);
+      expect(directory.tools[0].inputSchema).toBeUndefined();
+
+      const ran: any = await client.callTool({ name: "orbytlink__call_tool", arguments: { name: "mail_orbyt__enroll_leads_in_campaign", arguments: { campaignId: "c1", leadIds: ["l1"] } } });
+      expect(text(ran)).toContain("ran enroll_leads_in_campaign");
+      expect(services.call).toHaveBeenCalledWith(expect.objectContaining({ name: "Mail Orbyt" }), "enroll_leads_in_campaign", { campaignId: "c1", leadIds: ["l1"] }, undefined);
+      // Unlisted tools can still be called by name, as workflows and older chats do.
+      expect(text(await client.callTool({ name: "crm__log_call", arguments: {} }))).toContain("ran log_call");
+    } finally {
+      await client.close();
+    }
+  });
+  it("explains bad discovery calls instead of failing silently", async () => {
+    await addMany();
+    const client = await connect((await token("search")).token);
+    try {
+      const call = (name: string, args: Record<string, unknown>) => client.callTool({ name, arguments: args }) as Promise<any>;
+      expect((await call("orbytlink__find_tools", {})).isError).toBe(true);
+      expect(text(await call("orbytlink__find_tools", { query: "x", app: "Nope" }))).toContain("No connected app");
+      expect(text(await call("orbytlink__find_tools", { query: "zzzqqq" }))).toContain("No tools match");
+      expect(text(await call("orbytlink__call_tool", { name: "mail_orbyt__nope" }))).toContain("orbytlink__find_tools");
+      expect((await call("orbytlink__call_tool", { name: "orbytlink__list_apps" })).isError).toBe(true);
+      expect((await call("orbytlink__call_tool", { name: "crm__log_call", arguments: [] })).isError).toBe(true);
+      expect(services.call).not.toHaveBeenCalled();
+    } finally {
+      await client.close();
+    }
+  });
+  it("respects a token's choice, and disabled tools stay unreachable", async () => {
+    await addMany();
+    const all = await connect((await token("all")).token);
+    try {
+      expect(appTools((await all.listTools()).tools)).toHaveLength(mailTools.length + crmTools.length);
+    } finally {
+      await all.close();
+    }
+    const crm = (await api("/api/state")).data.connections.find((c: any) => c.name === "CRM");
+    await api(`/api/connections/${crm.id}/tools`, { disabledTools: ["log_call"] }, "PUT");
+    const search = await connect((await token("search")).token);
+    try {
+      const found = JSON.parse(text(await search.callTool({ name: "orbytlink__find_tools", arguments: { app: "CRM" } })));
+      expect(found.tools.map((t: any) => t.name)).not.toContain("crm__log_call");
+      expect(((await search.callTool({ name: "orbytlink__call_tool", arguments: { name: "crm__log_call" } })) as any).isError).toBe(true);
+    } finally {
+      await search.close();
+    }
+  });
+  it("lists the most-used tools directly", async () => {
+    await addMany();
+    const client = await connect((await token()).token);
+    try {
+      for (let i = 0; i < 3; i++) await client.callTool({ name: "orbytlink__call_tool", arguments: { name: "mail_orbyt__list_campaigns" } });
+      await client.callTool({ name: "orbytlink__call_tool", arguments: { name: "crm__list_deals" } });
+      expect(appTools((await client.listTools()).tools)).toEqual(["mail_orbyt__list_campaigns"]);
+    } finally {
+      await client.close();
+    }
+  });
+  it("lets the owner change a token's mode, and no one else", async () => {
+    await addMany();
+    const created = await token();
+    expect(created.toolMode).toBe("auto");
+    expect((await api("/api/tokens", { name: "Bad", toolMode: "everything" })).status).toBe(400);
+    expect((await api(`/api/tokens/${created.id}`, { toolMode: "all" }, "PUT")).status).toBe(200);
+    expect((await api("/api/state")).data.tokens.find((t: any) => t.id === created.id).toolMode).toBe("all");
+    const client = await connect(created.token);
+    try {
+      expect(appTools((await client.listTools()).tools)).toHaveLength(mailTools.length + crmTools.length);
+    } finally {
+      await client.close();
+    }
+    const other = await register("someone-else@example.invalid");
+    expect((await api(`/api/tokens/${created.id}`, { toolMode: "search" }, "PUT", other)).status).toBe(404);
+    // A token cannot change itself.
+    const headers = { Authorization: `Bearer ${created.token}` };
+    expect((await inject(app, { url: `/api/tokens/${created.id}`, method: "PUT", headers, body: { toolMode: "search" } })).status).toBe(403);
+  });
+});

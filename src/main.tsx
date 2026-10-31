@@ -567,7 +567,8 @@ export function App() {
               onQuickCreate={(name: string) =>
                 act(async () => setFreshToken(await api("/tokens", { name, expiresInDays: 90 })), "Token ready. It’s in every step below.", false)
               }
-              onCreate={() => setDialog({ type: "new-token" })} onRevoke={(t: Data) => setDialog({ type: "revoke", data: t })} />
+              onCreate={() => setDialog({ type: "new-token" })} onRevoke={(t: Data) => setDialog({ type: "revoke", data: t })}
+              onToolMode={(t: Data, toolMode: string) => act(() => api(`/tokens/${t.id}`, { toolMode }, "PUT"), toolModeSaved[toolMode] || "Saved", false)} />
           )}
           {title === "Catalog" && (
             <CatalogPage state={s} canConfigure={canConfigure} search={search} setSearch={setSearch} onConnect={(p: Preset) => setDialog({ type: "connection", data: presetDraft(p) })} />
@@ -747,7 +748,7 @@ export function App() {
                 event.preventDefault();
                 const f = new FormData(event.currentTarget);
                 void act(async () => {
-                  const token = await api("/tokens", { name: f.get("name"), expiresInDays: Number(f.get("expires")) });
+                  const token = await api("/tokens", { name: f.get("name"), expiresInDays: Number(f.get("expires")), toolMode: f.get("toolMode") });
                   setFreshToken(token);
                   setDialog({ type: "token", data: token });
                 }, "Token created", false);
@@ -762,6 +763,11 @@ export function App() {
                   <option value="30">30 days</option>
                   <option value="90">90 days</option>
                   <option value="365">1 year</option>
+                </select>
+              </Field>
+              <Field label="App tools" hint={toolModeHint}>
+                <select name="toolMode" defaultValue="auto">
+                  {toolModes.map(([v, label]) => <option key={v} value={v}>{label}</option>)}
                 </select>
               </Field>
               <p className="muted">The token can list and call your connected tools. It cannot read credentials, change connections, or sign in to this console.</p>
@@ -1730,7 +1736,19 @@ function CodeBlock({ code, copyText, copy, file }: { code: string; copyText: str
     </div>
   );
 }
-function AgentsPage({ state: s, busy, copy, freshToken, onQuickCreate, onCreate, onRevoke }: any) {
+// How a token's agent sees app tools. Mirrors ToolMode in server/gateway.ts.
+const toolModes: [string, string][] = [
+  ["auto", "Auto"],
+  ["search", "Search first"],
+  ["all", "List all"],
+];
+const toolModeHint = "Auto lists every tool while there are 30 or fewer, then switches to search first: the agent finds the tools it needs instead of loading all of them.";
+const toolModeSaved: Record<string, string> = {
+  auto: "Auto: the agent searches once there are more than 30 tools. Start a new chat to apply.",
+  search: "The agent now finds tools before calling them. Start a new chat to apply.",
+  all: "The agent now sees every tool. Start a new chat to apply.",
+};
+function AgentsPage({ state: s, busy, copy, freshToken, onQuickCreate, onCreate, onRevoke, onToolMode }: any) {
   const presets = agents.filter((a) => a.id !== "mcp"),
     generic = agents.find((a) => a.id === "mcp")!;
   // Nothing picked means "any client": the URL and token are all it needs.
@@ -1841,12 +1859,17 @@ function AgentsPage({ state: s, busy, copy, freshToken, onQuickCreate, onCreate,
         <div className="section-heading"><h2>Gateway tokens</h2><span className="count">{s.tokens.length}</span></div>
         {s.tokens.length ? <div className="table-scroll">
           <table>
-            <thead><tr><th>Name</th>{s.tokens.some((t: Data) => !t.mine) && <th>Owner</th>}<th>Created</th><th>Last used</th><th>Expires</th><th /></tr></thead>
+            <thead><tr><th>Name</th>{s.tokens.some((t: Data) => !t.mine) && <th>Owner</th>}<th title={toolModeHint}>App tools</th><th>Created</th><th>Last used</th><th>Expires</th><th /></tr></thead>
             <tbody>
               {s.tokens.map((t: Data) => (
                 <tr key={t.id}>
                   <td><strong>{t.name}</strong></td>
                   {s.tokens.some((x: Data) => !x.mine) && <td className="muted">{t.mine ? "You" : t.owner}</td>}
+                  <td>
+                    <select className="table-select" aria-label={`App tools for ${t.name}`} value={t.toolMode || "auto"} disabled={busy} onChange={(e) => onToolMode(t, e.target.value)}>
+                      {toolModes.map(([v, label]) => <option key={v} value={v}>{label}</option>)}
+                    </select>
+                  </td>
                   <td className="muted">{when(t.createdAt)}</td>
                   <td className="muted">{t.lastUsedAt ? when(t.lastUsedAt) : "Never"}</td>
                   <td className="muted">{when(t.expiresAt)}</td>

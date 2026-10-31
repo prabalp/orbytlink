@@ -6,6 +6,8 @@ import { BlockList, isIP } from "node:net";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport, StreamableHTTPError } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
+import { ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
+import { createHash } from "node:crypto";
 import type { Row } from "./store.js";
 // Every non-public range (RFC 6890 and successors). Only global unicast is reachable.
 const blocked = new BlockList();
@@ -112,12 +114,9 @@ const CONNECT_TIMEOUT = 15000;
 export const CALL_TIMEOUT = Number(process.env.TOOL_TIMEOUT_MS) || 120000;
 // Results bigger than this are cut down to their text, not rejected.
 export const RESULT_LIMIT = 100000;
-async function withMcp<T>(
-  c: Row,
-  secret: string | undefined,
-  fn: (client: Client) => Promise<T>,
-  timeout = CONNECT_TIMEOUT,
-) {
+// Opens an MCP session: Streamable HTTP first, then the older SSE transport some servers still use.
+// Each request is limited to `timeout`; every URL must stay on the verified origin.
+async function openMcp(c: Row, secret: string | undefined, timeout: number) {
   const endpoint = await safeEndpoint(c.endpoint);
   const auth = headers(c, secret);
   const guardedFetch = async (input: string | URL, init?: RequestInit) => {
@@ -147,20 +146,114 @@ async function withMcp<T>(
     await client.connect(t, { timeout: CONNECT_TIMEOUT });
     return client;
   };
-  // Streamable HTTP first, then the older SSE transport some servers still use.
-  let client: Client;
   try {
-    client = await attempt("streamable");
+    return await attempt("streamable");
   } catch (error) {
     // A server that rejects the credential speaks Streamable HTTP; retrying over SSE only hides that.
     if (error instanceof StreamableHTTPError && (error.code === 401 || error.code === 403))
       throw new Error(`Authorization ${error.code === 401 ? "required" : "denied"} by the server`);
-    client = await attempt("sse");
+    const client = await attempt("sse");
+    sseClients.add(client);
+    return client;
   }
+}
+// Legacy SSE sessions hang on one long-lived stream that the request timeout would cut, so
+// they are never pooled: each call opens and closes its own.
+const sseClients = new WeakSet<Client>();
+const sseConnections = new Set<string>();
+// A one-off session, for testing a connection and discovering its tools.
+async function withMcp<T>(
+  c: Row,
+  secret: string | undefined,
+  fn: (client: Client) => Promise<T>,
+  timeout = CONNECT_TIMEOUT,
+) {
+  const client = await openMcp(c, secret, timeout);
   try {
     return await fn(client);
   } finally {
     await client.close();
+  }
+}
+
+// Tool calls reuse one open session per connection, so a call costs one request instead of a
+// fresh handshake. A session is keyed by everything that decides who we are to the server
+// (endpoint, auth, headers, credential): change any of them and the next call starts a new one.
+const POOL_IDLE_MS = Number(process.env.MCP_SESSION_IDLE_MS) || 5 * 60 * 1000;
+const POOL_MAX = 100;
+type Pooled = { key: string; client: Promise<Client>; lastUsed: number };
+const pool = new Map<string, Pooled>();
+const poolKey = (c: Row, secret?: string) =>
+  createHash("sha256")
+    .update(JSON.stringify([c.endpoint, c.auth, c.authHeader, c.headers || {}, secret || ""]))
+    .digest("hex");
+function dropSession(id: string, entry?: Pooled) {
+  const current = pool.get(id);
+  if (!current || (entry && current !== entry)) return;
+  pool.delete(id);
+  void current.client.then((client) => client.close()).catch(() => {});
+}
+// Close idle sessions; the timer never keeps the process alive.
+setInterval(() => {
+  const cutoff = Date.now() - POOL_IDLE_MS;
+  for (const [id, entry] of pool) if (entry.lastUsed < cutoff) dropSession(id, entry);
+}, Math.min(60_000, POOL_IDLE_MS)).unref();
+export function closeMcpSessions() {
+  for (const id of [...pool.keys()]) dropSession(id);
+}
+export const openMcpSessions = () => pool.size;
+function session(c: Row, secret: string | undefined) {
+  const key = poolKey(c, secret);
+  const existing = pool.get(c.id);
+  if (existing?.key === key) {
+    existing.lastUsed = Date.now();
+    return { entry: existing, reused: true };
+  }
+  if (existing) dropSession(c.id, existing);
+  if (pool.size >= POOL_MAX) {
+    const oldest = [...pool.entries()].sort((a, b) => a[1].lastUsed - b[1].lastUsed)[0];
+    if (oldest) dropSession(oldest[0], oldest[1]);
+  }
+  const entry: Pooled = { key, client: openMcp(c, secret, CALL_TIMEOUT), lastUsed: Date.now() };
+  pool.set(c.id, entry);
+  // A session that fails to open, or that the server closes, is forgotten.
+  entry.client.then(
+    (client) => {
+      client.onclose = () => {
+        if (pool.get(c.id) === entry) pool.delete(c.id);
+      };
+    },
+    () => {
+      if (pool.get(c.id) === entry) pool.delete(c.id);
+    },
+  );
+  return { entry, reused: false };
+}
+// Only a session the server says is gone is safe to retry: the request was never run.
+// Anything else (timeouts, dropped connections) might have run, so it is never repeated.
+function sessionExpired(error: unknown) {
+  if (error instanceof StreamableHTTPError) return error.code === 404;
+  return error instanceof Error && error.message === "Not connected";
+}
+async function withSession<T>(c: Row, secret: string | undefined, fn: (client: Client) => Promise<T>): Promise<T> {
+  if (sseConnections.has(poolKey(c, secret))) return withMcp(c, secret, fn, CALL_TIMEOUT);
+  const { entry, reused } = session(c, secret);
+  try {
+    const client = await entry.client;
+    if (sseClients.has(client)) {
+      if (sseConnections.size > 1000) sseConnections.clear();
+      sseConnections.add(entry.key);
+      dropSession(c.id, entry);
+      return withMcp(c, secret, fn, CALL_TIMEOUT);
+    }
+    return await fn(client);
+  } catch (error) {
+    // A protocol-level error is an answer from a working session; keep it open.
+    if (error instanceof McpError && error.code !== ErrorCode.ConnectionClosed && error.code !== ErrorCode.RequestTimeout) throw error;
+    dropSession(c.id, entry);
+    if (!reused || !sessionExpired(error)) throw error;
+    const retry = session(c, secret);
+    return fn(await retry.entry.client);
   }
 }
 async function mcpTools(c: Row, secret?: string) {
@@ -327,20 +420,17 @@ export const adapters: ServiceAdapters = {
     if (!definition) throw new Error("Tool is not registered");
     const problem = inputProblem(definition.inputSchema, args);
     if (problem) throw new Error(`Tool inputs do not match its discovered schema: ${problem}`);
-    return withMcp(
-      c,
-      secret,
-      async (client) => {
-        const result = await client.callTool(
-          { name: tool, arguments: args },
-          undefined,
-          { timeout: CALL_TIMEOUT },
-        );
-        // A tool-level error is a normal result; the client decides what to do with it.
-        return truncateResult(result);
-      },
-      CALL_TIMEOUT,
-    );
+    // Re-check the destination every call: DNS can change while a session stays open.
+    await safeEndpoint(c.endpoint);
+    return withSession(c, secret, async (client) => {
+      const result = await client.callTool(
+        { name: tool, arguments: args },
+        undefined,
+        { timeout: CALL_TIMEOUT },
+      );
+      // A tool-level error is a normal result; the client decides what to do with it.
+      return truncateResult(result);
+    });
   },
 };
 // An oversized result keeps its text, cut to the limit with a note, so the agent can narrow its query.

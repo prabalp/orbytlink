@@ -17,8 +17,16 @@ test("navigates the gateway and issues a token for Claude", async ({ page }) => 
   await page.locator(".sidebar nav").getByRole("link", { name: "Connect agents" }).click();
   await page.getByRole("button", { name: "Create token" }).first().click();
   await page.getByLabel("Token name").fill("Playwright");
+  await expect(page.getByLabel("App tools")).toHaveValue("auto");
   await page.locator(".modal").getByRole("button", { name: "Create token" }).click();
   await expect(page.locator("textarea.token")).toHaveValue(/^ol_/);
+  await page.locator(".modal").getByRole("button", { name: "Done" }).click();
+  // Each token picks how its agent sees app tools.
+  const mode = page.getByLabel("App tools for Playwright");
+  await mode.selectOption("search");
+  await expect(page.getByText("The agent now finds tools before calling them.")).toBeVisible();
+  await page.reload();
+  await expect(page.getByLabel("App tools for Playwright")).toHaveValue("search");
 });
 test("opens sign-up with the email from the landing page's early-access link", async ({ browser, baseURL }) => {
   const visitor = await (await browser.newContext({ baseURL })).newPage();

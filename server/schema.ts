@@ -134,7 +134,9 @@ export const tokenSchema = z.object({
   name: z.string().trim().min(2).max(80),
   // Gateway tokens always expire; the longest lifetime is one year.
   expiresInDays: z.union([z.literal(7), z.literal(30), z.literal(90), z.literal(365)]).default(90),
+  toolMode: z.enum(["auto", "all", "search"]).default("auto"),
 });
+export const tokenUpdateSchema = z.object({ toolMode: z.enum(["auto", "all", "search"]) });
 export type Identity = {
   user: string;
   email?: string;
@@ -144,6 +146,8 @@ export type Identity = {
   role?: "admin" | "member";
   org?: boolean;
   authMethod?: "email" | "oidc" | "token";
+  // Gateway tokens choose how app tools are shown; console sessions use "auto".
+  toolMode?: "auto" | "all" | "search";
   workspace: string;
   permissions: string[];
   demo: boolean;
