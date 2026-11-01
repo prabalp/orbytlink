@@ -9,7 +9,8 @@ import type { Store, Row } from "./store.js";
 import type { ServiceAdapters } from "./adapters.js";
 import type { Identity } from "./schema.js";
 import { credentialFor } from "./oauth.js";
-import { enabledSkills, skillText } from "./skills.js";
+import { addSkill, enabledSkills, skillCatalog, skillText } from "./skills.js";
+import { MIN_INSTALLS, searchRegistry } from "./skill-registry.js";
 import { runWorkflow, saveWorkflow, workflowInputSchema, workflowToolName } from "./workflows.js";
 import { allowedMethods, apiCall } from "./apis.js";
 import { ToolIndex, sameApp } from "./tool-search.js";
@@ -89,7 +90,7 @@ const listed = ({ name, connection, tool }: GatewayTool) => ({
   ...(tool.annotations ? { annotations: tool.annotations } : {}),
 });
 const BASE_INSTRUCTIONS =
-  "Credentials stay on the gateway and are never returned. Skills (orbytlink__use_skill) are instructions to load when a task matches them. workflow__* tools run a fixed sequence of tool calls. APIs stored in OrbytLink are read with orbytlink__api_docs and called with orbytlink__api_request; the gateway adds their keys. To automate a repeated task, draft a workflow with orbytlink__create_workflow; a person reviews and enables it.";
+  "Credentials stay on the gateway and are never returned. Skills (orbytlink__use_skill) are instructions to load when a task matches them; orbytlink__find_skills finds more, including community skills on skills.sh, and orbytlink__add_skill turns one on when the user asks. workflow__* tools run a fixed sequence of tool calls. APIs stored in OrbytLink are read with orbytlink__api_docs and called with orbytlink__api_request; the gateway adds their keys. To automate a repeated task, draft a workflow with orbytlink__create_workflow; a person reviews and enables it.";
 const SEARCH_INSTRUCTIONS =
   "OrbytLink is a gateway to the apps this workspace has connected. Their tools are not all listed: find them first. Call orbytlink__find_tools with a short description of the action (e.g. \"enroll leads in campaign\"), pick a result, then run it with orbytlink__call_tool using its exact name and arguments that match its input schema. orbytlink__list_apps shows which apps are connected. Tools listed directly are the ones used most and can be called as usual. " +
   BASE_INSTRUCTIONS;
@@ -115,8 +116,8 @@ export function gatewayServer(
   server.setRequestHandler(ListToolsRequestSchema, async () => {
     if (!allowed) return { tools: [] };
     const tools = gatewayTools(store, w);
-    if (mode === "all") return { tools: [...tools.map(listed), ...ownTools(store, w)] };
-    return { tools: [...discoveryTools(tools), ...pinnedTools(store, w, tools).map(listed), ...ownTools(store, w)] };
+    if (mode === "all") return { tools: [...tools.map(listed), ...ownTools(store, w, identity)] };
+    return { tools: [...discoveryTools(tools), ...pinnedTools(store, w, tools).map(listed), ...ownTools(store, w, identity)] };
   });
   server.setRequestHandler(ListPromptsRequestSchema, async () => ({
     prompts: allowed
@@ -128,7 +129,7 @@ export function gatewayServer(
     if (!skill) throw new Error("Unknown or disabled skill");
     return {
       description: skill.description.slice(0, 1024),
-      messages: [{ role: "user" as const, content: { type: "text" as const, text: skillText(skill.id)! } }],
+      messages: [{ role: "user" as const, content: { type: "text" as const, text: skillText(store, w, skill.id)! } }],
     };
   });
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
@@ -354,9 +355,63 @@ function apiDocs(api: Row, search?: string) {
     .filter(Boolean)
     .join("\n\n");
 }
-function ownTools(store: Store, w: string) {
+// Adding a skill changes the workspace, so only an agent acting for someone who may configure it can.
+const canConfigure = (identity: Identity) => identity.permissions.includes("configure") || !!identity.ownerCanConfigure;
+// Skills from the open skills.sh registry, found and added the way the find-skills skill does
+// with `npx skills`, but into the workspace, since an agent behind the gateway has no shell.
+async function findSkills(store: Store, w: string, args: Record<string, unknown>) {
+  const query = typeof args.query === "string" ? args.query.trim().slice(0, 200) : "";
+  if (!query) return toolText("Describe the task in a few words, e.g. \"write changelogs\".", true);
+  const catalog = skillCatalog(store, w);
+  const index = new ToolIndex(catalog.map((s) => ({ name: s.id, app: s.category, title: s.title, description: s.description })));
+  const workspace = index.search(query, 5).map((d) => {
+    const s = catalog.find((c) => c.id === d.name)!;
+    return { skill: s.id, title: s.title, description: s.description.slice(0, 300), on: s.enabled };
+  });
+  const have = new Set(catalog.filter((s) => s.added).map((s) => `${s.source.repo}/${s.source.path.split("/").pop()}`.toLowerCase()));
+  let registry: Record<string, unknown>[] = [],
+    note: string | undefined;
+  try {
+    registry = (await searchRegistry(query, 10))
+      .filter((r) => !have.has(`${r.repo}/${r.skill}`.toLowerCase()))
+      .map((r) => ({ skill: `${r.repo}@${r.skill}`, installs: r.installs, canAdd: r.installs >= MIN_INSTALLS, page: `https://skills.sh/${r.repo}/${r.skill}` }));
+  } catch {
+    note = "skills.sh could not be searched right now; only this workspace's skills are shown.";
+  }
+  return toolText(
+    JSON.stringify(
+      {
+        query,
+        inWorkspace: workspace,
+        skillsSh: registry,
+        ...(note ? { note } : {}),
+        next: `Tell the user what fits, with install counts and sources. Prefer well-known sources and more installs; canAdd is false below ${MIN_INSTALLS.toLocaleString("en")} installs. When the user wants one, add or turn it on with orbytlink__add_skill {skill}.`,
+      },
+      null,
+      2,
+    ),
+  );
+}
+function ownTools(store: Store, w: string, identity: Identity) {
   const skills = enabledSkills(store, w);
-  const tools: any[] = [];
+  const tools: any[] = [
+    {
+      name: "orbytlink__find_skills",
+      title: "Find skills",
+      description:
+        "Find skills (reusable expert instructions) for a task: this workspace's skills, and community skills on skills.sh with their install counts. Use it when the user asks for a skill, or asks how to do something specialised that a skill might cover.",
+      inputSchema: { type: "object", properties: { query: { type: "string", description: "The task in a few words, e.g. \"react performance\" or \"pr review\"" } }, required: ["query"] },
+      annotations: { readOnlyHint: true, openWorldHint: true },
+    },
+  ];
+  if (canConfigure(identity))
+    tools.push({
+      name: "orbytlink__add_skill",
+      title: "Add a skill",
+      description: `Turn on a skill for every agent in this workspace, when the user asks for it. Give a workspace skill's name, or owner/repo@skill from orbytlink__find_skills to add a community skill from skills.sh: it is fetched from GitHub, pinned to that commit, and refused if it ships scripts or has under ${MIN_INSTALLS.toLocaleString("en")} installs. Returns the skill's instructions to follow right away.`,
+      inputSchema: { type: "object", properties: { skill: { type: "string", description: "e.g. tdd, or vercel-labs/agent-skills@react-best-practices" } }, required: ["skill"] },
+      annotations: { openWorldHint: true },
+    });
   const apis = enabledApis(store, w);
   if (apis.length) {
     const list = apis.map(({ slug, api }) => `- ${slug}: ${api.name}${api.description ? ` (${api.description})` : ""}, ${api.access === "write" ? "read and write" : "read only"}`).join("\n");
@@ -430,11 +485,23 @@ function ownTools(store: Store, w: string) {
 }
 async function callOwnTool(store: Store, services: ServiceAdapters, identity: Identity, name: string, args: Record<string, unknown>) {
   const w = identity.workspace;
+  if (name === "orbytlink__find_skills") return findSkills(store, w, args);
+  if (name === "orbytlink__add_skill") {
+    if (!canConfigure(identity)) return toolText("Only a workspace admin's agent can add skills. Ask an admin, or turn skills on in OrbytLink → Skills.", true);
+    if (typeof args.skill !== "string" || !args.skill.trim()) return toolText("Give the skill as owner/repo@skill from orbytlink__find_skills, or a workspace skill's name.", true);
+    try {
+      const added = await addSkill(store, w, identity.user, args.skill, "agent");
+      const what = added.enabledOnly ? `"${added.title}" is on` : added.updated ? `"${added.title}" was updated to the latest version and is on` : `Added "${added.title}" from skills.sh; it is on`;
+      return toolText(`${what} for every agent in this workspace as ${added.id}. A person can turn it off in OrbytLink → Skills. Its instructions follow; use them for this task.\n\n${added.text}`);
+    } catch (error) {
+      return toolText((error as Error).message, true);
+    }
+  }
   if (name === "orbytlink__use_skill") {
     const skill = enabledSkills(store, w).find((s) => s.id === args.name);
     if (!skill) return toolText("Unknown or disabled skill.", true);
     store.audit(w, identity.user, "skill.used", skill.id);
-    return toolText(skillText(skill.id)!);
+    return toolText(skillText(store, w, skill.id)!);
   }
   if (name === "orbytlink__api_docs" || name === "orbytlink__api_request") {
     const match = enabledApis(store, w).find((a) => a.slug === args.api);

@@ -524,6 +524,7 @@ export function configureEmailAuth(app: Express, store: Store) {
       return {
         ...who,
         permissions: granted.filter((p) => who.permissions.includes(p)),
+        ownerCanConfigure: who.permissions.includes("configure"),
         authMethod: "token",
         toolMode: row.tool_mode === "all" || row.tool_mode === "search" ? row.tool_mode : "auto",
       };

@@ -14,7 +14,7 @@ import { configureOAuthCallback, configureOAuthRoutes, credentialFor, dropOAuth,
 import { adapters, type ServiceAdapters } from "./adapters.js";
 import { gatewayServer, gatewayTools } from "./gateway.js";
 import { configureOrgs, describe, syncOrgName } from "./orgs.js";
-import { skillCatalog, skillText } from "./skills.js";
+import { ADDED, removeSkill, skillCatalog, skillText } from "./skills.js";
 import { runWorkflow, saveWorkflow } from "./workflows.js";
 import { apiCall, apiSchema, fetchDocs, fetchLogo, ingestDocs, publicApi } from "./apis.js";
 import {
@@ -328,7 +328,7 @@ export function createApp(
     },
   );
   app.get("/api/skills/:id", permit("read"), (req, res) => {
-    const text = skillText(String(req.params.id));
+    const text = skillText(store, identity(res).workspace, String(req.params.id));
     if (!text) throw Object.assign(new Error("Record not found"), { status: 404 });
     res.json({ id: req.params.id, text });
   });
@@ -336,10 +336,18 @@ export function createApp(
   app.put("/api/skills/:id", permit("configure"), (req, res) => {
     const i = identity(res),
       id = String(req.params.id);
-    if (!skillText(id)) throw Object.assign(new Error("Record not found"), { status: 404 });
+    if (!skillText(store, i.workspace, id)) throw Object.assign(new Error("Record not found"), { status: 404 });
     const { enabled } = z.object({ enabled: z.boolean() }).parse(req.body);
     store.put(i.workspace, "skills", { id, enabled });
     store.audit(i.workspace, i.user, enabled ? "skill.enabled" : "skill.disabled", id);
+    res.json({ ok: true });
+  });
+  // Only skills added from skills.sh can be removed; bundled ones are just turned off.
+  app.delete("/api/skills/:id", permit("configure"), (req, res) => {
+    const i = identity(res),
+      id = String(req.params.id);
+    if (!store.list(i.workspace, ADDED).some((r) => r.id === id)) throw Object.assign(new Error("Record not found"), { status: 404 });
+    removeSkill(store, i.workspace, i.user, id);
     res.json({ ok: true });
   });
   app.post("/api/workflows", permit("configure"), (req, res) => {

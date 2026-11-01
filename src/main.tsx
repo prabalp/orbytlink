@@ -963,7 +963,7 @@ export function App() {
             </div>
           )}
           {dialog.type === "skill" && (
-            <SkillDetail skill={s.skills.find((k: Data) => k.id === dialog.data!.id) || dialog.data} busy={busy} canConfigure={canConfigure} onToggle={(enabled: boolean) => act(() => api(`/skills/${dialog.data!.id}`, { enabled }, "PUT"), enabled ? "On for your agents" : "Turned off", false)} />
+            <SkillDetail skill={s.skills.find((k: Data) => k.id === dialog.data!.id) || dialog.data} busy={busy} canConfigure={canConfigure} onToggle={(enabled: boolean) => act(() => api(`/skills/${dialog.data!.id}`, { enabled }, "PUT"), enabled ? "On for your agents" : "Turned off", false)} onRemove={() => act(() => api(`/skills/${dialog.data!.id}`, {}, "DELETE"), "Skill removed")} />
           )}
           {dialog.type === "workflow" && (
             <WorkflowEditor
@@ -2184,12 +2184,12 @@ function SkillsPage({ state: s, busy, canConfigure, search, setSearch, onOpen, o
         )}
       </section>
       <p className="footnote">
-        Install counts are from skills.sh and stars from GitHub, as of {new Date(skills[0]?.signalsAsOf || Date.now()).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}. Skills are bundled from their repositories at a pinned commit and reach your agents only when turned on{canConfigure ? "" : "; an admin turns them on"}.
+        Install counts are from skills.sh and stars from GitHub, as of {new Date(skills[0]?.signalsAsOf || Date.now()).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}. Skills are bundled from their repositories at a pinned commit and reach your agents only when turned on{canConfigure ? "" : "; an admin turns them on"}. Ask your agent for a skill and it can search skills.sh and add one here.
       </p>
     </>
   );
 }
-function SkillDetail({ skill, busy, canConfigure, onToggle }: any) {
+function SkillDetail({ skill, busy, canConfigure, onToggle, onRemove }: any) {
   const [text, setText] = useState("");
   const [error, setError] = useState("");
   useEffect(() => {
@@ -2207,7 +2207,15 @@ function SkillDetail({ skill, busy, canConfigure, onToggle }: any) {
           <Switch checked={skill.enabled} label={`Use ${skill.title}`} disabled={busy || !canConfigure} onChange={onToggle} />
         </div>
       </div>
-      <p className="muted">Agents load it as the <code>{skill.id}</code> prompt, or through the <code>orbytlink__use_skill</code> tool.</p>
+      <p className="muted">
+        Agents load it as the <code>{skill.id}</code> prompt, or through the <code>orbytlink__use_skill</code> tool.
+        {skill.added && <> Added from skills.sh{skill.added.via === "agent" ? " by an agent" : ""} on {new Date(skill.added.at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}.</>}
+      </p>
+      {skill.added && canConfigure && (
+        <div className="skill-remove">
+          <button type="button" className="secondary compact" disabled={busy} onClick={onRemove}><Trash2 size={14} /> Remove skill</button>
+        </div>
+      )}
       <div className="skill-doc">{error ? <p className="error">{error}</p> : text ? <Markdown text={text} /> : <LoaderCircle className="spin" size={18} />}</div>
     </div>
   );

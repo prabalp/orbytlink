@@ -148,6 +148,9 @@ export type Identity = {
   authMethod?: "email" | "oidc" | "token";
   // Gateway tokens choose how app tools are shown; console sessions use "auto".
   toolMode?: "auto" | "all" | "search";
+  // Gateway tokens: whether the token's owner may change this workspace, which lets their
+  // agent add skills (the token itself still only has "call").
+  ownerCanConfigure?: boolean;
   workspace: string;
   permissions: string[];
   demo: boolean;
