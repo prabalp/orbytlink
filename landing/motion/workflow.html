@@ -1,0 +1,46 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>From exploration to a reusable workflow</title>
+<script src="vendor/gsap-3.14.2.min.js"></script>
+<style>
+@font-face{font-family:Manrope;src:url(vendor/manrope-regular.ttf);font-weight:400}@font-face{font-family:Manrope;src:url(vendor/manrope-medium.ttf);font-weight:500 700}
+
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#f0ebf7;color:#30243e;font-family:Manrope,sans-serif}#root{position:relative;width:640px;height:600px;overflow:hidden}.heading{position:absolute;left:40px;top:32px;right:40px;display:flex;justify-content:space-between;font-size:14px;color:#65556f}.title{position:absolute;left:40px;top:72px;font-size:30px;line-height:36px;font-weight:500;letter-spacing:-1px}.scene-title{position:absolute;width:560px;opacity:0}.scene-title:first-child{opacity:1}.stage{position:absolute;inset:0}.task{position:absolute;left:64px;top:168px;width:512px;height:56px;display:flex;align-items:center;gap:16px;background:#fbf9fe;border-radius:8px;padding:0 20px;font-size:16px;z-index:3}.task .app{width:72px;font-size:12px;font-weight:600;color:#65556f}.task .check{margin-left:auto;width:16px;height:16px;border-radius:50%;background:#d8c8f1;opacity:0}.task .check:after{content:"";display:block;width:8px;height:4px;border-left:1.5px solid #554163;border-bottom:1.5px solid #554163;transform:translate(4px,5px) rotate(-45deg)}.task.judgment{background:#d8c8f1}.extra{position:absolute;left:40px;top:170px;padding:12px 16px;border:1px solid #c9bed5;border-radius:8px;font-size:12px;color:#7a6d84}.connector{position:absolute;left:92px;top:186px;height:244px;width:2px;background:#c9b4e0;transform-origin:top;z-index:1;opacity:0}.packet{position:absolute;width:8px;height:8px;background:#694984;left:89px;top:190px;border-radius:50%;z-index:4;opacity:0}.saved{position:absolute;top:426px;left:64px;right:64px;display:flex;justify-content:space-between;align-items:center;padding:16px 0;font-size:14px;opacity:0}.saved code{font-size:12px}.summary{position:absolute;left:40px;right:40px;top:506px;border-top:1px solid #c9bed5;padding-top:20px;display:grid;grid-template-columns:1fr 1fr;gap:32px}.summary p{margin:0;font-size:14px;line-height:20px;color:#65556f}.summary strong{display:block;font-size:20px;line-height:28px;font-weight:500;color:#30243e}.stat{position:absolute;opacity:0}.stat:first-child{opacity:1}.note{position:absolute;right:40px;top:510px;max-width:240px;font-size:14px;line-height:20px;color:#65556f}.note>span{position:absolute;right:0;width:240px;opacity:0}.note>span:first-child{opacity:1}
+
+[data-compact] .task{font-size:24px;padding:0 16px;gap:12px}[data-compact] .task .app{font-size:18px;width:100px}[data-compact] .title{font-size:36px;line-height:40px}[data-compact] .heading{font-size:20px}[data-compact] .summary strong{font-size:26px;line-height:32px}[data-compact] .summary p{font-size:22px;line-height:28px}[data-compact] .note{display:none}[data-compact] .summary{display:block}[data-compact] .saved{font-size:22px}[data-compact] .saved code{display:none}[data-compact] .extra{font-size:16px;padding:8px}
+</style></head><body>
+<div id="root" data-composition-id="workflow" data-start="0" data-duration="15" data-width="640" data-height="600">
+<div class="clip" data-start="0" data-duration="15" data-track-index="0" id="workflow-scene">
+<div class="heading"><span>Monthly close</span><span>OrbytLink</span></div>
+<div class="title"><div class="scene-title" id="title1">First, find the way.</div><div class="scene-title" id="title5">Then, keep only what you need.</div><div class="scene-title" id="title20">Finally, keep the work.</div></div>
+<div class="connector"></div><div class="packet"></div>
+<div class="extra" id="extra1">Search contacts</div><div class="extra" id="extra2">List subscriptions</div><div class="extra" id="extra3">Find documents</div><div class="extra" id="extra4">Get customers</div>
+<div class="task" id="task1"><span class="app">Stripe</span><span>Read payouts</span><span class="check"></span></div>
+<div class="task" id="task2"><span class="app">HubSpot</span><span>Match invoices</span><span class="check"></span></div>
+<div class="task judgment" id="task3"><span class="app">Your agent</span><span>Review exceptions</span><span class="check"></span></div>
+<div class="task" id="task4"><span class="app">Sheets</span><span>Write the close report</span><span class="check"></span></div>
+<div class="saved"><span>Workflow ready for review</span><code>monthly-close.md</code></div>
+<div class="summary"><div class="stat" id="stat1"><strong>Explore the tools</strong><p>Discover the steps as you work.</p></div><div class="stat" id="stat5"><strong>A focused toolset</strong><p>The same job. Less searching.</p></div><div class="stat" id="stat20"><strong>A repeatable workflow</strong><p>Routine steps, ready to reuse.</p></div></div>
+<div class="note"><span id="note1">Your agent finds the right path through your connected apps.</span><span id="note5">Only the tools this job needs stay in context.</span><span id="note20">Your agent stays involved where judgment matters.</span></div>
+</div></div>
+<script>
+const tl=gsap.timeline({paused:true});
+const initial=[{x:0,y:0,scale:.76},{x:32,y:90,scale:.76},{x:-28,y:168,scale:.76},{x:16,y:250,scale:.76}];
+initial.forEach((p,i)=>tl.set('#task'+(i+1),{...p,transformOrigin:'50% 50%'},0));
+tl.set('#extra1',{x:0,y:-40},0).set('#extra2',{x:140,y:-40},0).set('#extra3',{x:290,y:-40},0).set('#extra4',{x:435,y:-40},0);
+tl.fromTo('.task',{opacity:0},{opacity:1,duration:.7,stagger:.3,ease:'power3.out'},.25);
+tl.fromTo('.extra',{opacity:0},{opacity:.65,duration:.6,stagger:.18,ease:'power3.out'},.5);
+tl.to('#task1',{x:-22,duration:.8,ease:'power3.inOut'},2).to('#task2',{x:12,duration:.8,ease:'power3.inOut'},2.3);
+function chapter(oldId,newId,t){tl.to(['#title'+oldId,'#stat'+oldId,'#note'+oldId],{opacity:0,y:-8,duration:.35,ease:'power3.in'},t);tl.fromTo(['#title'+newId,'#stat'+newId,'#note'+newId],{opacity:0,y:12},{opacity:1,y:0,duration:.6,ease:'power3.out'},t+.35)}
+chapter(1,5,4.5);
+tl.to('.extra',{opacity:0,scale:.9,duration:.55,stagger:.06,ease:'power3.in'},4.5);
+for(let i=1;i<=4;i++)tl.to('#task'+i,{x:0,y:(i-1)*76,scale:1,duration:1, ease:'power3.inOut'},4.65+(i-1)*.09);
+tl.to('.connector',{opacity:1,scaleY:1,duration:.6,ease:'power3.out'},5.6);
+tl.fromTo('.packet',{opacity:0,y:0},{opacity:1,duration:.2},6.3).to('.packet',{y:240,duration:1.3,ease:'power2.inOut'},6.5).to('.packet',{opacity:0,duration:.2},7.8);
+chapter(5,20,9.5);
+for(let i=1;i<=4;i++)tl.to('#task'+i,{y:(i-1)*64,duration:.8,ease:'power3.inOut'},9.7+(i-1)*.06);
+tl.to('.connector',{scaleY:.8,duration:.8,ease:'power3.inOut'},9.7);
+tl.fromTo('.task .check',{opacity:0,scale:.5},{opacity:1,scale:1,duration:.4,stagger:.28,ease:'power3.out'},10.6);
+tl.to('#task3',{backgroundColor:'#c8afe8',duration:.5},11.2).to('#task3',{backgroundColor:'#d8c8f1',duration:.6},12);
+tl.fromTo('.saved',{opacity:0,y:12},{opacity:1,y:0,duration:.7,ease:'power3.out'},12.2);
+tl.to({}, {duration:1.9},13.1);
+window.__timelines=window.__timelines||{};window.__timelines.workflow=tl;
+</script><script src="vendor/hyperframe.runtime-0.9.8.js"></script></body></html>

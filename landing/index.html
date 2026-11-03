@@ -1,0 +1,1297 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OrbytLink · The workhub for AI agents</title>
+<meta name="description" content="Stop planning automations. Start working. Your agent does the job once; OrbytLink makes it faster, cheaper and yours every time after.">
+<meta property="og:title" content="OrbytLink · The workhub for AI agents">
+<meta property="og:description" content="Your agent does it once. OrbytLink makes it faster, cheaper, and yours every time after.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://orbytlink.com/">
+<meta name="theme-color" content="#000000">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23000'/%3E%3Cg transform='translate(4 4) scale(0.857)' stroke='%23000' stroke-width='1.1' stroke-linejoin='round'%3E%3Cpolygon points='14,14 14,1 23.19,4.81' fill='%23fff'/%3E%3Cpolygon points='14,14 23.19,4.81 27,14 23.19,23.19 14,27 4.81,23.19 1,14 4.81,4.81 14,1' fill='%23EDF2F5' fill-opacity='.72'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>
+  // Theme before first paint: saved choice, else the system's.
+  (function () {
+    var t = null;
+    try { t = localStorage.getItem("ol-theme"); } catch (e) {}
+    if (t !== "light" && t !== "dark") t = "light";
+    document.documentElement.dataset.theme = t;
+  })();
+</script>
+<style>
+:root {
+  --font: "Inter Variable", "Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  --col: 1200px;
+  --gw: min(var(--col), 100% - 48px);
+  --gp: 32px;
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-fade: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  --ease-big: cubic-bezier(0.19, 1, 0.22, 1);
+
+  /* Page (themed) */
+  --bg: #000000;
+  --text: #EDF2F5;
+  --text-strong: #FFFFFF;
+  --text-2: #9F9F9F;
+  --muted: #828282;
+  --tert: #505050;
+  --border: #232323;
+  --border-strong: #2C2C2C;
+  --surface: #252525;
+  --surface-2: #333333;
+  --hover: #1B1B1B;
+  --raised: #0A0A0B;
+  --card: #141416;
+  --btn-bg: #FFFFFF;
+  --btn-fg: #222222;
+  --btn-hover: #CDCDCD;
+  --chip-bg: #260B00;
+  --chip-text: #FF9B6D;
+  --success: #08FFB6;
+  --logo-fill: #EDF2F5;
+  --header-bg: rgb(0 0 0 / 0.9);
+
+  /* Product frame (always dark: it is content, not chrome) */
+  --f-bg: #0E0E10;
+  --f-side: #1A1A1C;
+  --f-card: #141416;
+  --f-ink: #0D0D0D;
+  --f-text: #FAFAFA;
+  --f-dim: #A8A8AD;
+  --f-faint: #636366;
+  --f-line: #FFFFFF14;
+  --f-line-2: #FFFFFF22;
+  --blue: #54A2FF;
+  --teal: #23FFBD;
+  --purple: #8D58F7;
+  --coral: #FF774E;
+  --green: #4EA852;
+  --red: #FF6568;
+  --yellow: #FFEA35;
+}
+:root[data-theme="light"] {
+  --bg: #FFFFFF;
+  --text: #0D0D0D;
+  --text-strong: #000000;
+  --text-2: #5E5E62;
+  --muted: #6E6E73;
+  --tert: #A1A1A6;
+  --border: #E8E8EA;
+  --border-strong: #DADADD;
+  --surface: #F2F2F3;
+  --surface-2: #EBEBED;
+  --hover: #F4F4F5;
+  --raised: #FAFAFA;
+  --card: #F7F7F8;
+  --btn-bg: #0D0D0D;
+  --btn-fg: #FFFFFF;
+  --btn-hover: #333333;
+  --chip-bg: #FFF0E8;
+  --chip-text: #C2410C;
+  --success: #0E9F6E;
+  --logo-fill: #0D0D0D;
+  --header-bg: rgb(255 255 255 / 0.88);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; scroll-padding-top: 112px; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 400 16px/24px var(--font); letter-spacing: -0.2px;
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility; overflow-x: hidden;
+  transition: background-color 300ms var(--ease), color 300ms var(--ease);
+}
+img, svg { display: block; }
+a { color: inherit; text-decoration: none; }
+button, input { font: inherit; color: inherit; }
+::selection { background: #47A8FF55; }
+:focus-visible { outline: 2px solid var(--tert); outline-offset: 2px; border-radius: 6px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Column with faint vertical guides */
+.wrap { width: var(--gw); margin-inline: auto; position: relative; padding-inline: var(--gp); }
+.guides { position: fixed; inset: 0; pointer-events: none; z-index: 0; }
+.guides::before {
+  content: ""; position: absolute; top: 0; bottom: 0; left: 50%;
+  width: var(--gw); transform: translateX(-50%);
+  border-inline: 1px solid var(--border);
+}
+main, header, footer { position: relative; z-index: 1; }
+
+/* Type */
+h1, h2, h3, h4 { margin: 0; font-weight: 500; color: var(--text); }
+.h1 { font-size: 56px; line-height: 64px; letter-spacing: -2.94px; }
+.h2 { font-size: 48px; line-height: 56px; letter-spacing: -1.08px; }
+.h3 { font-size: 32px; line-height: 40px; letter-spacing: -0.72px; }
+.h4 { font-size: 24px; line-height: 32px; letter-spacing: -0.3px; }
+.lead { font-size: 18px; line-height: 28px; letter-spacing: -0.045px; color: var(--text-2); }
+.small { font-size: 14px; line-height: 20px; letter-spacing: -0.175px; }
+.label { font-size: 12px; line-height: 14.5px; letter-spacing: -0.0125em; color: var(--muted); }
+.dim { color: var(--text-2); }
+.muted { color: var(--muted); }
+.mono { font-family: var(--mono); letter-spacing: 0; }
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  height: 32px; padding: 6px 12px; border-radius: 8px; border: 0; cursor: pointer;
+  font-size: 14px; font-weight: 500; line-height: 20px; letter-spacing: 0.105px; white-space: nowrap;
+  transition: background-color 200ms ease-in-out, color 200ms ease-in-out, box-shadow 200ms ease-in-out;
+}
+.btn-lg { height: 40px; padding: 10px 16px; }
+.btn-primary { background: var(--btn-bg); color: var(--btn-fg); }
+.btn-primary:hover { background: var(--btn-hover); }
+.btn-secondary { background: var(--surface-2); color: var(--text); box-shadow: inset 0 0 0 1px var(--surface-2); }
+.btn-secondary:hover { background: color-mix(in srgb, var(--surface-2) 80%, var(--text) 12%); }
+.pill {
+  display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px;
+  border-radius: 999px; font-size: 13px; font-weight: 500; letter-spacing: -0.1px;
+  background: var(--surface); color: var(--text); border: 0; cursor: pointer;
+  transition: background-color 200ms ease-in-out;
+}
+.pill:hover { background: var(--surface-2); }
+.arrow { transition: transform 200ms var(--ease); }
+a:hover .arrow, button:hover .arrow { transform: translateX(2px); }
+.link-arrow { color: var(--muted); font-size: 14px; display: inline-flex; gap: 6px; align-items: center; transition: color 300ms ease-out; }
+.link-arrow:hover { color: var(--text); }
+
+/* Header + announcement */
+.site-header {
+  position: sticky; top: 0; z-index: 1000; height: 56px;
+  background: var(--header-bg); border-bottom: 1px solid var(--border);
+  -webkit-backdrop-filter: saturate(180%) blur(12px); backdrop-filter: saturate(180%) blur(12px);
+}
+.site-header .wrap { height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-inline: 16px; }
+.brand { display: inline-flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 500; letter-spacing: -0.3px; color: var(--text); }
+.brand svg { width: 22px; height: 22px; }
+.mark-a { fill: var(--logo-fill); }
+.mark-b { fill: var(--logo-fill); fill-opacity: 0.55; }
+.nav { display: flex; gap: 2px; }
+.nav a { height: 32px; padding: 0 12px; display: inline-flex; align-items: center; font-size: 14px; font-weight: 500; color: var(--muted); border-radius: 8px; transition: color 300ms ease-out; }
+.nav a:hover, .nav a[aria-current="true"] { color: var(--text); }
+.head-actions { display: flex; align-items: center; gap: 8px; }
+.login { font-size: 14px; font-weight: 500; color: var(--text); padding: 0 8px; }
+.icon-btn {
+  width: 32px; height: 32px; display: inline-grid; place-items: center; border-radius: 8px;
+  background: transparent; border: 0; color: var(--muted); cursor: pointer; transition: color 300ms ease-out, background-color 200ms;
+}
+.icon-btn:hover { color: var(--text); background: var(--hover); }
+.icon-btn svg { width: 16px; height: 16px; }
+.theme-sun { display: none; }
+:root[data-theme="light"] .theme-sun { display: block; }
+:root[data-theme="light"] .theme-moon { display: none; }
+.menu-btn { display: none; }
+.announce {
+  position: sticky; top: 56px; z-index: 999; height: 48px; background: var(--bg);
+  border-bottom: 1px solid var(--border); display: grid; place-items: center; padding-inline: 12px;
+}
+.announce a {
+  display: inline-flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 8px;
+  font-size: 15px; color: var(--text); transition: background-color 200ms; max-width: 100%;
+}
+.announce a:hover { background: var(--hover); }
+.announce .txt { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chip { background: var(--chip-bg); color: var(--chip-text); border-radius: 6px; padding: 4px 8px; font-size: 12px; line-height: 14px; font-weight: 500; white-space: nowrap; }
+.mobile-nav { display: none; }
+
+/* Sections */
+section { position: relative; }
+.rule { border-top: 1px solid var(--border); }
+.section { padding: 120px 0; }
+.sec-head { max-width: 800px; }
+.sec-head .lead { margin-top: 16px; max-width: 560px; }
+.eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted); margin-bottom: 20px; }
+.eyebrow .num { font-family: var(--mono); font-size: 12px; color: var(--tert); }
+.sec-body { margin-top: 64px; }
+.source { margin-top: 12px; font-size: 12px; line-height: 18px; color: var(--muted); }
+.source a { color: var(--muted); border-bottom: 1px solid var(--border-strong); }
+.source a:hover { color: var(--text); }
+
+/* Reveal */
+.reveal { opacity: 0; transform: translateY(16px); transition: opacity 800ms var(--ease-fade), transform 800ms var(--ease-fade); }
+.reveal.in { opacity: 1; transform: none; }
+.reveal[data-delay="1"] { transition-delay: 80ms; }
+.reveal[data-delay="2"] { transition-delay: 160ms; }
+.reveal[data-delay="3"] { transition-delay: 240ms; }
+
+/* Hero */
+.hero { padding: 136px 0 128px; text-align: center; }
+.hero .badge {
+  display: inline-flex; align-items: center; gap: 8px; height: 28px; padding: 0 12px 0 8px;
+  border-radius: 999px; box-shadow: inset 0 0 0 1px var(--border-strong); font-size: 13px; color: var(--text-2);
+}
+.hero .badge i { width: 6px; height: 6px; border-radius: 2px; background: var(--success); box-shadow: 0 0 10px var(--success); }
+.hero h1 { margin: 24px auto 0; max-width: 900px; }
+.hero h1 .l2 { display: block; color: var(--text); }
+.hero h1 .l1 { display: block; color: color-mix(in srgb, var(--text) 52%, transparent); }
+.hero .lead { margin: 20px auto 0; max-width: 560px; color: color-mix(in srgb, var(--text) 60%, transparent); }
+.hero .ctas { margin-top: 32px; display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.endpoint {
+  margin: 28px auto 0; display: inline-flex; align-items: center; gap: 10px; max-width: 100%;
+  height: 36px; padding: 0 6px 0 14px; border-radius: 999px; background: var(--raised);
+  box-shadow: inset 0 0 0 1px var(--border); font-size: 13px; color: var(--muted);
+}
+.endpoint code { font-family: var(--mono); font-size: 12.5px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.endpoint .copy { height: 26px; padding: 0 10px; border-radius: 999px; border: 0; background: var(--surface); font-size: 12px; font-weight: 500; cursor: pointer; color: var(--text); transition: background-color 200ms; }
+.endpoint .copy:hover { background: var(--surface-2); }
+
+/* Product frame */
+.frame {
+  position: relative; border-radius: 16px; background: var(--f-bg); color: var(--f-text);
+  box-shadow: 0 0 0 1px #232323, inset 0 0 25px -6px #FFFFFF0A; overflow: hidden; text-align: left;
+}
+:root[data-theme="light"] .frame { box-shadow: 0 0 0 1px #1A1A1C, 0 24px 60px -24px rgb(0 0 0 / 0.35); }
+.frame-bar { height: 44px; display: flex; align-items: center; gap: 12px; padding: 0 16px; border-bottom: 1px solid var(--f-line); font-size: 13px; color: var(--f-dim); }
+.dots { display: flex; gap: 6px; }
+.dots i { width: 10px; height: 10px; border-radius: 50%; background: #2A2A2D; }
+.frame-bar .title { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.frame-bar .title b { font-weight: 500; color: var(--f-text); white-space: nowrap; }
+.frame-bar .sp { flex: 1; }
+.fchip { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 8px; border-radius: 6px; font-size: 12px; background: #FFFFFF0D; color: var(--f-dim); white-space: nowrap; }
+.fchip .dot { width: 6px; height: 6px; border-radius: 2px; background: var(--teal); }
+.tag { display: inline-flex; align-items: center; height: 20px; padding: 0 7px; border-radius: 6px; font-size: 11px; font-weight: 500; letter-spacing: 0; white-space: nowrap; }
+.tag.agent { background: #8D58F724; color: #B79BFF; }
+.tag.wf { background: #54A2FF1F; color: #8EC2FF; }
+.tag.ok { background: #23FFBD17; color: var(--teal); }
+.tag.warn { background: #FF774E1F; color: #FFA287; }
+.tag.bad { background: #FF656821; color: #FF8C8E; }
+.tag.dim { background: #FFFFFF0F; color: var(--f-dim); }
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Tags that sit on the page (not inside a dark product frame) need darker ink in light mode. */
+:root[data-theme="light"] .ent .tag.ok { color: #0B8A5F; background: #0E9F6E14; }
+:root[data-theme="light"] .ent .tag.bad { color: #C93235; background: #FF65681F; }
+:root[data-theme="light"] .ent .tag.agent { color: #6D3FD9; background: #8D58F71A; }
+:root[data-theme="light"] .ent .tag.dim { color: var(--muted); background: var(--surface); }
+:root[data-theme="light"] .fb-step .ic { filter: saturate(1.4) brightness(0.8); }
+
+/* Problem */
+.panel { border-radius: 16px; background: var(--raised); box-shadow: inset 0 0 0 1px var(--border); padding: 20px; position: relative; overflow: hidden; }
+.panel-title { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 14px; color: var(--text); }
+.bento { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.stack-card { grid-column: 1 / -1; padding: 0; height: 400px; }
+.stack-grid {
+  position: absolute; inset: -6px; display: grid; gap: 12px; padding: 18px;
+  grid-template-columns: repeat(auto-fill, minmax(56px, 1fr)); grid-auto-rows: 56px; align-content: center;
+  -webkit-mask-image: radial-gradient(ellipse 30% 42% at 50% 50%, transparent 55%, #000 100%);
+  mask-image: radial-gradient(ellipse 30% 42% at 50% 50%, transparent 55%, #000 100%);
+}
+.app {
+  position: relative; border-radius: 14px; display: grid; place-items: center;
+  background: linear-gradient(155deg, color-mix(in srgb, var(--c) 20%, var(--card)), var(--card) 70%);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 18%, var(--border));
+  opacity: 0; transform: scale(0.82);
+  transition: opacity 500ms var(--ease-fade), transform 700ms var(--ease-big); transition-delay: var(--dl, 0ms);
+}
+.app svg { width: 24px; height: 24px; fill: none; stroke: var(--c); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.app b {
+  position: absolute; top: -5px; right: -5px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
+  background: var(--red); color: #000; font-size: 11px; line-height: 18px; font-weight: 500; text-align: center;
+  box-shadow: 0 0 0 2px var(--raised); transform: scale(0); transition: transform 400ms var(--ease-big); transition-delay: calc(var(--dl, 0ms) + 500ms);
+}
+.stack-card.in .app { opacity: 1; transform: none; }
+:root[data-theme="light"] .app svg { stroke: color-mix(in srgb, var(--c) 70%, #000); }
+.stack-card.in .app b { transform: none; }
+.stack-over { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; padding: 24px; pointer-events: none; }
+.stack-over::before { content: ""; position: absolute; left: 50%; top: 50%; width: min(620px, 96%); height: 300px; transform: translate(-50%, -50%); background: radial-gradient(closest-side, var(--raised) 58%, transparent); }
+.stack-over > * { position: relative; }
+.stack-over .big { font-size: 112px; line-height: 104px; letter-spacing: -6px; font-weight: 500; color: var(--text); font-variant-numeric: tabular-nums; }
+.stack-over .label { font-size: 14px; color: var(--muted); }
+.stack-over .under { margin-top: 10px; font-size: 15px; color: var(--text-2); }
+.stack-chips { margin-top: 18px; display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.stack-chips span { height: 26px; padding: 0 10px; border-radius: 999px; display: inline-flex; align-items: center; font-size: 12.5px; color: var(--text-2); background: var(--bg); box-shadow: inset 0 0 0 1px var(--border-strong); }
+
+.kb { margin-top: 16px; display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 10px; }
+.kcol { border-radius: 12px; background: var(--bg); box-shadow: inset 0 0 0 1px var(--border); padding: 10px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.kh { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); padding: 2px 2px 4px; }
+.kh span { font-family: var(--mono); }
+.kc { border-radius: 8px; padding: 8px 10px; background: var(--card); box-shadow: inset 0 0 0 1px var(--border); font-size: 12.5px; line-height: 17px; color: var(--text); }
+.kc small { display: block; margin-top: 3px; font-size: 11px; color: var(--muted); }
+.kc.stuck { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--red) 45%, transparent); }
+.kc .stall { margin-top: 8px; height: 4px; border-radius: 2px; background: var(--surface-2); overflow: hidden; }
+.kc .stall i { display: block; height: 100%; width: 0; background: var(--red); border-radius: 2px; transition: width 1.6s var(--ease-big) 300ms; }
+.panel.in .kc .stall i { width: 32%; }
+.kc.more { background: transparent; box-shadow: none; color: var(--muted); text-align: center; padding: 4px; }
+.kc.ghost { background: transparent; box-shadow: none; border: 1px dashed var(--border-strong); color: var(--muted); text-align: center; padding: 18px 8px; }
+.kstack { position: relative; }
+.kstack .kc:nth-child(n+2) { margin-top: 6px; }
+.k-foot { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--text-2); }
+.k-foot b { font-weight: 500; color: var(--red); }
+
+.chores { margin-top: 16px; display: grid; gap: 6px; counter-reset: chore; }
+.chore {
+  display: grid; grid-template-columns: 28px 1fr auto; gap: 12px; align-items: center; padding: 10px 12px; border-radius: 10px;
+  background: var(--bg); box-shadow: inset 0 0 0 1px var(--border); font-size: 13.5px; color: var(--text-2);
+  transition: box-shadow 300ms var(--ease), color 300ms var(--ease), background-color 300ms var(--ease);
+}
+.chore .ic { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; background: var(--surface); color: var(--muted); transition: background-color 300ms, color 300ms; }
+.chore .ic svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.chore .t { font-family: var(--mono); font-size: 11.5px; color: var(--tert); }
+.chore.cur { color: var(--text); box-shadow: inset 0 0 0 1px var(--border-strong); background: var(--card); }
+.chore.cur .ic { background: color-mix(in srgb, var(--coral) 18%, transparent); color: var(--coral); }
+.chore.cur .t { color: var(--coral); }
+.again { margin-top: 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 12px; border-top: 1px solid var(--border); font-size: 13px; color: var(--text-2); }
+.again .loop { display: inline-flex; align-items: center; gap: 8px; }
+.again svg { width: 16px; height: 16px; color: var(--muted); }
+.again .loop.spin svg { animation: spin 1.2s var(--ease) 1; }
+.again b { font-weight: 500; color: var(--text); }
+
+/* Statement scene */
+.statement { min-height: 92vh; display: grid; place-items: center; text-align: center; overflow: hidden; padding: 96px 0; }
+.statement canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.statement .copy { position: relative; max-width: 820px; padding-inline: 24px; }
+.statement .copy::before { content: ""; position: absolute; left: -80px; right: -80px; top: 72px; bottom: -40px; background: radial-gradient(closest-side, var(--bg) 62%, transparent); }
+.statement .copy > * { position: relative; }
+.statement .ghost { color: var(--text); margin-top: 8px; opacity: calc(0.18 + 0.82 * var(--q, 0)); filter: blur(calc(6px * (1 - var(--q, 0)))); transform: scale(calc(0.97 + 0.03 * var(--q, 0))); will-change: filter, opacity; }
+.statement .center-mark { width: 56px; height: 56px; margin: 0 auto 28px; border-radius: 14px; display: grid; place-items: center; background: var(--bg); box-shadow: inset 0 0 0 1px var(--border-strong); }
+.statement .center-mark svg { width: 30px; height: 30px; }
+
+/* How it works */
+.how { display: grid; grid-template-columns: 1fr 1.25fr; gap: 64px; align-items: start; }
+.stages { display: flex; flex-direction: column; }
+.stage-step { padding: 36px 0; border-top: 1px solid var(--border); opacity: 0.38; transition: opacity 600ms var(--ease-fade); min-height: 46vh; }
+.stage-step:first-child { border-top: 0; padding-top: 8px; }
+.stage-step.active { opacity: 1; }
+.stage-step .k { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.stage-step .run { font-family: var(--mono); font-size: 12px; color: var(--muted); }
+.avail { font-size: 11px; font-weight: 500; padding: 3px 7px; border-radius: 6px; background: var(--surface); color: var(--text-2); }
+.avail.now { background: color-mix(in srgb, var(--success) 14%, transparent); color: var(--success); }
+.ent-txt h3 .avail, .cap h3 .avail { vertical-align: 3px; margin-left: 6px; }
+.stage-step p { margin: 12px 0 0; color: var(--text-2); max-width: 440px; }
+.stage-step .fact { margin-top: 16px; padding-left: 12px; border-left: 2px solid var(--border-strong); font-size: 13px; line-height: 20px; color: var(--muted); max-width: 440px; }
+.stage-step .fact a { border-bottom: 1px solid var(--border-strong); }
+.stage-step .fact a:hover { color: var(--text); }
+.how-visual { position: sticky; top: 136px; }
+.pills { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+.tab {
+  height: 32px; padding: 0 14px; border-radius: 999px; border: 0; cursor: pointer; font-size: 14px; font-weight: 500;
+  background: transparent; color: var(--text); box-shadow: inset 0 0 0 1px var(--border-strong);
+  transition: background-color 200ms, color 200ms;
+}
+.tab:hover { background: var(--hover); }
+.tab[aria-selected="true"] { background: var(--btn-bg); color: var(--btn-fg); box-shadow: none; }
+.trace .frame-bar .mode { margin-left: auto; }
+.metrics { display: grid; grid-template-columns: repeat(4, 1fr); border-bottom: 1px solid var(--f-line); }
+.metric { padding: 14px 16px; border-right: 1px solid var(--f-line); }
+.metric:last-child { border-right: 0; }
+.metric .k { font-size: 11px; color: var(--f-faint); }
+.metric .v { margin-top: 4px; font-size: 22px; line-height: 28px; letter-spacing: -0.5px; font-weight: 500; color: var(--f-text); font-variant-numeric: tabular-nums; }
+.metric .d { font-size: 11px; color: var(--teal); min-height: 14px; }
+.trace-list { padding: 10px; display: grid; gap: 6px; min-height: 330px; align-content: start; }
+.trow {
+  display: grid; grid-template-columns: 64px minmax(0, 1fr) auto 52px; gap: 10px; align-items: center;
+  padding: 7px 10px; border-radius: 9px; font-size: 12.5px; color: var(--f-dim);
+  background: var(--f-card); box-shadow: inset 0 0 0 1px var(--f-line);
+  animation: row-in 450ms var(--ease-fade) both;
+}
+.trow code { font-family: var(--mono); font-size: 12px; color: var(--f-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.trow .r { color: var(--f-faint); white-space: nowrap; font-size: 12px; }
+.trow .ms { text-align: right; font-family: var(--mono); font-size: 11.5px; color: var(--f-dim); }
+.trow.warnrow code { color: #FFA287; }
+.trow.more { background: transparent; box-shadow: none; color: var(--f-faint); justify-content: center; grid-template-columns: 1fr; text-align: center; font-size: 12px; }
+@keyframes row-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.chart { border-top: 1px solid var(--f-line); padding: 14px 16px 12px; }
+.chart-head { display: flex; justify-content: space-between; font-size: 12px; color: var(--f-dim); margin-bottom: 10px; }
+.chart-head .lg { display: flex; gap: 12px; color: var(--f-faint); }
+.chart-head .lg i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 6px; vertical-align: 0; }
+.bars { display: grid; grid-template-columns: repeat(20, 1fr); gap: 4px; align-items: end; height: 84px; }
+.bar { position: relative; height: 100%; display: flex; align-items: flex-end; gap: 1px; }
+.bar i { flex: 1; display: block; border-radius: 2px 2px 0 0; height: var(--h); transition: height 900ms var(--ease-big), background-color 400ms; background: #2A2A2E; }
+.bar i + i { background: #232326; }
+.bar.past i:first-child { background: #54A2FF66; }
+.bar.past i + i { background: #23FFBD40; }
+.bar.cur i:first-child { background: var(--blue); }
+.bar.cur i + i { background: var(--teal); }
+.bars-axis { display: flex; justify-content: space-between; margin-top: 6px; font-size: 11px; color: var(--f-faint); font-family: var(--mono); }
+.illus { font-size: 12px; color: var(--muted); margin-top: 12px; }
+
+/* Software */
+.sw-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.sw-card { border-radius: 16px; background: var(--raised); box-shadow: inset 0 0 0 1px var(--border); display: flex; flex-direction: column; overflow: hidden; transition: box-shadow 300ms var(--ease), transform 300ms var(--ease); }
+.sw-card:hover { box-shadow: inset 0 0 0 1px var(--border-strong); transform: translateY(-2px); }
+.sw-replaces { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 14px 16px; border-bottom: 1px solid var(--border); font-size: 12px; color: var(--muted); }
+.sw-replaces s { color: var(--tert); text-decoration-color: color-mix(in srgb, var(--red) 70%, transparent); padding: 2px 7px; border-radius: 6px; box-shadow: inset 0 0 0 1px var(--border); }
+.sw-mock { margin: 16px; border-radius: 12px; background: var(--f-bg); color: var(--f-text); box-shadow: 0 0 0 1px #232323; padding: 14px; min-height: 236px; display: flex; flex-direction: column; gap: 8px; }
+.sw-mock .mh { display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 500; margin-bottom: 4px; }
+.qrow { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 9px; background: var(--f-card); box-shadow: inset 0 0 0 1px var(--f-line); font-size: 12.5px; }
+.qrow small { display: block; font-size: 11px; color: var(--f-faint); }
+.qbtns { display: flex; gap: 4px; }
+.qbtns span { height: 24px; padding: 0 8px; border-radius: 6px; display: grid; place-items: center; font-size: 11.5px; font-weight: 500; background: #FFFFFF; color: #111; }
+.qbtns span + span { background: #2A2A2D; color: var(--f-text); }
+.trk { display: grid; gap: 7px; }
+.trk-row { display: grid; grid-template-columns: 1fr 90px 34px; gap: 10px; align-items: center; font-size: 12.5px; }
+.trk-row .pb { height: 6px; border-radius: 3px; background: #232326; overflow: hidden; }
+.trk-row .pb i { display: block; height: 100%; width: var(--p); background: var(--teal); border-radius: 3px; transition: width 1.4s var(--ease-big); }
+.sw-card:not(.in) .trk-row .pb i { width: 0; }
+.trk-row .n { text-align: right; color: var(--f-faint); font-size: 11.5px; font-family: var(--mono); }
+.rep-bars { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; align-items: end; height: 110px; margin-top: 6px; }
+.rep-bars i { display: block; border-radius: 2px 2px 0 0; background: #FFFFFF; height: var(--h); transition: height 1.2s var(--ease-big); }
+.rep-bars i:nth-child(8) { background: var(--blue); }
+.sw-card:not(.in) .rep-bars i { height: 4%; }
+.rep-kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.rep-kpis div { padding: 8px 10px; border-radius: 9px; box-shadow: inset 0 0 0 1px var(--f-line); font-size: 11px; color: var(--f-faint); }
+.rep-kpis b { display: block; font-size: 16px; color: var(--f-text); font-weight: 500; }
+.rep-kpis .up { color: var(--teal); font-size: 11px; font-weight: 400; }
+.sw-text { padding: 0 20px 20px; margin-top: auto; }
+.sw-text h3 { font-size: 18px; line-height: 24px; letter-spacing: -0.2px; }
+.sw-text p { margin: 6px 0 0; font-size: 14px; line-height: 20px; color: var(--text-2); }
+.sw-text .from { margin-top: 14px; display: flex; gap: 8px; align-items: center; font-size: 12px; color: var(--muted); }
+.sw-text .from code { font-family: var(--mono); font-size: 11.5px; color: var(--text-2); }
+.evolve { display: flex; align-items: center; gap: 10px; margin-top: 28px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
+.evolve span { padding: 4px 10px; border-radius: 999px; box-shadow: inset 0 0 0 1px var(--border-strong); color: var(--text-2); }
+.evolve svg { width: 14px; height: 14px; color: var(--tert); }
+
+/* Files */
+.files .body { display: grid; grid-template-columns: 1.15fr 1fr; }
+.file-tabs { display: flex; gap: 2px; padding: 8px 8px 0; border-bottom: 1px solid var(--f-line); overflow-x: auto; scrollbar-width: none; }
+.file-tabs::-webkit-scrollbar { display: none; }
+.ftab { height: 34px; padding: 0 12px; border: 0; border-radius: 8px 8px 0 0; background: transparent; color: var(--f-faint); font-family: var(--mono); font-size: 12px; cursor: pointer; white-space: nowrap; position: relative; transition: color 200ms; }
+.ftab:hover { color: var(--f-dim); }
+.ftab[aria-selected="true"] { color: var(--f-text); background: var(--f-card); }
+.ftab[aria-selected="true"]::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px; background: var(--f-card); }
+.md { margin: 0; padding: 18px 20px 22px; font-family: var(--mono); font-size: 12.5px; line-height: 21px; color: #D4D4D8; white-space: pre-wrap; word-break: break-word; background: var(--f-card); min-height: 420px; }
+.md[hidden] { display: none; }
+.md .c { color: #6B6B72; }
+.md .k { color: #8EC2FF; }
+.md .s { color: #23FFBD; }
+.md .h { color: #FAFAFA; font-weight: 600; }
+.md .b { color: #FAFAFA; font-weight: 600; }
+.md .t { color: #FFA287; }
+.md .q { color: #A8A8AD; font-style: italic; }
+.md .ag { color: #B79BFF; }
+.diff-col { border-left: 1px solid var(--f-line); display: flex; flex-direction: column; min-width: 0; }
+.diff-head { padding: 14px 16px; border-bottom: 1px solid var(--f-line); display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; }
+.diff-head .ver { display: flex; gap: 6px; align-items: center; font-family: var(--mono); font-size: 12px; color: var(--f-dim); }
+.diff { font-family: var(--mono); font-size: 12px; line-height: 21px; padding: 10px 0; flex: 1; }
+.dl { display: grid; grid-template-columns: 34px 16px 1fr; padding: 0 12px 0 0; white-space: pre-wrap; word-break: break-word; color: var(--f-dim); }
+.dl .ln { text-align: right; padding-right: 10px; color: #48484E; }
+.dl .sg { color: #48484E; }
+.dl.hunk { color: #8EC2FF; background: #54A2FF0D; margin: 6px 0; }
+.dl.del { background: #FF656814; color: #FFB3B4; }
+.dl.del .sg { color: var(--red); }
+.dl.add { background: #23FFBD12; color: #A7FFE4; }
+.dl.add .sg { color: var(--teal); }
+.diff-meta { border-top: 1px solid var(--f-line); padding: 12px 16px; display: grid; gap: 8px; font-size: 12px; color: var(--f-dim); }
+.diff-meta .r { display: flex; justify-content: space-between; gap: 8px; }
+.diff-actions { display: flex; gap: 8px; padding: 0 16px 16px; flex-wrap: wrap; }
+.fbtn { height: 30px; padding: 0 12px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 500; background: #FFFFFF; color: #111; border: 0; cursor: pointer; }
+.fbtn.sec { background: #2A2A2D; color: var(--f-text); }
+.fbtn svg { width: 13px; height: 13px; }
+.file-points { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 48px; }
+.file-points div { padding: 24px 24px 0 0; border-top: 1px solid var(--border); }
+.file-points div + div { padding-left: 24px; border-left: 1px solid var(--border); }
+.file-points h3 { font-size: 18px; line-height: 24px; letter-spacing: -0.2px; }
+.file-points p { margin: 6px 0 0; font-size: 14px; line-height: 20px; color: var(--text-2); }
+
+/* Trust */
+.ent { display: grid; grid-template-columns: 1fr 1fr; border-radius: 16px; box-shadow: inset 0 0 0 1px var(--border); background: var(--raised); overflow: hidden; }
+.ent > div + div { border-left: 1px solid var(--border); }
+.ent-ill { height: 340px; background: var(--bg); border-bottom: 1px solid var(--border); display: grid; place-items: center; padding: 24px; position: relative; overflow: hidden; }
+.ent-txt { padding: 22px 24px 26px; }
+.ent-txt h3 { font-size: 18px; line-height: 24px; letter-spacing: -0.2px; }
+.ent-txt p { margin: 6px 0 0; font-size: 14px; line-height: 20px; color: var(--text-2); max-width: 440px; }
+.perm { width: min(380px, 100%); display: grid; gap: 8px; }
+.perm-row { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; background: var(--card); box-shadow: inset 0 0 0 1px var(--border); font-size: 13px; color: var(--text); }
+.perm-row code { font-family: var(--mono); font-size: 12px; }
+.perm-row small { display: block; font-size: 11.5px; color: var(--muted); }
+.sw { width: 34px; height: 20px; border-radius: 10px; background: var(--surface-2); position: relative; transition: background-color 300ms; }
+.sw::after { content: ""; position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 50%; background: var(--muted); transition: transform 300ms var(--ease), background-color 300ms; }
+.sw.on { background: var(--success); }
+.sw.on::after { transform: translateX(14px); background: #000; }
+.sw.ask { background: #FF774E55; }
+.sw.ask::after { transform: translateX(7px); background: var(--coral); }
+.fb { width: min(400px, 100%); display: grid; gap: 0; }
+.fb-step { display: grid; grid-template-columns: 22px 1fr auto; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 10px; background: var(--card); box-shadow: inset 0 0 0 1px var(--border); font-size: 13px; }
+.fb-step code { font-family: var(--mono); font-size: 12px; }
+.fb-step .ic { width: 22px; height: 22px; border-radius: 6px; display: grid; place-items: center; font-size: 12px; }
+.fb-link { height: 18px; width: 1px; margin-left: 22px; background: var(--border-strong); }
+.fb-step.fail { box-shadow: inset 0 0 0 1px #FF656866; }
+.fb-step.agent { box-shadow: inset 0 0 0 1px #8D58F766; }
+.cap { display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 16px; }
+.cap > div { padding: 24px 24px 8px 0; border-top: 1px solid var(--border); }
+.cap > div + div { padding-left: 24px; border-left: 1px solid var(--border); }
+.cap h3 { font-size: 18px; line-height: 24px; letter-spacing: -0.2px; font-weight: 500; }
+.cap p { margin: 6px 0 16px; font-size: 14px; line-height: 20px; color: var(--text-2); }
+.cap .mini { font-family: var(--mono); font-size: 11.5px; line-height: 18px; color: var(--muted); border-radius: 10px; padding: 10px 12px; background: var(--raised); box-shadow: inset 0 0 0 1px var(--border); white-space: pre; overflow: hidden; text-overflow: ellipsis; }
+.cap .mini b { color: var(--text); font-weight: 400; }
+.cap .mini .g { color: var(--success); }
+.cap .mini .o { color: var(--coral); }
+
+/* Integrations */
+.int-head { display: flex; justify-content: space-between; align-items: end; gap: 24px; flex-wrap: wrap; }
+.int-head .l { font-size: 14px; color: var(--muted); }
+.int-head .l b { color: var(--text); font-weight: 500; }
+.job { font-size: 14px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+.job b { color: var(--text); font-weight: 500; min-width: 0; transition: opacity 300ms; }
+.logos { margin-top: 20px; display: grid; grid-template-columns: repeat(8, 1fr); border-top: 1px solid var(--border); border-left: 1px solid var(--border); }
+.logo-cell { height: 96px; display: grid; place-items: center; border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); position: relative; }
+.logo-cell svg { width: 30px; height: 30px; fill: var(--text); opacity: 0.22; transition: opacity 600ms var(--ease-fade), transform 600ms var(--ease-fade); }
+.logo-cell .nm { position: absolute; bottom: 10px; font-size: 11px; color: var(--muted); opacity: 0; transition: opacity 400ms; }
+.logo-cell.lit svg { opacity: 1; transform: scale(1.06); }
+.logo-cell.lit .nm { opacity: 1; }
+.logo-cell:hover svg { opacity: 0.8; }
+.logo-cell:hover .nm { opacity: 1; }
+
+/* Who */
+.who { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.who-card { border-radius: 16px; background: var(--raised); box-shadow: inset 0 0 0 1px var(--border); padding: 24px; display: flex; flex-direction: column; transition: box-shadow 300ms; }
+.who-card:hover { box-shadow: inset 0 0 0 1px var(--border-strong); }
+.who-card .ix { font-family: var(--mono); font-size: 12px; color: var(--tert); }
+.who-card h3 { margin-top: 40px; font-size: 24px; line-height: 32px; letter-spacing: -0.3px; }
+.who-card p { margin: 10px 0 0; font-size: 15px; line-height: 22px; color: var(--text-2); }
+.who-card ul { list-style: none; margin: 24px 0 0; padding: 16px 0 0; border-top: 1px solid var(--border); display: grid; gap: 8px; }
+.who-card li { display: flex; gap: 10px; font-size: 14px; line-height: 20px; color: var(--text); }
+.who-card li::before { content: ""; flex: none; width: 6px; height: 6px; margin-top: 7px; border-radius: 2px; background: var(--tert); }
+
+/* CTA */
+.cta { padding: 120px 0 128px; text-align: center; }
+.cta .lead { margin: 16px auto 0; max-width: 480px; color: color-mix(in srgb, var(--text) 60%, transparent); }
+.signup { margin: 32px auto 0; display: flex; gap: 8px; max-width: 460px; }
+.signup input {
+  flex: 1; min-width: 0; height: 40px; padding: 0 14px; border-radius: 8px; border: 0; background: var(--raised);
+  box-shadow: inset 0 0 0 1px var(--border-strong); color: var(--text); font-size: 15px; transition: box-shadow 200ms;
+}
+.signup input::placeholder { color: var(--muted); }
+.signup input:focus { outline: none; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--text) 35%, transparent); }
+.signup-note { margin-top: 12px; font-size: 13px; color: var(--muted); min-height: 20px; }
+.signup-note.err { color: var(--red); }
+.cta .alt { margin-top: 20px; }
+
+/* Footer */
+.site-footer { padding: 64px 0 32px; border-top: 1px solid var(--border); }
+.foot { display: grid; grid-template-columns: 1.4fr repeat(3, 1fr); gap: 32px; }
+.foot h4 { font-size: 14px; font-weight: 400; color: var(--text-strong); margin-bottom: 8px; }
+.foot a:not(.brand) { display: block; font-size: 14px; line-height: 32px; color: var(--muted); transition: color 300ms ease-out; }
+.foot a:hover { color: var(--text); }
+.foot .about { font-size: 14px; color: var(--muted); max-width: 300px; margin-top: 16px; line-height: 22px; }
+.status { margin-top: 20px; display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.status i { width: 8px; height: 8px; background: var(--tert); transition: background-color 300ms; }
+.status.up i { background: var(--success); }
+.foot-bottom .legal { display: flex; gap: 20px; }
+.foot-bottom .legal a { display: inline; line-height: 20px; }
+.foot-bottom { margin-top: 56px; display: flex; justify-content: space-between; gap: 16px; font-size: 13px; color: var(--muted); flex-wrap: wrap; }
+
+/* Responsive */
+@media (max-width: 1080px) {
+  .nav a { padding: 0 8px; }
+}
+@media (max-width: 900px) {
+  .nav, .login { display: none; }
+  .menu-btn { display: inline-grid; }
+  .mobile-nav { display: block; position: fixed; inset: 56px 0 auto; z-index: 998; background: var(--bg); border-bottom: 1px solid var(--border); padding: 8px 24px 20px; transform: translateY(-8px); opacity: 0; pointer-events: none; transition: opacity 200ms var(--ease), transform 200ms var(--ease); }
+  .mobile-nav.open { opacity: 1; transform: none; pointer-events: auto; }
+  .mobile-nav a { display: block; padding: 12px 0; font-size: 16px; color: var(--text); border-bottom: 1px solid var(--border); }
+  .mobile-nav a:last-child { border-bottom: 0; }
+  .bento, .how, .files .body, .ent { grid-template-columns: 1fr; }
+  .ent > div + div { border-left: 0; border-top: 1px solid var(--border); }
+  .diff-col { border-left: 0; border-top: 1px solid var(--f-line); }
+  .md { min-height: 0; }
+  .how { gap: 24px; }
+  .how-visual { position: static; order: -1; }
+  .stage-step { min-height: 0; padding: 20px 0; display: none; opacity: 1; border-top: 0; }
+  .stage-step.active { display: block; }
+  .sw-grid, .who { grid-template-columns: 1fr; }
+  .cap, .file-points { grid-template-columns: 1fr; }
+  .cap > div + div, .file-points div + div { padding-left: 0; border-left: 0; }
+  .cap > div, .file-points div { padding-right: 0; }
+  .foot { grid-template-columns: 1fr 1fr; }
+  .foot > div:first-child { grid-column: 1 / -1; }
+}
+@media (max-width: 767px) {
+  .h1 { font-size: 40px; line-height: 45px; letter-spacing: -2.1px; }
+  .h2 { font-size: 36px; line-height: 40px; letter-spacing: -0.81px; }
+  .h3 { font-size: 28px; line-height: 36px; letter-spacing: -0.63px; }
+  .h4 { font-size: 22px; line-height: 32px; letter-spacing: -0.275px; }
+  .lead { font-size: 17px; line-height: 24px; letter-spacing: -0.21px; }
+  body { font-size: 15px; letter-spacing: -0.19px; }
+  :root { --gw: calc(100% - 24px); --gp: 16px; }
+  .hide-sm { display: none; }
+  .hero { padding: 88px 0 80px; }
+  .section { padding: 80px 0; }
+  .sec-body { margin-top: 40px; }
+  .stack-card { height: 380px; }
+  .stack-grid { grid-template-columns: repeat(auto-fill, minmax(44px, 1fr)); grid-auto-rows: 44px; gap: 10px; -webkit-mask-image: radial-gradient(ellipse 72% 36% at 50% 50%, transparent 62%, #000 100%); mask-image: radial-gradient(ellipse 72% 36% at 50% 50%, transparent 62%, #000 100%); }
+  .stack-over .label { font-size: 13px; }
+  .stack-over .under { font-size: 14px; }
+  .app { border-radius: 11px; }
+  .app svg { width: 19px; height: 19px; }
+  .stack-over .big { font-size: 80px; line-height: 80px; letter-spacing: -4px; }
+  .stack-chips span:nth-child(3) { display: none; }
+  .kb { grid-template-columns: 1fr; }
+  .statement { min-height: 80vh; }
+  .metrics { grid-template-columns: repeat(2, 1fr); }
+  .metric:nth-child(2) { border-right: 0; }
+  .metric:nth-child(-n+2) { border-bottom: 1px solid var(--f-line); }
+  .trow { grid-template-columns: 54px minmax(0, 1fr) 44px; }
+  .trow .r { display: none; }
+  .logos { grid-template-columns: repeat(4, 1fr); }
+  .logo-cell { height: 80px; }
+  .signup { flex-direction: column; }
+  .signup .btn { height: 40px; }
+  .announce a { font-size: 14px; }
+  .frame-bar .hide-sm { display: none; }
+  .ent-ill { height: auto; min-height: 260px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .statement { --q: 1; }
+  html { scroll-behavior: auto; }
+  .reveal { opacity: 1; transform: none; transition: none; }
+  .app, .app b { opacity: 1; transform: none; transition: none; }
+  .kc .stall i { transition: none; }
+  .again .loop.spin svg { animation: none; }
+  .trow { animation: none; }
+}
+</style>
+<link rel="stylesheet" href="redesign.css">
+</head>
+<body>
+<div class="guides" aria-hidden="true"></div>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="mark" viewBox="0 0 28 28">
+      <g stroke="var(--bg)" stroke-width="1.1" stroke-linejoin="round">
+        <polygon class="mark-a" points="14,14 14,1 23.19,4.81"/>
+        <polygon class="mark-b" points="14,14 23.19,4.81 27,14"/>
+        <polygon class="mark-b" points="14,14 27,14 23.19,23.19"/>
+        <polygon class="mark-b" points="14,14 23.19,23.19 14,27"/>
+        <polygon class="mark-b" points="14,14 14,27 4.81,23.19"/>
+        <polygon class="mark-b" points="14,14 4.81,23.19 1,14"/>
+        <polygon class="mark-b" points="14,14 1,14 4.81,4.81"/>
+        <polygon class="mark-b" points="14,14 4.81,4.81 14,1"/>
+      </g>
+    </symbol>
+    <symbol id="i-arrow" viewBox="0 0 16 16"><path d="M3 8h9M8.5 4.5 12 8l-3.5 3.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-bolt" viewBox="0 0 16 16"><path d="M9 1.5 3.5 9h4L7 14.5 12.5 7h-4L9 1.5Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 16 16"><path d="M8 1.5v3M8 11.5v3M1.5 8h3M11.5 8h3M3.4 3.4l2.1 2.1M10.5 10.5l2.1 2.1M3.4 12.6l2.1-2.1M10.5 5.5l2.1-2.1" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M8 4.5V8l2.5 1.5" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></symbol>
+    <symbol id="i-down" viewBox="0 0 16 16"><path d="M8 2.5v8M4.5 7 8 10.5 11.5 7M3 13.5h10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-link" viewBox="0 0 16 16"><path d="M6.5 9.5l3-3M7 4.5l1-1a2.8 2.8 0 0 1 4 4l-1 1M9 11.5l-1 1a2.8 2.8 0 0 1-4-4l1-1" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 16 16"><rect x="2" y="2" width="5" height="5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="2" width="5" height="5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.3"/><rect x="2" y="9" width="5" height="5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.3"/><rect x="9" y="9" width="5" height="5" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.3"/></symbol>
+    <symbol id="i-flow" viewBox="0 0 16 16"><circle cx="4" cy="4" r="2" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="12" cy="12" r="2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M4 6v2a2 2 0 0 0 2 2h4" fill="none" stroke="currentColor" stroke-width="1.3"/></symbol>
+    <symbol id="i-file" viewBox="0 0 16 16"><path d="M4 1.8h5L12.5 5v9.2H4z M9 1.8V5h3.5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></symbol>
+    <symbol id="i-key" viewBox="0 0 16 16"><circle cx="5.5" cy="10.5" r="3" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M7.7 8.3 13.5 2.5M11.5 4.5l1.5 1.5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></symbol>
+  </defs>
+</svg>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="#top" aria-label="OrbytLink home"><svg><use href="#mark"/></svg>OrbytLink</a>
+    <nav class="nav" aria-label="Main">
+      <a href="#how">How it works</a>
+      <a href="#software">Your software</a>
+      <a href="#files">Skills &amp; workflows</a>
+      <a href="#trust">Trust</a>
+      <a href="#who">Who it's for</a>
+    </nav>
+    <div class="head-actions">
+      <button class="icon-btn" id="theme" type="button" aria-label="Switch colour theme">
+        <svg class="theme-moon" viewBox="0 0 16 16"><path d="M13.5 9.8A5.8 5.8 0 0 1 6.2 2.5a5.8 5.8 0 1 0 7.3 7.3Z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+        <svg class="theme-sun" viewBox="0 0 16 16"><circle cx="8" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M8 1v1.5M8 13.5V15M1 8h1.5M13.5 8H15M3 3l1 1M12 12l1 1M3 13l1-1M12 4l1-1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+      </button>
+      <a class="login" href="https://app.orbytlink.com/">Log in</a>
+      <a class="btn btn-primary" href="#access">Get started</a>
+      <button class="icon-btn menu-btn" id="menu" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-nav">
+        <svg viewBox="0 0 16 16"><path d="M2.5 5h11M2.5 11h11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+<nav class="mobile-nav" id="mobile-nav" aria-label="Mobile">
+  <a href="#how">How it works</a>
+  <a href="#software">Your software</a>
+  <a href="#files">Skills &amp; workflows</a>
+  <a href="#trust">Trust</a>
+  <a href="#who">Who it's for</a>
+  <a href="https://app.orbytlink.com/">Log in</a>
+</nav>
+
+
+<main id="top">
+  <section class="hero">
+    <div class="wrap">
+      <h1 class="heading-1">Do the work.<br><span>Keep what works.</span></h1>
+      <div class="hero-bottom">
+        <p class="lead">One connection for your agent.<br>All the tools your work needs.<br>And a way to keep what it learns.</p>
+        <div class="hero-action"><a class="btn btn-primary btn-lg" href="#access">Get started <svg width="20" height="20"><use href="#i-arrow"/></svg></a><p class="caption-2">Bring your agent. Connect your apps.</p></div>
+      </div>
+      <div class="work-surface" aria-label="Illustrative workflow example">
+        <div class="work-heading"><span class="title-3">A Monday task, with a better next Monday.</span><span class="caption-2">Interactive example</span></div>
+        <div class="work-demo">
+          <div class="work-request"><span class="caption-2">YOU ASK</span><p class="heading-5">“Reconcile last month’s payouts. Flag anything that doesn’t match.”</p><div class="app-names"><span>Stripe</span><span>HubSpot</span><span>Sheets</span></div></div>
+          <div class="work-route"><div class="route-step"><span class="route-dot"></span><span>Connect the right tools</span></div><div class="route-step"><span class="route-dot"></span><span>Let your agent do the work</span></div><div class="route-step"><span class="route-dot"></span><span>Keep the repeatable steps</span></div></div>
+          <div class="work-result"><span class="caption-2" id="demo-label">THE FIRST TIME</span><p class="heading-5" id="demo-title">A job done.<br>A process discovered.</p><p class="body-6" id="demo-desc">Your agent uses the connected tools to find the steps that work.</p><button class="demo-toggle button-sm" id="demo-toggle" type="button" aria-pressed="false">See what you keep <svg width="16" height="16"><use href="#i-arrow"/></svg></button></div>
+        </div>
+        <div class="work-foot"><span>OrbytLink connects the work.</span><span>You stay in control.</span></div>
+      </div>
+      <div class="hero-caption"><span>Works with Claude, Cursor, Codex and other MCP clients.</span><a href="#how">Explore how it works <svg width="16" height="16"><use href="#i-arrow"/></svg></a></div>
+    </div>
+  </section>
+
+  <!-- 2. Problem -->
+  <section class="section rule" id="problem">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        
+        <h2 class="h2">Your tools are connected.
+Your work should be, too.</h2>
+        <p class="lead">Teams buy a new tool each time something hurts, then spend months scoping automations that never ship. The work still gets done by hand in between.</p>
+      </div>
+      <div class="sec-body bento">
+        <div class="panel stack-card" id="stack">
+          <div class="stack-grid" id="stack-grid" aria-hidden="true"></div>
+          <div class="stack-over">
+            <div class="label">Apps in use at the average company*</div>
+            <div class="big" id="app-count" aria-label="305">305</div>
+            <div class="under">Each one fixed a single small problem.</div>
+            <div class="stack-chips"><span>305 logins</span><span>305 renewals</span><span>305 places your data lives</span></div>
+          </div>
+        </div>
+        <div class="panel reveal">
+          <div class="panel-title"><span>The automation backlog</span><span class="label">Month 7</span></div>
+          <div class="kb" aria-label="Backlog: 11 planned, 1 in progress, 0 shipped">
+            <div class="kcol">
+              <div class="kh">Planned <span>11</span></div>
+              <div class="kc">Auto-approve small refunds<small>Waiting on scoping</small></div>
+              <div class="kc">Sync invoices to the CRM<small>Waiting on vendor review</small></div>
+              <div class="kc">Weekly revenue email<small>Needs a spec</small></div>
+              <div class="kc more">+ 8 more</div>
+            </div>
+            <div class="kcol">
+              <div class="kh">In progress <span>1</span></div>
+              <div class="kc stuck">Month-end reconciliation<small>Process mapping · week 26</small><div class="stall"><i></i></div></div>
+            </div>
+            <div class="kcol">
+              <div class="kh">Shipped <span>0</span></div>
+              <div class="kc ghost">Nothing yet</div>
+            </div>
+          </div>
+          <div class="k-foot"><span>Work automated so far</span><b>0 tasks</b></div>
+        </div>
+        <div class="panel reveal" data-delay="1" id="chores">
+          <div class="panel-title"><span>Meanwhile, by hand</span><span class="label">Every Monday</span></div>
+          <div class="chores">
+            <div class="chore"><span class="ic"><svg viewBox="0 0 24 24"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M4 19h16"/></svg></span>Export payouts as CSV<span class="t">09:05</span></div>
+            <div class="chore"><span class="ic"><svg viewBox="0 0 24 24"><path d="M8 4h9l3 3v13H8zM4 8v12h11"/></svg></span>Paste into the close sheet<span class="t">09:20</span></div>
+            <div class="chore"><span class="ic"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m20 20-4.5-4.5"/></svg></span>Look up 142 invoices, one by one<span class="t">10:40</span></div>
+            <div class="chore"><span class="ic"><svg viewBox="0 0 24 24"><path d="M3 6h18v12H3zM3 7l9 6 9-6"/></svg></span>Email finance the mismatches<span class="t">11:55</span></div>
+          </div>
+          <div class="again"><span class="loop" id="loop"><svg viewBox="0 0 16 16"><path d="M13 8a5 5 0 1 1-1.5-3.5M13 2.5V5h-2.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>Again next Monday</span><b>≈ 3 hours a week</b></div>
+        </div>
+      </div>
+      <p class="source reveal">*Average across companies in the <a href="https://zylo.com/reports/2026-saas-management-index/" target="_blank" rel="noopener">Zylo 2026 SaaS Management Index</a>. Backlog and task times are illustrative.</p>
+    </div>
+  </section>
+
+  <section class="statement rule" id="statement">
+    <canvas id="net" aria-hidden="true" hidden></canvas>
+    <div class="copy"><div class="center-mark" hidden><svg><use href="#mark"/></svg></div>
+      <h2 class="heading-1 tagline">Do the work once.<br>Build on it every time.</h2>
+      <p class="lead">The first run solves a problem. The next one starts with what you already know.</p>
+    </div>
+  </section>
+
+  <!-- 3. How it works -->
+  <section class="section rule" id="how">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        
+        <h2 class="h2">It gets faster and cheaper every run.</h2>
+        <p class="lead">One job, three moments in its life. Your agent explores once. OrbytLink keeps what worked.</p>
+      </div>
+      <div class="sec-body how">
+        <div class="stages" id="stages">
+          <article class="stage-step active" data-stage="0">
+            <div class="k"><span class="run">RUN 1</span></div>
+            <h3 class="h3">Work first. No planning.</h3>
+            <p>Ask your agent for the outcome. It reaches every app you've connected through one OrbytLink endpoint, works out the steps, and every call is logged.</p>
+          </article>
+          <article class="stage-step" data-stage="1">
+            <div class="k"><span class="run">RUN 5</span></div>
+            <h3 class="h3">A toolset built for the job.</h3>
+            <p>OrbytLink has seen which tools this job really uses. Your agent now gets a tailored MCP server with only those, so it stops searching and starts doing.</p>
+            <p class="fact">Tool definitions are expensive: Anthropic measured 58 tools taking about 55K tokens before a conversation even starts. <a href="https://www.anthropic.com/engineering/advanced-tool-use" target="_blank" rel="noopener">Source</a></p>
+          </article>
+          <article class="stage-step" data-stage="2">
+            <div class="k"><span class="run">RUN 20</span></div>
+            <h3 class="h3">Routine steps become a workflow.</h3>
+            <p>The predictable steps run as a deterministic workflow in seconds and cents. Your agent is called only for the step that needs judgment, and nothing runs on its own until you approve it.</p>
+          </article>
+        </div>
+        <div class="how-visual motion-demo">
+          <div class="motion-tabs" role="tablist" aria-label="Workflow stages">
+            <button class="motion-tab" role="tab" aria-selected="true" data-time="0">Run 1</button>
+            <button class="motion-tab" role="tab" aria-selected="false" data-time="5.5">Run 5</button>
+            <button class="motion-tab" role="tab" aria-selected="false" data-time="10.8">Run 20</button>
+          </div>
+          <hyperframes-player id="workflow-player" src="motion/workflow.html" width="640" height="600" muted disable-click-to-play aria-label="Animated example: tools are discovered, focused, and saved as a reusable workflow"></hyperframes-player>
+          <div class="motion-controls"><span id="motion-status" role="status">Explore. Focus. Reuse.</span><div><button id="motion-toggle" type="button">Play</button><button id="motion-replay" type="button">Replay</button></div></div>
+          <p id="motion-error" hidden>The animation could not load. The three stages are explained alongside it.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. From work to software -->
+  <section class="section rule" id="software">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        
+        <h2 class="h2">From a finished task
+to a tool you keep.</h2>
+        <p class="lead">Compiled workflows grow into small internal tools, shaped by how your team really works. They replace the generic apps you bought for one feature.</p>
+      </div>
+      <div class="sec-body tool-examples">
+        <article class="tool-example">
+          <div class="tool-copy"><h3>Approval flows</h3><p>Let routine requests through. Bring the exceptions to a person.</p></div>
+          <figure class="tool-preview approval-preview" aria-label="Example refund approval awaiting a person">
+            <div class="preview-heading"><span>Refund request</span><span>#4471</span></div>
+            <div class="refund-amount">$820<span>.00</span></div>
+            <p class="request-reason">Damaged in transit<br><span>Order delivered 12 days ago</span></p>
+            <dl class="approval-facts"><div><dt>Policy limit</dt><dd>$500.00</dd></div><div><dt>Decision</dt><dd>Needs your review</dd></div></dl>
+            <div class="approval-note"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 8v5m0 3h.01"/><circle cx="12" cy="12" r="9"/></svg><span>The amount exceeds your policy.<br>A person makes the final call.</span></div>
+          </figure>
+          <p class="tool-file"><svg width="16" height="16" aria-hidden="true"><use href="#i-file"/></svg><code>refund-approval.md</code></p>
+        </article>
+        <article class="tool-example">
+          <div class="tool-copy"><h3>Trackers</h3><p>Know what’s done, what’s missing, and who needs a nudge.</p></div>
+          <figure class="tool-preview tracker-preview" aria-label="Example vendor onboarding checklist">
+            <div class="preview-heading"><span>Vendor onboarding</span><span>3 of 5</span></div>
+            <p class="preview-title">Lumen Packaging</p>
+            <ol class="vendor-checklist">
+              <li class="complete"><span class="check-mark" aria-hidden="true"></span><span>Company details</span><span>Received</span></li>
+              <li class="complete"><span class="check-mark" aria-hidden="true"></span><span>Service agreement</span><span>Signed</span></li>
+              <li class="complete"><span class="check-mark" aria-hidden="true"></span><span>Bank details</span><span>Verified</span></li>
+              <li class="current"><span class="check-mark" aria-hidden="true"></span><span>Tax form</span><span>Waiting</span></li>
+              <li><span class="check-mark" aria-hidden="true"></span><span>Final review</span><span>Next</span></li>
+            </ol>
+            <p class="tracker-next">Your agent follows up on the missing tax form.</p>
+          </figure>
+          <p class="tool-file"><svg width="16" height="16" aria-hidden="true"><use href="#i-file"/></svg><code>vendor-onboarding.md</code></p>
+        </article>
+        <article class="tool-example">
+          <div class="tool-copy"><h3>Reports</h3><p>The numbers, the context, and the next step. Ready before standup.</p></div>
+          <figure class="tool-preview report-preview" aria-label="Example weekly revenue report">
+            <div class="preview-heading"><span>Weekly revenue</span><span>Mon, 08:00</span></div>
+            <p class="preview-title">Your week, in view.</p>
+            <dl class="report-figures"><div><dt>Net revenue</dt><dd>$184.2K</dd><span>Up 6.1% this week</span></div><div><dt>Refund rate</dt><dd>1.8%</dd><span>Down 0.3 points</span></div></dl>
+            <div class="report-summary"><p>What changed</p><p>Revenue is up and the refund rate is down compared with last week.</p></div>
+            <div class="report-delivery"><span>From your connected sources</span><svg width="20" height="20" aria-hidden="true"><use href="#i-arrow"/></svg></div>
+          </figure>
+          <p class="tool-file"><svg width="16" height="16" aria-hidden="true"><use href="#i-file"/></svg><code>weekly-revenue.md</code></p>
+        </article>
+      </div>
+      <div class="evolve reveal"><span>Agent run</span><svg><use href="#i-arrow"/></svg><span>Workflow</span><svg><use href="#i-arrow"/></svg><span>Internal tool</span><span style="box-shadow:none;padding:0;color:var(--muted)">· every stage is yours to read, edit and export.</span></div>
+    </div>
+  </section>
+
+  <!-- 5. Skills and workflows as files -->
+  <section class="section rule" id="files">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        
+        <h2 class="h2">Your process.
+In plain sight.</h2>
+        <p class="lead">Read it, diff it, share it, download it. No black box and no proprietary format.</p>
+      </div>
+      <div class="sec-body reveal">
+        <div class="frame files">
+          <div class="body">
+            <div style="min-width:0">
+              <div class="file-tabs" role="tablist" aria-label="Files">
+                <button class="ftab" role="tab" aria-selected="true" data-file="wf">workflows/monthly-reconciliation.md</button>
+                <button class="ftab" role="tab" aria-selected="false" data-file="sk">skills/refund-policy.md</button>
+              </div>
+<pre class="md" id="file-wf"><span class="c">---</span>
+<span class="k">name:</span> <span class="s">monthly-reconciliation</span>
+<span class="k">trigger:</span> <span class="s">schedule, 1st of month 09:00</span>
+<span class="k">version:</span> <span class="t">4</span>
+<span class="k">permissions:</span>
+  - <span class="s">stripe: read</span>
+  - <span class="s">hubspot: read</span>
+  - <span class="s">sheets: write</span>
+<span class="k">approval:</span> <span class="s">finance-lead</span>
+<span class="c">---</span>
+
+<span class="h"># Monthly reconciliation</span>
+
+1. <span class="b">stripe.list_payouts</span> for last month
+2. <span class="b">hubspot.search_invoices</span> for each payout
+3. Match by amount and date, tolerance <span class="t">1%</span>
+4. <span class="ag">agent:</span> review mismatches and explain each one
+   using <span class="b">[[refund-policy]]</span>
+5. <span class="b">sheets.append_rows</span> to "Close / {{month}}"
+
+<span class="q">&gt; Compiled from 20 runs. If a step fails, the agent
+&gt; takes over and proposes an update.</span></pre>
+<pre class="md" id="file-sk" hidden><span class="c">---</span>
+<span class="k">name:</span> <span class="s">refund-policy</span>
+<span class="k">description:</span> <span class="s">How we decide refunds and who signs off</span>
+<span class="c">---</span>
+
+<span class="h"># Refund policy</span>
+
+- Under <span class="t">$500</span>: approve if the order shipped
+  less than <span class="t">30</span> days ago.
+- Over <span class="t">$500</span>: ask <span class="b">finance-lead</span> before refunding.
+- Duplicate charges: refund at once, then tell
+  the customer which charge was kept.
+- Always log the reason on the ticket.
+
+<span class="q">&gt; Written by the ops team. Used by 3 workflows.</span></pre>
+            </div>
+            <div class="diff-col">
+              <div class="diff-head"><span>Changes</span><span class="ver"><span class="tag dim">v3</span><svg width="12" height="12"><use href="#i-arrow"/></svg><span class="tag ok">v4</span></span></div>
+              <div class="diff" aria-label="Diff from version 3 to version 4">
+                <div class="dl hunk"><span class="ln"></span><span class="sg"></span><span>@@ permissions</span></div>
+                <div class="dl"><span class="ln">7</span><span class="sg"> </span><span>  - hubspot: read</span></div>
+                <div class="dl del"><span class="ln">8</span><span class="sg">-</span><span>  - sheets: read</span></div>
+                <div class="dl add"><span class="ln">8</span><span class="sg">+</span><span>  - sheets: write</span></div>
+                <div class="dl add"><span class="ln">9</span><span class="sg">+</span><span>approval: finance-lead</span></div>
+                <div class="dl hunk"><span class="ln"></span><span class="sg"></span><span>@@ steps</span></div>
+                <div class="dl del"><span class="ln">16</span><span class="sg">-</span><span>3. Match by amount, tolerance 0.5%</span></div>
+                <div class="dl add"><span class="ln">16</span><span class="sg">+</span><span>3. Match by amount and date, tolerance 1%</span></div>
+                <div class="dl"><span class="ln">17</span><span class="sg"> </span><span>4. agent: review mismatches</span></div>
+              </div>
+              <div class="diff-meta">
+                <div class="r"><span>Proposed by</span><span style="color:var(--f-text)">Agent, after run 19</span></div>
+                <div class="r"><span>Approved by</span><span style="color:var(--f-text)">finance-lead</span></div>
+              </div>
+              <div class="diff-actions">
+                <button class="fbtn" type="button" id="dl-md"><svg><use href="#i-down"/></svg>Download .md</button>
+                <button class="fbtn sec" type="button" data-copy="https://orbytlink.com/#files"><svg><use href="#i-link"/></svg>Copy share link</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="file-points">
+          <div><h3>Readable</h3><p>Plain Markdown with front matter. Anyone on the team can see exactly what will run.</p></div>
+          <div><h3>Shareable</h3><p>Hand a workflow to a colleague or a client as one file. Skills follow the open Agent Skills format.</p></div>
+          <div><h3>Versioned</h3><p>Every change is a diff someone approved, so you can always see what changed and roll it back.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. Trust and control -->
+  <section class="section rule" id="trust">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        
+        <h2 class="h2">Give it tools.
+Keep the controls.</h2>
+        <p class="lead">Choose the tools your agent can use. Keep credentials on the server and a record of every call.</p>
+      </div>
+      <div class="sec-body trust-layout">
+        <article class="permission-sheet">
+          <div class="trust-intro"><h3>Decide what gets through.</h3><p>Choose the tools available to your agent. Credentials stay encrypted on the server.</p></div>
+          <div class="permission-register" role="table" aria-label="Example tool permissions">
+            <div class="permission-line register-head" role="row"><span role="columnheader">Tool</span><span role="columnheader">Access</span></div>
+            <div class="permission-line" role="row"><div role="cell"><strong>Read payouts</strong><code>stripe.list_payouts</code></div><span class="access-state allowed" role="cell">Allowed</span></div>
+            <div class="permission-line" role="row"><div role="cell"><strong>Create a refund</strong><code>stripe.create_refund</code></div><span class="access-state review" role="cell">Needs approval</span></div>
+            <div class="permission-line" role="row"><div role="cell"><strong>Delete a contact</strong><code>hubspot.delete_contact</code></div><span class="access-state blocked" role="cell">Blocked</span></div>
+            <div class="permission-line" role="row"><div role="cell"><strong>Update the close sheet</strong><code>sheets.append_rows</code></div><span class="access-state" role="cell">This workflow</span></div>
+          </div>
+          <p class="register-foot">Your agent uses the tools. It never sees the credentials.</p>
+        </article>
+        <article class="recovery-note">
+          <h3>When something breaks,<br>you keep the final say.</h3>
+          <p class="recovery-context">An app changes a field. The workflow needs an update.</p>
+          <ol class="recovery-steps"><li><strong>The step stops</strong><span>The invoice lookup finds a renamed field.</span></li><li><strong>The agent picks it up</strong><span>It finishes the job and proposes a fix.</span></li><li><strong>You review the change</strong><span>The proposed update waits for your approval.</span></li></ol>
+          <p class="recovery-availability">Automatic fallback · Early access</p>
+        </article>
+      </div>
+      <div class="sec-body">
+        <div class="cap reveal">
+          <div>
+            <h3>Approval steps</h3>
+            <p>Any step can wait for a person. New workflows stay off until someone enables them.</p>
+<div class="mini"><span class="o">●</span> <b>stripe.create_refund</b> $820
+  waiting for finance-lead</div>
+          </div>
+          <div>
+            <h3>Audit log</h3>
+            <p>See which tool ran, when it ran and whether it succeeded. Tool arguments and responses are not stored in the audit log.</p>
+<div class="mini">09:00:01 <b>stripe.list_payouts</b> <span class="g">ok</span>
+09:00:02 <b>hubspot.search…</b> <span class="g">ok</span></div>
+          </div>
+          <div>
+            <h3>Version history</h3>
+            <p>Every skill and workflow change is a version you can diff, approve or roll back.</p>
+<div class="mini">v4 <b>tolerance 1%</b>      <span class="g">live</span>
+v3 tolerance 0.5%    rollback</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7. Integrations -->
+  <section class="section rule" id="integrations">
+    <div class="wrap">
+      <div class="int-head reveal">
+        <div>
+          <h2 class="h3" style="max-width:620px">Every tool your team uses. Your agent only ever sees the ones it needs.</h2>
+          <p class="l" style="margin-top:12px">Any remote MCP server or HTTPS API, plus <b>39 ready-made presets</b>.</p>
+        </div>
+        <div class="job" aria-live="polite">This job <b id="job-name">Monthly close</b></div>
+      </div>
+      <div class="logos reveal" id="logos"></div>
+    </div>
+  </section>
+
+  <!-- 8. Who it's for -->
+  <section class="section rule" id="who">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        
+        <h2 class="h2">Built for teams that would rather be doing the work.</h2>
+      </div>
+      <div class="sec-body who">
+        <article class="who-card reveal">
+          <span class="ix">A</span>
+          <h3>Automation agencies &amp; AI consultants</h3>
+          <p>Skip the six-week discovery phase. Do the client's real work from day one, then hand over workflows they own as files.</p>
+          <ul><li>Bill for outcomes, not scoping</li><li>One workspace per client</li><li>Deliverables they can read and keep</li></ul>
+        </article>
+        <article class="who-card reveal" data-delay="1">
+          <span class="ix">B</span>
+          <h3>Ops teams</h3>
+          <p>Close, onboarding, reporting, triage. Hand it to your agent today, and next month it runs faster on its own.</p>
+          <ul><li>Approvals where they matter</li><li>A log of every action</li><li>Fewer tools to administer</li></ul>
+        </article>
+        <article class="who-card reveal" data-delay="2">
+          <span class="ix">C</span>
+          <h3>Growing startups</h3>
+          <p>Skip the app-per-problem stack. Grow your own internal tools as the company grows, from the work you already do.</p>
+          <ul><li>No automation backlog</li><li>Costs that fall as work repeats</li><li>Software shaped like your team</li></ul>
+        </article>
+      </div>
+    </div>
+  </section>
+
+<section class="section faq" id="questions"><div class="wrap"><h2 class="h2">A few things to know.</h2><div class="faq-list">
+<details><summary>Do I need to switch agents?</summary><p>No. OrbytLink connects to MCP compatible clients, including Claude, Cursor and Codex. Keep using the agent you prefer.</p></details>
+<details><summary>What can I connect?</summary><p>Connect MCP servers and HTTP APIs. OrbytLink holds the credentials and exposes the enabled tools through one endpoint.</p></details>
+<details><summary>Does my agent get my API keys?</summary><p>No. Credentials are encrypted on the server. OrbytLink attaches them when it calls a connected service.</p></details>
+<details><summary>Can I review a workflow before it runs?</summary><p>New workflow drafts start disabled. An admin reviews the steps and enables the workflow before the team can use it.</p></details>
+<details><summary>Are the example timings measured results?</summary><p>No. The monthly close example illustrates how the process could evolve. Its times and costs are not a product benchmark.</p></details>
+<details><summary>What is available in early access?</summary><p>The page labels capabilities still in early access, including tailored toolsets, automatic fallback and version history. Create a workspace to explore the connected tools available today.</p></details>
+</div></div></section>
+  <!-- 9. Final CTA -->
+  <section class="cta rule" id="access">
+    <div class="wrap">
+      <h2 class="h2 reveal">Do the work once.<br>OrbytLink makes it yours.</h2>
+      <p class="lead reveal" data-delay="1">Connect your agent today and start working. Every run after the first gets faster, cheaper and more your own.</p>
+      <form class="signup reveal" data-delay="2" id="signup" novalidate>
+        <label class="sr-only" for="email">Work email</label>
+        <input id="email" name="email" type="email" autocomplete="email" placeholder="you@company.com" required>
+        <button class="btn btn-primary btn-lg" type="submit">Create your workspace</button>
+      </form>
+      <p class="signup-note reveal" data-delay="2" id="signup-note">You'll create your workspace on app.orbytlink.com.</p>
+      <div class="alt reveal" data-delay="3"><a class="link-arrow" href="#how">See how it works <svg class="arrow" width="14" height="14"><use href="#i-arrow"/></svg></a></div>
+    </div>
+  </section>
+</main>
+
+<!-- 10. Footer -->
+<footer class="site-footer">
+  <div class="wrap">
+    <div class="foot">
+      <div>
+        <a class="brand" href="#top"><svg><use href="#mark"/></svg>OrbytLink</a>
+        <p class="about">The workhub for AI agents. Do the work, and keep what your agent learns.</p>
+        <div class="status" id="status"><i></i><span>Checking gateway status…</span></div>
+      </div>
+      <div><h4>Product</h4><a href="#how">How it works</a><a href="#software">Your software</a><a href="#files">Skills &amp; workflows</a><a href="#trust">Trust &amp; control</a><a href="#integrations">Integrations</a></div>
+      <div><h4>For</h4><a href="#who">Agencies &amp; consultants</a><a href="#who">Ops teams</a><a href="#who">Startups</a></div>
+      <div><h4>Get started</h4><a href="#access">Get started</a><a href="https://app.orbytlink.com/">Log in</a></div>
+    </div>
+    <div class="foot-bottom"><span>© 2026 OrbytLink. All rights reserved.</span><span class="legal"><a href="/privacy.html">Privacy</a><a href="/terms.html">Terms</a><a href="mailto:hello@orbytlink.com">Contact</a></span></div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+  var reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var BRANDS = {"notion":{"n":"Notion","p":"M4.459 4.208c.746.606 1.026.56 2.428.466l13.215-.793c.28 0 .047-.28-.046-.326L17.86 1.968c-.42-.326-.981-.7-2.055-.607L3.01 2.295c-.466.046-.56.28-.374.466zm.793 3.08v13.904c0 .747.373 1.027 1.214.98l14.523-.84c.841-.046.935-.56.935-1.167V6.354c0-.606-.233-.933-.748-.887l-15.177.887c-.56.047-.747.327-.747.933zm14.337.745c.093.42 0 .84-.42.888l-.7.14v10.264c-.608.327-1.168.514-1.635.514-.748 0-.935-.234-1.495-.933l-4.577-7.186v6.952L12.21 19s0 .84-1.168.84l-3.222.186c-.093-.186 0-.653.327-.746l.84-.233V9.854L7.822 9.76c-.094-.42.14-1.026.793-1.073l3.456-.233 4.764 7.279v-6.44l-1.215-.139c-.093-.514.28-.887.747-.933zM1.936 1.035l13.31-.98c1.634-.14 2.055-.047 3.082.7l4.249 2.986c.7.513.934.653.934 1.213v16.378c0 1.026-.373 1.634-1.68 1.726l-15.458.934c-.98.047-1.448-.093-1.962-.747l-3.129-4.06c-.56-.747-.793-1.306-.793-1.96V2.667c0-.839.374-1.54 1.447-1.632z","h":"000000"},"linear":{"n":"Linear","p":"M2.886 4.18A11.982 11.982 0 0 1 11.99 0C18.624 0 24 5.376 24 12.009c0 3.64-1.62 6.903-4.18 9.105L2.887 4.18ZM1.817 5.626l16.556 16.556c-.524.33-1.075.62-1.65.866L.951 7.277c.247-.575.537-1.126.866-1.65ZM.322 9.163l14.515 14.515c-.71.172-1.443.282-2.195.322L0 11.358a12 12 0 0 1 .322-2.195Zm-.17 4.862 9.823 9.824a12.02 12.02 0 0 1-9.824-9.824Z","h":"5E6AD2"},"github":{"n":"GitHub","p":"M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12","h":"181717"},"stripe":{"n":"Stripe","p":"M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.594-7.305h.003z","h":"635BFF"},"api-hubspot":{"n":"HubSpot","p":"M18.164 7.93V5.084a2.198 2.198 0 001.267-1.978v-.067A2.2 2.2 0 0017.238.845h-.067a2.2 2.2 0 00-2.193 2.193v.067a2.196 2.196 0 001.252 1.973l.013.006v2.852a6.22 6.22 0 00-2.969 1.31l.012-.01-7.828-6.095A2.497 2.497 0 104.3 4.656l-.012.006 7.697 5.991a6.176 6.176 0 00-1.038 3.446c0 1.343.425 2.588 1.147 3.607l-.013-.02-2.342 2.343a1.968 1.968 0 00-.58-.095h-.002a2.033 2.033 0 102.033 2.033 1.978 1.978 0 00-.1-.595l.005.014 2.317-2.317a6.247 6.247 0 104.782-11.134l-.036-.005zm-.964 9.378a3.206 3.206 0 113.215-3.207v.002a3.206 3.206 0 01-3.207 3.207z","h":"FF7A59"},"gmail":{"n":"Gmail","p":"M24 5.457v13.909c0 .904-.732 1.636-1.636 1.636h-3.819V11.73L12 16.64l-6.545-4.91v9.273H1.636A1.636 1.636 0 0 1 0 19.366V5.457c0-2.023 2.309-3.178 3.927-1.964L5.455 4.64 12 9.548l6.545-4.91 1.528-1.145C21.69 2.28 24 3.434 24 5.457z","h":"EA4335"},"google-sheets":{"n":"Google Sheets","p":"M11.318 12.545H7.91v-1.909h3.41v1.91zM14.728 0v6h6l-6-6zm1.363 10.636h-3.41v1.91h3.41v-1.91zm0 3.273h-3.41v1.91h3.41v-1.91zM20.727 6.5v15.864c0 .904-.732 1.636-1.636 1.636H4.909a1.636 1.636 0 0 1-1.636-1.636V1.636C3.273.732 4.005 0 4.909 0h9.318v6.5h6.5zm-3.273 2.773H6.545v7.909h10.91v-7.91zm-6.136 4.636H7.91v1.91h3.41v-1.91z","h":"34A853"},"google-drive":{"n":"Google Drive","p":"M12.01 1.485c-2.082 0-3.754.02-3.743.047.01.02 1.708 3.001 3.774 6.62l3.76 6.574h3.76c2.081 0 3.753-.02 3.742-.047-.005-.02-1.708-3.001-3.775-6.62l-3.76-6.574zm-4.76 1.73a789.828 789.861 0 0 0-3.63 6.319L0 15.868l1.89 3.298 1.885 3.297 3.62-6.335 3.618-6.33-1.88-3.287C8.1 4.704 7.255 3.22 7.25 3.214zm2.259 12.653-.203.348c-.114.198-.96 1.672-1.88 3.287a423.93 423.948 0 0 1-1.698 2.97c-.01.026 3.24.042 7.222.042h7.244l1.796-3.157c.992-1.734 1.85-3.23 1.906-3.323l.104-.167h-7.249z","h":"4285F4"},"api-shopify":{"n":"Shopify","p":"M15.337 23.979l7.216-1.561s-2.604-17.613-2.625-17.73c-.018-.116-.114-.192-.211-.192s-1.929-.136-1.929-.136-1.275-1.274-1.439-1.411c-.045-.037-.075-.057-.121-.074l-.914 21.104h.023zM11.71 11.305s-.81-.424-1.774-.424c-1.447 0-1.504.906-1.504 1.141 0 1.232 3.24 1.715 3.24 4.629 0 2.295-1.44 3.76-3.406 3.76-2.354 0-3.54-1.465-3.54-1.465l.646-2.086s1.245 1.066 2.28 1.066c.675 0 .975-.545.975-.932 0-1.619-2.654-1.694-2.654-4.359-.034-2.237 1.571-4.416 4.827-4.416 1.257 0 1.875.361 1.875.361l-.945 2.715-.02.01zM11.17.83c.136 0 .271.038.405.135-.984.465-2.064 1.639-2.508 3.992-.656.213-1.293.405-1.889.578C7.697 3.75 8.951.84 11.17.84V.83zm1.235 2.949v.135c-.754.232-1.583.484-2.394.736.466-1.777 1.333-2.645 2.085-2.971.193.501.309 1.176.309 2.1zm.539-2.234c.694.074 1.141.867 1.429 1.755-.349.114-.735.231-1.158.366v-.252c0-.752-.096-1.371-.271-1.871v.002zm2.992 1.289c-.02 0-.06.021-.078.021s-.289.075-.714.21c-.423-1.233-1.176-2.37-2.508-2.37h-.115C12.135.209 11.669 0 11.265 0 8.159 0 6.675 3.877 6.21 5.846c-1.194.365-2.063.636-2.16.674-.675.213-.694.232-.772.87-.075.462-1.83 14.063-1.83 14.063L15.009 24l.927-21.166z","h":"7AB55C"},"api-zendesk":{"n":"Zendesk","p":"M12.914 2.904V16.29L24 2.905H12.914zM0 2.906C0 5.966 2.483 8.45 5.543 8.45s5.542-2.484 5.543-5.544H0zm11.086 4.807L0 21.096h11.086V7.713zm7.37 7.84c-3.063 0-5.542 2.48-5.542 5.543H24c0-3.06-2.48-5.543-5.543-5.543z","h":"03363D"},"api-intercom":{"n":"Intercom","p":"M21 0H3C1.343 0 0 1.343 0 3v18c0 1.658 1.343 3 3 3h18c1.658 0 3-1.342 3-3V3c0-1.657-1.342-3-3-3zm-5.801 4.399c0-.44.36-.8.802-.8.44 0 .8.36.8.8v10.688c0 .442-.36.801-.8.801-.443 0-.802-.359-.802-.801V4.399zM11.2 3.994c0-.44.357-.799.8-.799s.8.359.8.799v11.602c0 .44-.357.8-.8.8s-.8-.36-.8-.8V3.994zm-4 .405c0-.44.359-.8.799-.8.443 0 .802.36.802.8v10.688c0 .442-.36.801-.802.801-.44 0-.799-.359-.799-.801V4.399zM3.199 6c0-.442.36-.8.802-.8.44 0 .799.358.799.8v7.195c0 .441-.359.8-.799.8-.443 0-.802-.36-.802-.8V6zM20.52 18.202c-.123.105-3.086 2.593-8.52 2.593-5.433 0-8.397-2.486-8.521-2.593-.335-.288-.375-.792-.086-1.128.285-.334.79-.375 1.125-.09.047.041 2.693 2.211 7.481 2.211 4.848 0 7.456-2.186 7.479-2.207.334-.289.839-.25 1.128.086.289.336.25.84-.086 1.128zm.281-5.007c0 .441-.36.8-.801.8-.441 0-.801-.36-.801-.8V6c0-.442.361-.8.801-.8.441 0 .801.357.801.8v7.195z","h":"6AFDEF"},"api-airtable":{"n":"Airtable","p":"M11.992 1.966c-.434 0-.87.086-1.28.257L1.779 5.917c-.503.208-.49.908.012 1.116l8.982 3.558a3.266 3.266 0 0 0 2.454 0l8.982-3.558c.503-.196.503-.908.012-1.116l-8.957-3.694a3.255 3.255 0 0 0-1.272-.257zM23.4 8.056a.589.589 0 0 0-.222.045l-10.012 3.877a.612.612 0 0 0-.38.564v8.896a.6.6 0 0 0 .821.552L23.62 18.1a.583.583 0 0 0 .38-.551V8.653a.6.6 0 0 0-.6-.596zM.676 8.095a.644.644 0 0 0-.48.19C.086 8.396 0 8.53 0 8.69v8.355c0 .442.515.737.908.54l6.27-3.006.307-.147 2.969-1.436c.466-.22.43-.908-.061-1.092L.883 8.138a.57.57 0 0 0-.207-.044z","h":"18BFFF"},"api-asana":{"n":"Asana","p":"M18.78 12.653c-2.882 0-5.22 2.336-5.22 5.22s2.338 5.22 5.22 5.22 5.22-2.34 5.22-5.22-2.336-5.22-5.22-5.22zm-13.56 0c-2.88 0-5.22 2.337-5.22 5.22s2.338 5.22 5.22 5.22 5.22-2.338 5.22-5.22-2.336-5.22-5.22-5.22zm12-6.525c0 2.883-2.337 5.22-5.22 5.22-2.882 0-5.22-2.337-5.22-5.22 0-2.88 2.338-5.22 5.22-5.22 2.883 0 5.22 2.34 5.22 5.22z","h":"F06A6A"},"agent-claude":{"n":"Claude","p":"m4.7144 15.9555 4.7174-2.6471.079-.2307-.079-.1275h-.2307l-.7893-.0486-2.6956-.0729-2.3375-.0971-2.2646-.1214-.5707-.1215-.5343-.7042.0546-.3522.4797-.3218.686.0608 1.5179.1032 2.2767.1578 1.6514.0972 2.4468.255h.3886l.0546-.1579-.1336-.0971-.1032-.0972L6.973 9.8356l-2.55-1.6879-1.3356-.9714-.7225-.4918-.3643-.4614-.1578-1.0078.6557-.7225.8803.0607.2246.0607.8925.686 1.9064 1.4754 2.4893 1.8336.3643.3035.1457-.1032.0182-.0728-.164-.2733-1.3539-2.4467-1.445-2.4893-.6435-1.032-.17-.6194c-.0607-.255-.1032-.4674-.1032-.7285L6.287.1335 6.6997 0l.9957.1336.419.3642.6192 1.4147 1.0018 2.2282 1.5543 3.0296.4553.8985.2429.8318.091.255h.1579v-.1457l.1275-1.706.2368-2.0947.2307-2.6957.0789-.7589.3764-.9107.7468-.4918.5828.2793.4797.686-.0668.4433-.2853 1.8517-.5586 2.9021-.3643 1.9429h.2125l.2429-.2429.9835-1.3053 1.6514-2.0643.7286-.8196.85-.9046.5464-.4311h1.0321l.759 1.1293-.34 1.1657-1.0625 1.3478-.8804 1.1414-1.2628 1.7-.7893 1.36.0729.1093.1882-.0183 2.8535-.607 1.5421-.2794 1.8396-.3157.8318.3886.091.3946-.3278.8075-1.967.4857-2.3072.4614-3.4364.8136-.0425.0304.0486.0607 1.5482.1457.6618.0364h1.621l3.0175.2247.7892.522.4736.6376-.079.4857-1.2142.6193-1.6393-.3886-3.825-.9107-1.3113-.3279h-.1822v.1093l1.0929 1.0686 2.0035 1.8092 2.5075 2.3314.1275.5768-.3218.4554-.34-.0486-2.2039-1.6575-.85-.7468-1.9246-1.621h-.1275v.17l.4432.6496 2.3436 3.5214.1214 1.0807-.17.3521-.6071.2125-.6679-.1214-1.3721-1.9246L14.38 17.959l-1.1414-1.9428-.1397.079-.674 7.2552-.3156.3703-.7286.2793-.6071-.4614-.3218-.7468.3218-1.4753.3886-1.9246.3157-1.53.2853-1.9004.17-.6314-.0121-.0425-.1397.0182-1.4328 1.9672-2.1796 2.9446-1.7243 1.8456-.4128.164-.7164-.3704.0667-.6618.4008-.5889 2.386-3.0357 1.4389-1.882.929-1.0868-.0062-.1579h-.0546l-6.3385 4.1164-1.1293.1457-.4857-.4554.0608-.7467.2307-.2429 1.9064-1.3114Z","h":"D97757"},"agent-cursor":{"n":"Cursor","p":"M11.503.131 1.891 5.678a.84.84 0 0 0-.42.726v11.188c0 .3.162.575.42.724l9.609 5.55a1 1 0 0 0 .998 0l9.61-5.55a.84.84 0 0 0 .42-.724V6.404a.84.84 0 0 0-.42-.726L12.497.131a1.01 1.01 0 0 0-.996 0M2.657 6.338h18.55c.263 0 .43.287.297.515L12.23 22.918c-.062.107-.229.064-.229-.06V12.335a.59.59 0 0 0-.295-.51l-9.11-5.257c-.109-.063-.064-.23.061-.23","h":"000000"},"google-calendar":{"n":"Google Calendar","p":"M18.316 5.684H24v12.632h-5.684V5.684zM5.684 24h12.632v-5.684H5.684V24zM18.316 5.684V0H1.895A1.894 1.894 0 0 0 0 1.895v16.421h5.684V5.684h12.632zm-7.207 6.25v-.065c.272-.144.5-.349.687-.617s.279-.595.279-.982c0-.379-.099-.72-.3-1.025a2.05 2.05 0 0 0-.832-.714 2.703 2.703 0 0 0-1.197-.257c-.6 0-1.094.156-1.481.467-.386.311-.65.671-.793 1.078l1.085.452c.086-.249.224-.461.413-.633.189-.172.445-.257.767-.257.33 0 .602.088.816.264a.86.86 0 0 1 .322.703c0 .33-.12.589-.36.778-.24.19-.535.284-.886.284h-.567v1.085h.633c.407 0 .748.109 1.02.327.272.218.407.499.407.843 0 .336-.129.614-.387.832s-.565.327-.924.327c-.351 0-.651-.103-.897-.311-.248-.208-.422-.502-.521-.881l-1.096.452c.178.616.505 1.082.977 1.401.472.319.984.478 1.538.477a2.84 2.84 0 0 0 1.293-.291c.382-.193.684-.458.902-.794.218-.336.327-.72.327-1.149 0-.429-.115-.797-.344-1.105a2.067 2.067 0 0 0-.881-.689zm2.093-1.931l.602.913L15 10.045v5.744h1.187V8.446h-.827l-2.158 1.557zM22.105 0h-3.289v5.184H24V1.895A1.894 1.894 0 0 0 22.105 0zm-3.289 23.5l4.684-4.684h-4.684V23.5zM0 22.105C0 23.152.848 24 1.895 24h3.289v-5.184H0v3.289z","h":"4285F4"},"api-sentry":{"n":"Sentry","p":"M13.91 2.505c-.873-1.448-2.972-1.448-3.844 0L6.904 7.92a15.478 15.478 0 0 1 8.53 12.811h-2.221A13.301 13.301 0 0 0 5.784 9.814l-2.926 5.06a7.65 7.65 0 0 1 4.435 5.848H2.194a.365.365 0 0 1-.298-.534l1.413-2.402a5.16 5.16 0 0 0-1.614-.913L.296 19.275a2.182 2.182 0 0 0 .812 2.999 2.24 2.24 0 0 0 1.086.288h6.983a9.322 9.322 0 0 0-3.845-8.318l1.11-1.922a11.47 11.47 0 0 1 4.95 10.24h5.915a17.242 17.242 0 0 0-7.885-15.28l2.244-3.845a.37.37 0 0 1 .504-.13c.255.14 9.75 16.708 9.928 16.9a.365.365 0 0 1-.327.543h-2.287c.029.612.029 1.223 0 1.831h2.297a2.206 2.206 0 0 0 1.922-3.31z","h":"362D59"},"api-supabase":{"n":"Supabase","p":"M11.9 1.036c-.015-.986-1.26-1.41-1.874-.637L.764 12.05C-.33 13.427.65 15.455 2.409 15.455h9.579l.113 7.51c.014.985 1.259 1.408 1.873.636l9.262-11.653c1.093-1.375.113-3.403-1.645-3.403h-9.642z","h":"3FCF8E"},"api-vercel":{"n":"Vercel","p":"m12 1.608 12 20.784H0Z","h":"000000"},"api-mailchimp":{"n":"Mailchimp","p":"M11.267 0C6.791-.015-1.82 10.246 1.397 12.964l.79.669a3.88 3.88 0 0 0-.22 1.792c.084.84.518 1.644 1.22 2.266.666.59 1.542.964 2.392.964 1.406 3.24 4.62 5.228 8.386 5.34 4.04.12 7.433-1.776 8.854-5.182.093-.24.488-1.316.488-2.267 0-.956-.54-1.352-.885-1.352-.01-.037-.078-.286-.172-.586-.093-.3-.19-.51-.19-.51.375-.563.382-1.065.332-1.35-.053-.353-.2-.653-.496-.964-.296-.311-.902-.63-1.753-.868l-.446-.124c-.002-.019-.024-1.053-.043-1.497-.014-.32-.042-.822-.197-1.315-.186-.668-.508-1.253-.911-1.627 1.112-1.152 1.806-2.422 1.804-3.511-.003-2.095-2.576-2.729-5.746-1.416l-.672.285A678.22 678.22 0 0 0 12.7.504C12.304.159 11.817.002 11.267 0zm.073.873c.166 0 .322.019.465.058.297.084 1.28 1.224 1.28 1.224s-1.826 1.013-3.52 2.426c-2.28 1.757-4.005 4.311-5.037 7.082-.811.158-1.526.618-1.963 1.253-.261-.218-.748-.64-.834-.804-.698-1.326.761-3.902 1.781-5.357C5.834 3.44 9.37.867 11.34.873zm3.286 3.273c.04-.002.06.05.028.074-.143.11-.299.26-.413.414a.04.04 0 0 0 .031.064c.659.004 1.587.235 2.192.574.041.023.012.103-.034.092-.915-.21-2.414-.369-3.97.01-1.39.34-2.45.863-3.224 1.426-.04.028-.086-.023-.055-.06.896-1.035 1.999-1.935 2.987-2.44.034-.018.07.019.052.052-.079.143-.23.447-.278.678-.007.035.032.063.062.042.615-.42 1.684-.868 2.622-.926zm3.023 3.205l.056.001a.896.896 0 0 1 .456.146c.534.355.61 1.216.638 1.845.015.36.059 1.229.074 1.478.034.571.184.651.487.751.17.057.33.098.563.164.706.198 1.125.4 1.39.658.157.162.23.333.253.497.083.608-.472 1.36-1.942 2.041-1.607.746-3.557.935-4.904.785l-.471-.053c-1.078-.145-1.693 1.247-1.046 2.201.417.615 1.552 1.015 2.688 1.015 2.604 0 4.605-1.111 5.35-2.072a.987.987 0 0 0 .06-.085c.036-.055.006-.085-.04-.054-.608.416-3.31 2.069-6.2 1.571 0 0-.351-.057-.672-.182-.255-.1-.788-.344-.853-.891 2.333.72 3.801.039 3.801.039a.072.072 0 0 0 .042-.072.067.067 0 0 0-.074-.06s-1.911.283-3.718-.378c.197-.64.72-.408 1.51-.345a11.045 11.045 0 0 0 3.647-.394c.818-.234 1.892-.697 2.727-1.356.281.618.38 1.299.38 1.299s.219-.04.4.073c.173.106.299.326.213.895-.176 1.063-.628 1.926-1.387 2.72a5.714 5.714 0 0 1-1.666 1.244c-.34.18-.704.334-1.087.46-2.863.935-5.794-.093-6.739-2.3a3.545 3.545 0 0 1-.189-.522c-.403-1.455-.06-3.2 1.008-4.299.065-.07.132-.153.132-.256 0-.087-.055-.179-.102-.243-.374-.543-1.669-1.466-1.409-3.254.187-1.284 1.31-2.189 2.357-2.135.089.004.177.01.266.015.453.027.85.085 1.223.1.625.028 1.187-.063 1.853-.618.225-.187.405-.35.71-.401.028-.005.092-.028.215-.028zm.022 2.18a.42.42 0 0 0-.06.005c-.335.054-.347.468-.228 1.04.068.32.187.595.32.765.175-.02.343-.022.498 0 .089-.205.104-.557.024-.942-.112-.535-.261-.872-.554-.868zm-3.66 1.546a1.724 1.724 0 0 0-1.016.326c-.16.117-.311.28-.29.378.008.032.031.056.088.063.131.015.592-.217 1.122-.25.374-.023.684.094.923.2.239.104.386.173.443.113.037-.038.026-.11-.031-.204-.118-.192-.36-.387-.618-.497a1.601 1.601 0 0 0-.621-.129zm4.082.81c-.171-.003-.313.186-.317.42-.004.236.131.43.303.432.172.003.314-.185.318-.42.004-.236-.132-.429-.304-.432zm-3.58.172c-.05 0-.102.002-.155.008-.311.05-.483.152-.593.247-.094.082-.152.173-.152.237a.075.075 0 0 0 .075.076c.07 0 .228-.063.228-.063a1.98 1.98 0 0 1 1.001-.104c.157.018.23.027.265-.026.01-.016.022-.049-.01-.1-.063-.103-.311-.269-.66-.275zm2.26.4c-.127 0-.235.051-.283.148-.075.154.035.363.246.466.21.104.443.063.52-.09.075-.155-.035-.364-.246-.467a.542.542 0 0 0-.237-.058zm-11.635.024c.048 0 .098 0 .149.003.73.04 1.806.6 2.052 2.19.217 1.41-.128 2.843-1.449 3.069-.123.02-.248.029-.374.026-1.22-.033-2.539-1.132-2.67-2.435-.145-1.44.591-2.548 1.894-2.811.117-.024.252-.04.398-.042zm-.07.927a1.144 1.144 0 0 0-.847.364c-.38.418-.439.988-.366 1.19.027.073.07.094.1.098.064.008.16-.039.22-.2a1.2 1.2 0 0 0 .017-.052 1.58 1.58 0 0 1 .157-.37.689.689 0 0 1 .955-.199c.266.174.369.5.255.81-.058.161-.154.469-.133.721.043.511.357.717.64.738.274.01.466-.143.515-.256.029-.067.005-.107-.011-.125-.043-.053-.113-.037-.18-.021a.638.638 0 0 1-.16.022.347.347 0 0 1-.294-.148c-.078-.12-.073-.3.013-.504.011-.028.025-.058.04-.092.138-.308.368-.825.11-1.317-.195-.37-.513-.602-.894-.65a1.135 1.135 0 0 0-.138-.01z","h":"FFE01B"},"api-clickup":{"n":"ClickUp","p":"M2 18.439l3.69-2.828c1.961 2.56 4.044 3.739 6.363 3.739 2.307 0 4.33-1.166 6.203-3.704L22 18.405C19.298 22.065 15.941 24 12.053 24 8.178 24 4.788 22.078 2 18.439zM12.04 6.15l-6.568 5.66-3.036-3.52L12.055 0l9.543 8.296-3.05 3.509z","h":"7B68EE"},"atlassian":{"n":"Atlassian","p":"M7.12 11.084a.683.683 0 00-1.16.126L.075 22.974a.703.703 0 00.63 1.018h8.19a.678.678 0 00.63-.39c1.767-3.65.696-9.203-2.406-12.52zM11.434.386a15.515 15.515 0 00-.906 15.317l3.95 7.9a.703.703 0 00.628.388h8.19a.703.703 0 00.63-1.017L12.63.38a.664.664 0 00-1.196.006z","h":"0052CC"}};
+
+  function brandSvg(id, cls) {
+    var b = BRANDS[id];
+    if (!b) return "";
+    return '<svg viewBox="0 0 24 24" role="img" aria-label="' + b.n + '"' + (cls ? ' class="' + cls + '"' : "") + '><path d="' + b.p + '"/></svg>';
+  }
+  // Brand marks inside the product frames keep their own colours on white tiles.
+  document.querySelectorAll("[data-brand]").forEach(function (el) {
+    var b = BRANDS[el.dataset.brand];
+    if (b) el.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#' + b.h + '" d="' + b.p + '"/></svg>';
+  });
+
+  /* Theme */
+  document.getElementById("theme").addEventListener("click", function () {
+    var t = document.documentElement.dataset.theme === "light" ? "dark" : "light";
+    document.documentElement.dataset.theme = t;
+    try { localStorage.setItem("ol-theme", t); } catch (e) {}
+  });
+
+  /* Mobile menu */
+  var menu = document.getElementById("menu"), mnav = document.getElementById("mobile-nav");
+  function setMenu(open) { mnav.classList.toggle("open", open); menu.setAttribute("aria-expanded", String(open)); }
+  menu.addEventListener("click", function () { setMenu(!mnav.classList.contains("open")); });
+  mnav.addEventListener("click", function (e) { if (e.target.closest("a")) setMenu(false); });
+  addEventListener("keydown", function (e) { if (e.key === "Escape") setMenu(false); });
+
+  /* Copy buttons */
+  document.querySelectorAll("[data-copy]").forEach(function (b) {
+    b.addEventListener("click", function () {
+      var text = b.dataset.copy, label = b.innerHTML;
+      var done = function () { b.lastChild.nodeType === 3 ? (b.lastChild.textContent = "Copied") : (b.textContent = "Copied"); setTimeout(function () { b.innerHTML = label; }, 1600); };
+      if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, function () {}); else done();
+    });
+  });
+
+  /* Download the sample workflow */
+  document.getElementById("dl-md").addEventListener("click", function () {
+    var text = document.getElementById("file-wf").textContent;
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([text], { type: "text/markdown" }));
+    a.download = "monthly-reconciliation.md";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+  });
+
+  /* File tabs */
+  document.querySelectorAll(".ftab").forEach(function (t) {
+    t.addEventListener("click", function () {
+      document.querySelectorAll(".ftab").forEach(function (x) { x.setAttribute("aria-selected", String(x === t)); });
+      document.getElementById("file-wf").hidden = t.dataset.file !== "wf";
+      document.getElementById("file-sk").hidden = t.dataset.file !== "sk";
+    });
+  });
+
+  /* Reveal on scroll */
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } });
+  }, { rootMargin: "0px 0px -8% 0px", threshold: 0.12 });
+  document.querySelectorAll(".reveal, .panel:not(.stack-card), .sw-card").forEach(function (el) { reduce ? el.classList.add("in") : io.observe(el); });
+
+  var seed = 7; function rnd() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }
+
+  /* Problem: a wall of single-purpose apps, a counter, and the weekly chore loop */
+  var GLYPHS = [
+    "M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6", "M4 6h16v14H4zM4 10h16M8 3v4M16 3v4", "M4 5h16v11H9l-5 4z",
+    "M5 3h14v18H5zM8 8h8M8 12h8M8 16h5", "M5 20V11M12 20V5M19 20v-6M3 20h18", "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7v5l3 2",
+    "M4 20l4-1 11-11-3-3L5 16zM14 6l3 3", "M3 13l3-8h12l3 8v6H3zM3 13h5l1 3h6l1-3h5", "M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM3 20c0-3 3-5 6-5s6 2 6 5M16 5a3 3 0 0 1 0 6M18 15c2 .5 3 2.5 3 5",
+    "M3 6h6l2 2h10v11H3z", "M6 16v-5a6 6 0 0 1 12 0v5l2 2H4zM10 21h4", "M4 4h16v16H4zM8 12l3 3 5-6",
+    "M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z", "M3 6h18v12H3zM3 10h18M7 15h4", "M9 4 3 6v14l6-2 6 2 6-2V4l-6 2zM9 4v14M15 6v14",
+    "M3 7h18v3a2 2 0 0 0 0 4v3H3v-3a2 2 0 0 0 0-4zM14 7v10", "M3 6h18v12H3zM3 7l9 6 9-6", "M6 3h8l4 4v14H6zM14 3v4h4"
+  ];
+  var TINTS = ["#FF774E", "#54A2FF", "#23FFBD", "#8D58F7", "#FFEA35", "#FF6568", "#4EA852", "#47A8FF", "#FF9B6D"];
+  var stack = document.getElementById("stack"), grid = document.getElementById("stack-grid"), apps = [];
+  for (var a = 0; a < 140; a++) {
+    var el = document.createElement("span");
+    el.className = "app";
+    el.style.setProperty("--c", TINTS[Math.floor(rnd() * TINTS.length)]);
+    el.innerHTML = '<svg viewBox="0 0 24 24"><path d="' + GLYPHS[Math.floor(rnd() * GLYPHS.length)] + '"/></svg>' + (rnd() > 0.8 ? "<b>" + (1 + Math.floor(rnd() * 12)) + "</b>" : "");
+    grid.appendChild(el); apps.push(el);
+  }
+  // Ripple in from the centre outwards: delay by distance from the counter.
+  function rippleDelays() {
+    var g = grid.getBoundingClientRect(), cx = g.left + g.width / 2, cy = g.top + g.height / 2, max = Math.hypot(g.width / 2, g.height / 2) || 1;
+    apps.forEach(function (el) {
+      var r = el.getBoundingClientRect();
+      el.style.setProperty("--dl", Math.round(Math.hypot(r.left + r.width / 2 - cx, r.top + r.height / 2 - cy) / max * 900) + "ms");
+    });
+  }
+  var counter = document.getElementById("app-count");
+  function countUp() {
+    if (reduce) return;
+    var t0 = performance.now();
+    (function step(now) {
+      var p = Math.min(1, (now - t0) / 1800), e = 1 - Math.pow(1 - p, 4);
+      counter.textContent = Math.round(305 * e);
+      if (p < 1) requestAnimationFrame(step);
+    })(t0);
+  }
+  if (reduce) stack.classList.add("in");
+  else {
+    counter.textContent = "0";
+    new IntersectionObserver(function (es, obs) {
+      if (!es[0].isIntersecting) return;
+      rippleDelays(); stack.classList.add("in"); countUp(); obs.disconnect();
+    }, { threshold: 0.35 }).observe(stack);
+  }
+  // The Monday chores light up one after another, then loop.
+  var chores = Array.prototype.slice.call(document.querySelectorAll(".chore")), loopEl = document.getElementById("loop"), ci = -1, choreTimer = null;
+  function nextChore() {
+    ci = (ci + 1) % (chores.length + 1);
+    chores.forEach(function (c, n) { c.classList.toggle("cur", n === ci); });
+    if (ci === chores.length) { loopEl.classList.remove("spin"); void loopEl.offsetWidth; loopEl.classList.add("spin"); }
+  }
+  if (reduce) chores[2].classList.add("cur");
+  else new IntersectionObserver(function (es) {
+    if (es[0].isIntersecting && !choreTimer) { nextChore(); choreTimer = setInterval(nextChore, 1100); }
+    else if (!es[0].isIntersecting && choreTimer) { clearInterval(choreTimer); choreTimer = null; }
+  }).observe(document.getElementById("chores"));
+
+  /* Integrations: each job lights only the tools it needs */
+  var LOGO_IDS = ["stripe", "api-hubspot", "google-sheets", "notion", "linear", "github", "gmail", "google-drive",
+    "api-shopify", "api-zendesk", "api-intercom", "api-airtable", "api-asana", "api-sentry", "google-calendar", "api-supabase"].filter(function (id) { return BRANDS[id]; });
+  var JOBS = [
+    ["Monthly close", ["stripe", "api-hubspot", "google-sheets"]],
+    ["Bug triage", ["github", "linear", "api-sentry"]],
+    ["Customer escalation", ["api-zendesk", "api-intercom", "notion"]],
+    ["Order exceptions", ["api-shopify", "gmail", "google-sheets"]],
+    ["Launch prep", ["notion", "api-asana", "google-calendar"]]
+  ];
+  var logos = document.getElementById("logos");
+  logos.innerHTML = LOGO_IDS.map(function (id) {
+    return '<div class="logo-cell" data-id="' + id + '">' + brandSvg(id) + '<span class="nm">' + BRANDS[id].n + "</span></div>";
+  }).join("");
+  var jobName = document.getElementById("job-name"), ji = 0, jobTimer = null;
+  function showJob() {
+    var job = JOBS[ji % JOBS.length]; ji++;
+    jobName.style.opacity = 0;
+    setTimeout(function () { jobName.textContent = job[0]; jobName.style.opacity = 1; }, 200);
+    logos.querySelectorAll(".logo-cell").forEach(function (c) { c.classList.toggle("lit", job[1].indexOf(c.dataset.id) >= 0); });
+  }
+  showJob();
+  if (!reduce) new IntersectionObserver(function (es) {
+    if (es[0].isIntersecting && !jobTimer) jobTimer = setInterval(showJob, 2600);
+    else if (!es[0].isIntersecting && jobTimer) { clearInterval(jobTimer); jobTimer = null; }
+  }).observe(logos);
+
+  /* Early access: hands the email to the app's sign-up */
+  var form = document.getElementById("signup"), note = document.getElementById("signup-note");
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var email = form.email.value.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      note.textContent = "Enter a valid work email."; note.classList.add("err"); form.email.focus(); return;
+    }
+    note.classList.remove("err"); note.textContent = "Opening your workspace…";
+    location.href = "https://app.orbytlink.com/#signup=" + encodeURIComponent(email);
+  });
+
+  /* Footer status: is the gateway reachable? */
+  var status = document.getElementById("status");
+  var ctl = new AbortController(); setTimeout(function () { ctl.abort(); }, 6000);
+  fetch("https://app.orbytlink.com/api/health", { mode: "no-cors", cache: "no-store", signal: ctl.signal })
+    .then(function () { status.classList.add("up"); status.lastChild.textContent = "Gateway online"; })
+    .catch(function () { status.lastChild.textContent = "Gateway status unavailable"; });
+})();
+</script>
+<script src="motion/vendor/hyperframes-player-0.9.8.global.js"></script>
+<script src="redesign.js"></script>
+<script src="motion/player.js"></script>
+</body>
+</html>

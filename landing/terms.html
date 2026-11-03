@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Terms of service · OrbytLink</title>
+<meta name="description" content="The terms that govern your use of OrbytLink.">
+<meta name="theme-color" content="#000000">
+<link rel="canonical" href="https://orbytlink.com/terms">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23000'/%3E%3Cg transform='translate(4 4) scale(0.857)' stroke='%23000' stroke-width='1.1' stroke-linejoin='round'%3E%3Cpolygon points='14,14 14,1 23.19,4.81' fill='%23fff'/%3E%3Cpolygon points='14,14 23.19,4.81 27,14 23.19,23.19 14,27 4.81,23.19 1,14 4.81,4.81 14,1' fill='%23EDF2F5' fill-opacity='.72'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<script>
+  (function () {
+    var t = null;
+    try { t = localStorage.getItem("ol-theme"); } catch (e) {}
+    if (t !== "light" && t !== "dark") t = matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+    document.documentElement.dataset.theme = t;
+  })();
+</script>
+<style>
+:root {
+  --font: "Inter Variable", "Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --col: 1200px; --gw: min(var(--col), 100% - 48px); --gp: 32px;
+  --bg: #000; --text: #EDF2F5; --text-strong: #FFF; --text-2: #9F9F9F; --muted: #828282; --tert: #505050;
+  --border: #232323; --border-strong: #2C2C2C; --hover: #1B1B1B; --raised: #0A0A0B;
+  --btn-bg: #FFF; --btn-fg: #222; --btn-hover: #CDCDCD; --logo-fill: #EDF2F5; --header-bg: rgb(0 0 0 / 0.9); --link: #47A8FF;
+}
+:root[data-theme="light"] {
+  --bg: #FFF; --text: #0D0D0D; --text-strong: #000; --text-2: #5E5E62; --muted: #6E6E73; --tert: #A1A1A6;
+  --border: #E8E8EA; --border-strong: #DADADD; --hover: #F4F4F5; --raised: #FAFAFA;
+  --btn-bg: #0D0D0D; --btn-fg: #FFF; --btn-hover: #333; --logo-fill: #0D0D0D; --header-bg: rgb(255 255 255 / 0.88); --link: #0B6BCB;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-padding-top: 80px; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 400 16px/26px var(--font); letter-spacing: -0.2px; -webkit-font-smoothing: antialiased; }
+a { color: inherit; text-decoration: none; }
+:focus-visible { outline: 2px solid var(--tert); outline-offset: 2px; border-radius: 6px; }
+.wrap { width: var(--gw); margin-inline: auto; padding-inline: var(--gp); position: relative; }
+.guides { position: fixed; inset: 0; pointer-events: none; }
+.guides::before { content: ""; position: absolute; top: 0; bottom: 0; left: 50%; width: var(--gw); transform: translateX(-50%); border-inline: 1px solid var(--border); }
+header, main, footer { position: relative; z-index: 1; }
+.site-header { position: sticky; top: 0; z-index: 10; height: 56px; background: var(--header-bg); border-bottom: 1px solid var(--border); -webkit-backdrop-filter: saturate(180%) blur(12px); backdrop-filter: saturate(180%) blur(12px); }
+.site-header .wrap { height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-inline: 16px; }
+.brand { display: inline-flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 500; letter-spacing: -0.3px; }
+.brand svg { width: 22px; height: 22px; }
+.mark-a { fill: var(--logo-fill); } .mark-b { fill: var(--logo-fill); fill-opacity: 0.55; }
+.actions { display: flex; align-items: center; gap: 8px; }
+.login { font-size: 14px; font-weight: 500; padding: 0 8px; }
+.btn { display: inline-flex; align-items: center; height: 32px; padding: 6px 12px; border-radius: 8px; font-size: 14px; font-weight: 500; line-height: 20px; letter-spacing: 0.105px; background: var(--btn-bg); color: var(--btn-fg); transition: background-color 200ms ease-in-out; white-space: nowrap; }
+.btn:hover { background: var(--btn-hover); }
+.doc { padding: 96px 0 112px; }
+.crumbs { font-size: 14px; color: var(--muted); }
+.crumbs a:hover { color: var(--text); }
+h1 { margin: 20px 0 0; font-size: 48px; line-height: 56px; letter-spacing: -1.08px; font-weight: 500; }
+.meta { margin-top: 12px; font-size: 14px; color: var(--muted); }
+.layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 64px; margin-top: 64px; align-items: start; }
+.toc { position: sticky; top: 88px; display: grid; gap: 2px; font-size: 14px; }
+.toc a { color: var(--muted); padding: 4px 0; transition: color 300ms ease-out; }
+.toc a:hover { color: var(--text); }
+.body { max-width: 704px; }
+.body .intro { margin: 0; font-size: 18px; line-height: 28px; color: var(--text-2); }
+.body h2 { margin: 48px 0 0; padding-top: 32px; border-top: 1px solid var(--border); font-size: 24px; line-height: 32px; letter-spacing: -0.3px; font-weight: 500; }
+.body h3 { margin: 24px 0 0; font-size: 16px; line-height: 24px; font-weight: 500; }
+.body p, .body li { color: var(--text-2); }
+.body p { margin: 12px 0 0; }
+.body ul { margin: 12px 0 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.body li { position: relative; padding-left: 18px; }
+.body li::before { content: ""; position: absolute; left: 0; top: 10px; width: 6px; height: 6px; border-radius: 2px; background: var(--tert); }
+.body strong { color: var(--text); font-weight: 500; }
+.body a { color: var(--link); }
+.body a:hover { text-decoration: underline; }
+.note { margin-top: 32px; padding: 16px 20px; border-radius: 12px; background: var(--raised); box-shadow: inset 0 0 0 1px var(--border); font-size: 14px; line-height: 22px; color: var(--text-2); }
+.site-footer { border-top: 1px solid var(--border); padding: 32px 0; }
+.site-footer .wrap { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; font-size: 14px; color: var(--muted); }
+.site-footer nav { display: flex; gap: 20px; }
+.site-footer a:hover, .site-footer a[aria-current] { color: var(--text); }
+@media (max-width: 900px) {
+  .layout { grid-template-columns: 1fr; gap: 32px; margin-top: 40px; }
+  .toc { position: static; grid-template-columns: 1fr 1fr; padding-bottom: 24px; border-bottom: 1px solid var(--border); }
+}
+@media (max-width: 767px) {
+  :root { --gw: calc(100% - 24px); --gp: 16px; }
+  .doc { padding: 56px 0 80px; }
+  h1 { font-size: 36px; line-height: 40px; letter-spacing: -0.81px; }
+  .login { display: none; }
+  body { font-size: 15px; }
+}
+</style>
+</head>
+<body>
+<div class="guides" aria-hidden="true"></div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><symbol id="mark" viewBox="0 0 28 28"><g stroke="var(--bg)" stroke-width="1.1" stroke-linejoin="round"><polygon class="mark-a" points="14,14 14,1 23.19,4.81"/><polygon class="mark-b" points="14,14 23.19,4.81 27,14"/><polygon class="mark-b" points="14,14 27,14 23.19,23.19"/><polygon class="mark-b" points="14,14 23.19,23.19 14,27"/><polygon class="mark-b" points="14,14 14,27 4.81,23.19"/><polygon class="mark-b" points="14,14 4.81,23.19 1,14"/><polygon class="mark-b" points="14,14 1,14 4.81,4.81"/><polygon class="mark-b" points="14,14 4.81,4.81 14,1"/></g></symbol></defs></svg>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="/" aria-label="OrbytLink home"><svg><use href="#mark"/></svg>OrbytLink</a>
+    <div class="actions"><a class="login" href="https://app.orbytlink.com/">Log in</a><a class="btn" href="/#access">Get started</a></div>
+  </div>
+</header>
+<main class="doc">
+  <div class="wrap">
+    <div class="crumbs"><a href="/">Home</a> / Terms of service</div>
+    <h1>Terms of service</h1>
+    <div class="meta">Last updated 31 October 2026</div>
+    <div class="layout">
+      <nav class="toc" aria-label="On this page"><a href="#service">The service</a><a href="#account">Your account</a><a href="#agents">Your agent and your connections</a><a href="#use">Acceptable use</a><a href="#ownership">Your content and ownership</a><a href="#third-party">Third-party services</a><a href="#fees">Fees</a><a href="#availability">Availability and changes</a><a href="#disclaimer">Disclaimer</a><a href="#liability">Limitation of liability</a><a href="#ending">Ending your use</a><a href="#changes">Changes to these terms</a><a href="#contact">Contact</a></nav>
+      <article class="body">
+        <p class="intro">These terms govern your use of orbytlink.com and the OrbytLink service at app.orbytlink.com. By creating an account or using the service, you agree to them. If you use OrbytLink for an organization, you agree on its behalf and confirm you are allowed to.</p>
+
+        <h2 id="service">The service</h2>
+        <p>OrbytLink is a workhub for AI agents. It gives your agent one endpoint through which it can use the apps, APIs, skills and workflows you connect, and lets your team manage who and what can use them.</p>
+        <p>OrbytLink is in <strong>early access</strong>. Features may change, be added or be removed, and some features described on our website are not yet available to every account. We will tell you before removing a feature you rely on, where we reasonably can.</p>
+
+        <h2 id="account">Your account</h2>
+        <ul>
+          <li>Give accurate information when you sign up, and keep your password and gateway tokens secret.</li>
+          <li>You are responsible for activity under your account and under tokens you create. Revoke any token you think is exposed.</li>
+          <li>You must be at least 16 and able to enter a binding contract.</li>
+        </ul>
+
+        <h2 id="agents">Your agent and your connections</h2>
+        <p>OrbytLink carries out the requests your agent makes, using the permissions you grant. That means:</p>
+        <ul>
+          <li><strong>You are responsible for the actions your agent takes</strong> through OrbytLink, and for the permissions, approval steps and workflows you enable.</li>
+          <li><strong>You must have the right to connect each account</strong> and to use its data the way your agent does, and you must follow that app's own terms.</li>
+          <li><strong>Review before you enable.</strong> Workflows drafted by an agent stay off until someone in your workspace turns them on.</li>
+        </ul>
+        <p>AI agents can make mistakes. Check important results, and use approval steps for actions that are hard to undo, such as payments, deletions or messages to customers.</p>
+
+        <h2 id="use">Acceptable use</h2>
+        <p>Don't use OrbytLink to:</p>
+        <ul>
+          <li>break the law or infringe anyone's rights;</li>
+          <li>access systems, accounts or data you are not authorized to access;</li>
+          <li>send spam or unsolicited bulk messages;</li>
+          <li>probe, overload or attack OrbytLink or any connected service, or try to get around its security or limits;</li>
+          <li>resell the service or give others access to it outside your workspace without our agreement.</li>
+        </ul>
+        <p>We may suspend access that puts the service, other customers or third parties at risk. We will tell you why unless the law or the risk prevents it.</p>
+
+        <h2 id="ownership">Your content and ownership</h2>
+        <p>You own your data, and you own the skills and workflows you create, including those your agent drafts for you. You can ask us for a copy at any time. You give us permission to store and process your content only to provide and secure the service. We own the OrbytLink software and brand.</p>
+        <p>If you send us feedback, we may use it without any obligation to you.</p>
+
+        <h2 id="third-party">Third-party services</h2>
+        <p>Connected apps and AI agents are provided by their own vendors under their own terms. We are not responsible for their availability, their behaviour or changes to their APIs. When a connected app changes, a skill or workflow that uses it may stop working until it is updated.</p>
+
+        <h2 id="fees">Fees</h2>
+        <p>Early access is currently free. If we introduce paid plans, we will tell you the price in advance, and you can choose whether to continue. We won't charge you for anything you haven't agreed to.</p>
+
+        <h2 id="availability">Availability and changes</h2>
+        <p>We work to keep OrbytLink available and secure, but during early access we don't promise any particular uptime. We may need to interrupt the service for maintenance, security or reasons outside our control.</p>
+
+        <h2 id="disclaimer">Disclaimer</h2>
+        <p>To the extent the law allows, OrbytLink is provided <strong>as is</strong> and <strong>as available</strong>, without warranties of any kind, including fitness for a particular purpose. We don't guarantee that results produced by your agent or by workflows will be accurate or complete.</p>
+
+        <h2 id="liability">Limitation of liability</h2>
+        <p>To the extent the law allows, we are not liable for indirect or consequential losses, or for loss of profits, revenue or data, and our total liability for any claim is limited to the greater of the fees you paid us in the three months before the claim and 100 US dollars. Nothing in these terms limits liability that cannot be limited by law.</p>
+
+        <h2 id="ending">Ending your use</h2>
+        <p>You can stop using OrbytLink at any time and ask us to delete your account. We may end or suspend your access if you seriously or repeatedly break these terms. When an account is deleted, its data is removed as described in our <a href="/privacy.html">privacy policy</a>.</p>
+
+        <h2 id="changes">Changes to these terms</h2>
+        <p>We may update these terms as the service develops. We will update the date at the top and, for significant changes, tell account holders before they take effect. If you keep using OrbytLink after that, the new terms apply.</p>
+
+        <h2 id="contact">Contact</h2>
+        <p>Questions about these terms: <a href="mailto:hello@orbytlink.com">hello@orbytlink.com</a>.</p>
+      </article>
+    </div>
+  </div>
+</main>
+<footer class="site-footer">
+  <div class="wrap"><span>© 2026 OrbytLink</span><nav aria-label="Legal"><a href="/">Home</a><a href="/privacy.html">Privacy</a><a href="/terms.html" aria-current="page">Terms</a><a href="mailto:hello@orbytlink.com">Contact</a></nav></div>
+</footer>
+</body>
+</html>

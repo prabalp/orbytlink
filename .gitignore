@@ -20,3 +20,6 @@ backups/
 v0/
 migration/
 .claude/
+
+# Old landing backup, local only
+landing/previous/

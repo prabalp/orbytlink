@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy policy · OrbytLink</title>
+<meta name="description" content="How OrbytLink collects, uses and protects your data.">
+<meta name="theme-color" content="#000000">
+<link rel="canonical" href="https://orbytlink.com/privacy">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23000'/%3E%3Cg transform='translate(4 4) scale(0.857)' stroke='%23000' stroke-width='1.1' stroke-linejoin='round'%3E%3Cpolygon points='14,14 14,1 23.19,4.81' fill='%23fff'/%3E%3Cpolygon points='14,14 23.19,4.81 27,14 23.19,23.19 14,27 4.81,23.19 1,14 4.81,4.81 14,1' fill='%23EDF2F5' fill-opacity='.72'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<script>
+  (function () {
+    var t = null;
+    try { t = localStorage.getItem("ol-theme"); } catch (e) {}
+    if (t !== "light" && t !== "dark") t = matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+    document.documentElement.dataset.theme = t;
+  })();
+</script>
+<style>
+:root {
+  --font: "Inter Variable", "Inter", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --col: 1200px; --gw: min(var(--col), 100% - 48px); --gp: 32px;
+  --bg: #000; --text: #EDF2F5; --text-strong: #FFF; --text-2: #9F9F9F; --muted: #828282; --tert: #505050;
+  --border: #232323; --border-strong: #2C2C2C; --hover: #1B1B1B; --raised: #0A0A0B;
+  --btn-bg: #FFF; --btn-fg: #222; --btn-hover: #CDCDCD; --logo-fill: #EDF2F5; --header-bg: rgb(0 0 0 / 0.9); --link: #47A8FF;
+}
+:root[data-theme="light"] {
+  --bg: #FFF; --text: #0D0D0D; --text-strong: #000; --text-2: #5E5E62; --muted: #6E6E73; --tert: #A1A1A6;
+  --border: #E8E8EA; --border-strong: #DADADD; --hover: #F4F4F5; --raised: #FAFAFA;
+  --btn-bg: #0D0D0D; --btn-fg: #FFF; --btn-hover: #333; --logo-fill: #0D0D0D; --header-bg: rgb(255 255 255 / 0.88); --link: #0B6BCB;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-padding-top: 80px; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 400 16px/26px var(--font); letter-spacing: -0.2px; -webkit-font-smoothing: antialiased; }
+a { color: inherit; text-decoration: none; }
+:focus-visible { outline: 2px solid var(--tert); outline-offset: 2px; border-radius: 6px; }
+.wrap { width: var(--gw); margin-inline: auto; padding-inline: var(--gp); position: relative; }
+.guides { position: fixed; inset: 0; pointer-events: none; }
+.guides::before { content: ""; position: absolute; top: 0; bottom: 0; left: 50%; width: var(--gw); transform: translateX(-50%); border-inline: 1px solid var(--border); }
+header, main, footer { position: relative; z-index: 1; }
+.site-header { position: sticky; top: 0; z-index: 10; height: 56px; background: var(--header-bg); border-bottom: 1px solid var(--border); -webkit-backdrop-filter: saturate(180%) blur(12px); backdrop-filter: saturate(180%) blur(12px); }
+.site-header .wrap { height: 100%; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-inline: 16px; }
+.brand { display: inline-flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 500; letter-spacing: -0.3px; }
+.brand svg { width: 22px; height: 22px; }
+.mark-a { fill: var(--logo-fill); } .mark-b { fill: var(--logo-fill); fill-opacity: 0.55; }
+.actions { display: flex; align-items: center; gap: 8px; }
+.login { font-size: 14px; font-weight: 500; padding: 0 8px; }
+.btn { display: inline-flex; align-items: center; height: 32px; padding: 6px 12px; border-radius: 8px; font-size: 14px; font-weight: 500; line-height: 20px; letter-spacing: 0.105px; background: var(--btn-bg); color: var(--btn-fg); transition: background-color 200ms ease-in-out; white-space: nowrap; }
+.btn:hover { background: var(--btn-hover); }
+.doc { padding: 96px 0 112px; }
+.crumbs { font-size: 14px; color: var(--muted); }
+.crumbs a:hover { color: var(--text); }
+h1 { margin: 20px 0 0; font-size: 48px; line-height: 56px; letter-spacing: -1.08px; font-weight: 500; }
+.meta { margin-top: 12px; font-size: 14px; color: var(--muted); }
+.layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 64px; margin-top: 64px; align-items: start; }
+.toc { position: sticky; top: 88px; display: grid; gap: 2px; font-size: 14px; }
+.toc a { color: var(--muted); padding: 4px 0; transition: color 300ms ease-out; }
+.toc a:hover { color: var(--text); }
+.body { max-width: 704px; }
+.body .intro { margin: 0; font-size: 18px; line-height: 28px; color: var(--text-2); }
+.body h2 { margin: 48px 0 0; padding-top: 32px; border-top: 1px solid var(--border); font-size: 24px; line-height: 32px; letter-spacing: -0.3px; font-weight: 500; }
+.body h3 { margin: 24px 0 0; font-size: 16px; line-height: 24px; font-weight: 500; }
+.body p, .body li { color: var(--text-2); }
+.body p { margin: 12px 0 0; }
+.body ul { margin: 12px 0 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.body li { position: relative; padding-left: 18px; }
+.body li::before { content: ""; position: absolute; left: 0; top: 10px; width: 6px; height: 6px; border-radius: 2px; background: var(--tert); }
+.body strong { color: var(--text); font-weight: 500; }
+.body a { color: var(--link); }
+.body a:hover { text-decoration: underline; }
+.note { margin-top: 32px; padding: 16px 20px; border-radius: 12px; background: var(--raised); box-shadow: inset 0 0 0 1px var(--border); font-size: 14px; line-height: 22px; color: var(--text-2); }
+.site-footer { border-top: 1px solid var(--border); padding: 32px 0; }
+.site-footer .wrap { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; font-size: 14px; color: var(--muted); }
+.site-footer nav { display: flex; gap: 20px; }
+.site-footer a:hover, .site-footer a[aria-current] { color: var(--text); }
+@media (max-width: 900px) {
+  .layout { grid-template-columns: 1fr; gap: 32px; margin-top: 40px; }
+  .toc { position: static; grid-template-columns: 1fr 1fr; padding-bottom: 24px; border-bottom: 1px solid var(--border); }
+}
+@media (max-width: 767px) {
+  :root { --gw: calc(100% - 24px); --gp: 16px; }
+  .doc { padding: 56px 0 80px; }
+  h1 { font-size: 36px; line-height: 40px; letter-spacing: -0.81px; }
+  .login { display: none; }
+  body { font-size: 15px; }
+}
+</style>
+</head>
+<body>
+<div class="guides" aria-hidden="true"></div>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><symbol id="mark" viewBox="0 0 28 28"><g stroke="var(--bg)" stroke-width="1.1" stroke-linejoin="round"><polygon class="mark-a" points="14,14 14,1 23.19,4.81"/><polygon class="mark-b" points="14,14 23.19,4.81 27,14"/><polygon class="mark-b" points="14,14 27,14 23.19,23.19"/><polygon class="mark-b" points="14,14 23.19,23.19 14,27"/><polygon class="mark-b" points="14,14 14,27 4.81,23.19"/><polygon class="mark-b" points="14,14 4.81,23.19 1,14"/><polygon class="mark-b" points="14,14 1,14 4.81,4.81"/><polygon class="mark-b" points="14,14 4.81,4.81 14,1"/></g></symbol></defs></svg>
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="/" aria-label="OrbytLink home"><svg><use href="#mark"/></svg>OrbytLink</a>
+    <div class="actions"><a class="login" href="https://app.orbytlink.com/">Log in</a><a class="btn" href="/#access">Get started</a></div>
+  </div>
+</header>
+<main class="doc">
+  <div class="wrap">
+    <div class="crumbs"><a href="/">Home</a> / Privacy policy</div>
+    <h1>Privacy policy</h1>
+    <div class="meta">Last updated 31 October 2026</div>
+    <div class="layout">
+      <nav class="toc" aria-label="On this page"><a href="#summary">The short version</a><a href="#website">The website</a><a href="#account">Your account</a><a href="#connections">Connected apps and credentials</a><a href="#gateway">Tool calls through the gateway</a><a href="#agents">Your AI agent</a><a href="#sharing">Who we share data with</a><a href="#retention">How long we keep it</a><a href="#security">Security</a><a href="#rights">Your rights</a><a href="#children">Children</a><a href="#changes">Changes to this policy</a><a href="#contact">Contact</a></nav>
+      <article class="body">
+        <p class="intro">This policy explains what OrbytLink collects when you visit orbytlink.com or use the OrbytLink gateway at app.orbytlink.com, why we collect it, and the choices you have. We keep it short and specific to what the product actually does.</p>
+
+        <h2 id="summary">The short version</h2>
+        <ul>
+          <li><strong>We don't sell your data</strong>, and we don't use it to train AI models.</li>
+          <li><strong>Credentials you connect are encrypted at rest</strong> and are never shown back to you or to your agent.</li>
+          <li><strong>We don't store what your agent sends or receives</strong> through a tool call. We keep a short record that a call happened.</li>
+          <li><strong>The website has no analytics or tracking cookies.</strong></li>
+        </ul>
+
+        <h2 id="website">The website</h2>
+        <p>orbytlink.com is a static page. It sets no cookies and runs no analytics. It remembers your light or dark theme choice in your browser's local storage, which never leaves your device.</p>
+        <p>The page loads the Inter typeface from Google Fonts, so Google receives your IP address and browser details when you visit. The site is served through Cloudflare, which processes requests to deliver and protect it. If you enter your email in the early-access form, it is passed to app.orbytlink.com in the page address (after the <strong>#</strong>, which browsers do not send to servers) to fill in the sign-up form. Nothing is stored until you create an account.</p>
+
+        <h2 id="account">Your account</h2>
+        <p>When you sign up we store your name, email address and a one-way hash of your password (scrypt). We never store your password itself. If you sign in with Google, we receive your name and email address from Google and do not receive your Google password.</p>
+        <p>Signing in sets one session cookie on app.orbytlink.com. It is strictly necessary, marked Secure, HttpOnly and SameSite=Strict, and is not used for tracking. We store only a hash of the session identifier, and expired sessions are deleted automatically.</p>
+
+        <h2 id="connections">Connected apps and credentials</h2>
+        <p>To let your agent use an app, you give OrbytLink an API key or sign in to that app through OAuth. We store those credentials encrypted with AES-256-GCM, bound to your workspace. They are used only to make the calls you or your agent ask for, are never returned through the interface or to your agent, and are removed when you delete the connection.</p>
+        <p>When you add an API, OrbytLink may fetch that service's public logo from its website to show next to it. That request does not include your key.</p>
+
+        <h2 id="gateway">Tool calls through the gateway</h2>
+        <p>When your agent calls a tool, OrbytLink passes the request to the app you connected and returns the result to your agent. We do not store the arguments or the results of these calls.</p>
+        <p>For each workspace we keep:</p>
+        <ul>
+          <li>a record of each tool call: which tool and connection, whether it succeeded, how long it took, which member or token made it, and when (the most recent 1,000 calls);</li>
+          <li>an activity log of actions such as connecting an app, using a skill or changing a workflow (the most recent 2,000 entries);</li>
+          <li>the configuration you create: connections, skills, workflows, tokens and members, with tokens stored only as hashes.</li>
+        </ul>
+        <p>Before anything is stored or shown, values matching your saved secrets are redacted. Our server logs record errors and failed calls with a short description; they never include request bodies, passwords or credentials.</p>
+
+        <h2 id="agents">Your AI agent</h2>
+        <p>OrbytLink does not run an AI model on your data. Your agent, for example Claude, is provided by its own vendor, and whatever your agent receives from OrbytLink is handled under that vendor's terms and privacy policy. Choose an agent and plan whose data terms suit you.</p>
+
+        <h2 id="sharing">Who we share data with</h2>
+        <p>We share data only with the services needed to run OrbytLink, and with the apps you connect, on your instruction:</p>
+        <ul>
+          <li><strong>Cloudflare</strong>, which delivers the website and sits in front of the gateway;</li>
+          <li><strong>our hosting provider</strong>, whose servers run the gateway and hold its database and backups;</li>
+          <li><strong>Google</strong>, for Google Fonts on the website and, if you use it, Google sign-in;</li>
+          <li><strong>the apps you connect</strong>, which receive the requests your agent makes to them.</li>
+        </ul>
+        <p>We may also disclose data where the law requires it. We never sell personal data.</p>
+
+        <h2 id="retention">How long we keep it</h2>
+        <p>We keep your account and workspace data for as long as your account exists. Call records and activity entries roll off as newer ones are added, within the limits above. Database backups are taken daily and kept for 14 days, so deleted data disappears from backups within that time.</p>
+
+        <h2 id="security">Security</h2>
+        <p>Connections to OrbytLink use HTTPS. Credentials are encrypted at rest, passwords and tokens are stored only as hashes, and every workspace is isolated from every other. Gateway tokens expire and can be revoked at any time, and you can sign out of every session at once. No system is perfectly secure; if we learn of a breach that affects your data, we will tell you without undue delay.</p>
+
+        <h2 id="rights">Your rights</h2>
+        <p>You can ask us to access, correct, export or delete your personal data, or object to how we use it. Some of this you can do yourself in the app, such as changing your password, deleting connections and revoking tokens. For anything else, including deleting your account, email <a href="mailto:hello@orbytlink.com">hello@orbytlink.com</a> and we will respond within 30 days. Depending on where you live, you may also have the right to complain to your data protection authority.</p>
+
+        <h2 id="children">Children</h2>
+        <p>OrbytLink is a business tool and is not intended for anyone under 16. We do not knowingly collect data from children.</p>
+
+        <h2 id="changes">Changes to this policy</h2>
+        <p>If we change this policy, we will update the date at the top. For significant changes, we will tell account holders by email or in the app before they take effect.</p>
+
+        <h2 id="contact">Contact</h2>
+        <p>For privacy questions or requests, email <a href="mailto:hello@orbytlink.com">hello@orbytlink.com</a>.</p>
+      </article>
+    </div>
+  </div>
+</main>
+<footer class="site-footer">
+  <div class="wrap"><span>© 2026 OrbytLink</span><nav aria-label="Legal"><a href="/">Home</a><a href="/privacy.html" aria-current="page">Privacy</a><a href="/terms.html">Terms</a><a href="mailto:hello@orbytlink.com">Contact</a></nav></div>
+</footer>
+</body>
+</html>

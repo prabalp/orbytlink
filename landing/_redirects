@@ -1,0 +1,14 @@
+# The app lives on app.orbytlink.com; keep old app links on the apex working.
+/app                https://app.orbytlink.com/                  302
+/login              https://app.orbytlink.com/login             302
+/register           https://app.orbytlink.com/register          302
+/forgot-password    https://app.orbytlink.com/forgot-password   302
+/reset-password     https://app.orbytlink.com/reset-password    302
+/verify             https://app.orbytlink.com/verify            302
+/search             https://app.orbytlink.com/search            302
+/c/*                https://app.orbytlink.com/c/:splat          302
+/share/*            https://app.orbytlink.com/share/:splat      302
+/agents             https://app.orbytlink.com/agents            302
+/agents/*           https://app.orbytlink.com/agents/:splat     302
+/oauth/*            https://app.orbytlink.com/oauth/:splat      302
+/api/*              https://app.orbytlink.com/api/:splat        302
