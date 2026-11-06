@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#fbfbf9"/>
+  <path d="M830 0h370v630H830z" fill="#d8c8f1"/>
+  <circle cx="1015" cy="315" r="174" fill="#f9f7fc"/>
+  <circle cx="1015" cy="315" r="133" fill="none" stroke="#c4b1df" stroke-width="2"/>
+  <circle cx="1015" cy="315" r="88" fill="none" stroke="#d8c8f1" stroke-width="2"/>
+  <rect x="82" y="74" width="54" height="54" rx="12" fill="#222326"/>
+  <g transform="translate(87 79) scale(1.5)" stroke="#222326" stroke-width="1.1" stroke-linejoin="round">
+    <polygon points="14,14 14,1 23.19,4.81" fill="#fff"/>
+    <polygon points="14,14 23.19,4.81 27,14 23.19,23.19 14,27 4.81,23.19 1,14 4.81,4.81 14,1" fill="#edf2f5" fill-opacity=".72"/>
+  </g>
+  <text x="154" y="111" fill="#202122" font-family="Manrope,Arial,sans-serif" font-size="30" font-weight="600">OrbytLink</text>
+  <text x="82" y="280" fill="#202122" font-family="Manrope,Arial,sans-serif" font-size="62" font-weight="600" letter-spacing="-2">Do the work once.</text>
+  <text x="82" y="356" fill="#202122" font-family="Manrope,Arial,sans-serif" font-size="62" font-weight="600" letter-spacing="-2">Build on it every time.</text>
+  <text x="84" y="430" fill="#505256" font-family="Manrope,Arial,sans-serif" font-size="24">The workhub for AI agents</text>
+  <text x="84" y="570" fill="#606268" font-family="Manrope,Arial,sans-serif" font-size="18">orbytlink.com</text>
+  <g fill="none" stroke="#76588f" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M932 315h162M1015 232v166"/>
+    <circle cx="932" cy="315" r="13" fill="#d8c8f1"/>
+    <circle cx="1094" cy="315" r="13" fill="#d8c8f1"/>
+    <circle cx="1015" cy="232" r="13" fill="#d8c8f1"/>
+    <circle cx="1015" cy="398" r="13" fill="#d8c8f1"/>
+  </g>
+</svg>

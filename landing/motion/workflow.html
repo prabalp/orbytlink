@@ -7,8 +7,8 @@
 
 [data-compact] .task{font-size:24px;padding:0 16px;gap:12px}[data-compact] .task .app{font-size:18px;width:100px}[data-compact] .title{font-size:36px;line-height:40px}[data-compact] .heading{font-size:20px}[data-compact] .summary strong{font-size:26px;line-height:32px}[data-compact] .summary p{font-size:22px;line-height:28px}[data-compact] .note{display:none}[data-compact] .summary{display:block}[data-compact] .saved{font-size:22px}[data-compact] .saved code{display:none}[data-compact] .extra{font-size:16px;padding:8px}
 </style></head><body>
-<div id="root" data-composition-id="workflow" data-start="0" data-duration="15" data-width="640" data-height="600">
-<div class="clip" data-start="0" data-duration="15" data-track-index="0" id="workflow-scene">
+<div id="root" data-composition-id="workflow" data-start="0" data-duration="12.75" data-width="640" data-height="600">
+<div class="clip" data-start="0" data-duration="12.75" data-track-index="0" id="workflow-scene">
 <div class="heading"><span>Monthly close</span><span>OrbytLink</span></div>
 <div class="title"><div class="scene-title" id="title1">First, find the way.</div><div class="scene-title" id="title5">Then, keep only what you need.</div><div class="scene-title" id="title20">Finally, keep the work.</div></div>
 <div class="connector"></div><div class="packet"></div>
@@ -26,21 +26,21 @@ const tl=gsap.timeline({paused:true});
 const initial=[{x:0,y:0,scale:.76},{x:32,y:90,scale:.76},{x:-28,y:168,scale:.76},{x:16,y:250,scale:.76}];
 initial.forEach((p,i)=>tl.set('#task'+(i+1),{...p,transformOrigin:'50% 50%'},0));
 tl.set('#extra1',{x:0,y:-40},0).set('#extra2',{x:140,y:-40},0).set('#extra3',{x:290,y:-40},0).set('#extra4',{x:435,y:-40},0);
-tl.fromTo('.task',{opacity:0},{opacity:1,duration:.7,stagger:.3,ease:'power3.out'},.25);
-tl.fromTo('.extra',{opacity:0},{opacity:.65,duration:.6,stagger:.18,ease:'power3.out'},.5);
-tl.to('#task1',{x:-22,duration:.8,ease:'power3.inOut'},2).to('#task2',{x:12,duration:.8,ease:'power3.inOut'},2.3);
-function chapter(oldId,newId,t){tl.to(['#title'+oldId,'#stat'+oldId,'#note'+oldId],{opacity:0,y:-8,duration:.35,ease:'power3.in'},t);tl.fromTo(['#title'+newId,'#stat'+newId,'#note'+newId],{opacity:0,y:12},{opacity:1,y:0,duration:.6,ease:'power3.out'},t+.35)}
-chapter(1,5,4.5);
-tl.to('.extra',{opacity:0,scale:.9,duration:.55,stagger:.06,ease:'power3.in'},4.5);
-for(let i=1;i<=4;i++)tl.to('#task'+i,{x:0,y:(i-1)*76,scale:1,duration:1, ease:'power3.inOut'},4.65+(i-1)*.09);
-tl.to('.connector',{opacity:1,scaleY:1,duration:.6,ease:'power3.out'},5.6);
-tl.fromTo('.packet',{opacity:0,y:0},{opacity:1,duration:.2},6.3).to('.packet',{y:240,duration:1.3,ease:'power2.inOut'},6.5).to('.packet',{opacity:0,duration:.2},7.8);
-chapter(5,20,9.5);
-for(let i=1;i<=4;i++)tl.to('#task'+i,{y:(i-1)*64,duration:.8,ease:'power3.inOut'},9.7+(i-1)*.06);
-tl.to('.connector',{scaleY:.8,duration:.8,ease:'power3.inOut'},9.7);
-tl.fromTo('.task .check',{opacity:0,scale:.5},{opacity:1,scale:1,duration:.4,stagger:.28,ease:'power3.out'},10.6);
-tl.to('#task3',{backgroundColor:'#c8afe8',duration:.5},11.2).to('#task3',{backgroundColor:'#d8c8f1',duration:.6},12);
-tl.fromTo('.saved',{opacity:0,y:12},{opacity:1,y:0,duration:.7,ease:'power3.out'},12.2);
-tl.to({}, {duration:1.9},13.1);
+tl.fromTo('.task',{opacity:0},{opacity:1,duration:.6,stagger:.25,ease:'power3.out'},.2);
+tl.fromTo('.extra',{opacity:0},{opacity:.65,duration:.5,stagger:.15,ease:'power3.out'},.425);
+tl.to('#task1',{x:-22,duration:.68,ease:'power3.inOut'},1.7).to('#task2',{x:12,duration:.68,ease:'power3.inOut'},1.95);
+function chapter(oldId,newId,t){tl.to(['#title'+oldId,'#stat'+oldId,'#note'+oldId],{opacity:0,y:-8,duration:.3,ease:'power3.in'},t);tl.fromTo(['#title'+newId,'#stat'+newId,'#note'+newId],{opacity:0,y:12},{opacity:1,y:0,duration:.5,ease:'power3.out'},t+.3)}
+chapter(1,5,3.825);
+tl.to('.extra',{opacity:0,scale:.9,duration:.47,stagger:.05,ease:'power3.in'},3.825);
+for(let i=1;i<=4;i++)tl.to('#task'+i,{x:0,y:(i-1)*76,scale:1,duration:.85, ease:'power3.inOut'},3.95+(i-1)*.08);
+tl.to('.connector',{opacity:1,scaleY:1,duration:.5,ease:'power3.out'},4.76);
+tl.fromTo('.packet',{opacity:0,y:0},{opacity:1,duration:.17},5.355).to('.packet',{y:240,duration:1.1,ease:'power2.inOut'},5.525).to('.packet',{opacity:0,duration:.17},6.63);
+chapter(5,20,8.075);
+for(let i=1;i<=4;i++)tl.to('#task'+i,{y:(i-1)*64,duration:.68,ease:'power3.inOut'},8.245+(i-1)*.05);
+tl.to('.connector',{scaleY:.8,duration:.68,ease:'power3.inOut'},8.245);
+tl.fromTo('.task .check',{opacity:0,scale:.5},{opacity:1,scale:1,duration:.34,stagger:.24,ease:'power3.out'},9.01);
+tl.to('#task3',{backgroundColor:'#c8afe8',duration:.43},9.52).to('#task3',{backgroundColor:'#d8c8f1',duration:.5},10.2);
+tl.fromTo('.saved',{opacity:0,y:12},{opacity:1,y:0,duration:.6,ease:'power3.out'},10.37);
+tl.to({}, {duration:1.61},11.14);
 window.__timelines=window.__timelines||{};window.__timelines.workflow=tl;
 </script><script src="vendor/hyperframe.runtime-0.9.8.js"></script></body></html>

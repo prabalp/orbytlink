@@ -1,0 +1,13 @@
+# OrbytLink
+
+> OrbytLink connects AI agents to MCP servers and APIs through one gateway. Teams can preserve repeatable work as reusable skills and workflows.
+
+Contact: hello@orbytlink.com
+Product: https://app.orbytlink.com/
+
+## Key pages
+
+- [Home](https://orbytlink.com/): OrbytLink’s product, workflow, and security overview
+- [Skills and workflows](https://orbytlink.com/skills.html): bundled agent skills, workflow templates, and tool references
+- [Privacy policy](https://orbytlink.com/privacy): how OrbytLink handles website and account data
+- [Terms of service](https://orbytlink.com/terms): terms for using OrbytLink
