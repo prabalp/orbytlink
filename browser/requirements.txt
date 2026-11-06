@@ -1,0 +1,5 @@
+fastapi==0.115.0
+uvicorn==0.30.6
+pydantic==2.9.2
+# Jev Ultrafast is MIT-licensed and not on PyPI; pin the commit you tested before deploying.
+jev-ultrafast @ git+https://github.com/browser-use/jev-ultrafast.git

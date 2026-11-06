@@ -11,9 +11,12 @@ import type { Identity } from "./schema.js";
 import { credentialFor } from "./oauth.js";
 import { addSkill, enabledSkills, skillCatalog, skillText } from "./skills.js";
 import { MIN_INSTALLS, searchRegistry } from "./skill-registry.js";
-import { runWorkflow, saveWorkflow, visibleTo, workflowInputSchema, workflowToolName } from "./workflows.js";
+import { resumeWorkflow, runWorkflow, saveWorkflow, visibleTo, workflowInputSchema, workflowToolName, type RunOutcome } from "./workflows.js";
 import { AI_TOOL, aiConfigured, aiInputSchema, aiSummary, generate, usd } from "./ai.js";
+import { BROWSER_TOOL, browse, browseText, browserConfigured, browserInputSchema } from "./browser.js";
 import { CONNECT_TOOL, connectApp, connectTool } from "./connect.js";
+import { alreadySaved, captureWorkflow, keyFor, noticeRepeat, recordCall } from "./capture.js";
+import { toMarkdown, workflowFileName } from "./workflow-md.js";
 import { libraryCount, librarySearch, viewerFor } from "./library.js";
 import { allowedMethods, apiCall } from "./apis.js";
 import { ToolIndex, sameApp } from "./tool-search.js";
@@ -93,7 +96,7 @@ const listed = ({ name, connection, tool }: GatewayTool) => ({
   ...(tool.annotations ? { annotations: tool.annotations } : {}),
 });
 const BASE_INSTRUCTIONS =
-  "Credentials stay on the gateway and are never returned. Skills (orbytlink__use_skill) are instructions to load when a task matches them; orbytlink__find_skills finds more, including community skills on skills.sh, and orbytlink__add_skill turns one on when the user asks. workflow__* tools run a fixed sequence of tool calls. APIs stored in OrbytLink are read with orbytlink__api_docs and called with orbytlink__api_request; the gateway adds their keys. To automate a repeated task, draft a workflow with orbytlink__create_workflow; a person reviews and enables it. If the user needs an app that is not connected, call orbytlink__connect_app: it returns a link to connect it and the steps to show the user.";
+  "Credentials stay on the gateway and are never returned. Skills (orbytlink__use_skill) are instructions to load when a task matches them; orbytlink__find_skills finds more, including community skills on skills.sh, and orbytlink__add_skill turns one on when the user asks. workflow__* tools run a fixed sequence of tool calls. APIs stored in OrbytLink are read with orbytlink__api_docs and called with orbytlink__api_request; the gateway adds their keys. To automate a repeated task, draft a workflow with orbytlink__create_workflow; a person reviews and enables it. If the user needs an app that is not connected, call orbytlink__connect_app: it returns a link to connect it and the steps to show the user. Before doing a task step by step, check whether a workflow__* tool already does it: one call is faster and cheaper. After finishing a task the user is likely to repeat, offer to save it with orbytlink__save_workflow, built from the calls you just made.";
 const SEARCH_INSTRUCTIONS =
   "OrbytLink is a gateway to the apps this workspace has connected. Their tools are not all listed: find them first. Call orbytlink__find_tools with a short description of the action (e.g. \"enroll leads in campaign\"), pick a result, then run it with orbytlink__call_tool using its exact name and arguments that match its input schema. orbytlink__list_apps shows which apps are connected. Tools listed directly are the ones used most and can be called as usual. " +
   BASE_INSTRUCTIONS;
@@ -155,8 +158,29 @@ export function gatewayServer(
   return server;
 }
 
-// Any tool by name: the gateway's own, a workflow, or an app tool, listed or not.
+// Any tool by name: the gateway's own, a workflow, or an app tool, listed or not. What runs is
+// remembered briefly (capture.ts), so a task can be saved as a workflow from the calls that really
+// happened; a task done the same way three times is pointed out to the agent once.
+const recorded = (name: string) => !name.startsWith("orbytlink__") || name === API_REQUEST_TOOL || name === AI_TOOL || name === BROWSER_TOOL;
 async function callTool(store: Store, services: ServiceAdapters, identity: Identity, name: string, args: Record<string, unknown>) {
+  const result: any = await runTool(store, services, identity, name, args);
+  if (!recorded(name)) return result;
+  const text = Array.isArray(result?.content) ? result.content.filter((c: any) => c?.type === "text").map((c: any) => c.text).join("\n") : "";
+  const ok = !result?.isError && !text.startsWith("The workflow paused");
+  const key = keyFor(identity);
+  recordCall(key, name, store.redact(identity.workspace, args) || {}, text, ok);
+  if (!ok) return result;
+  const repeat = noticeRepeat(key);
+  if (!repeat || alreadySaved(store, identity, repeat.tools)) return result;
+  return {
+    ...result,
+    content: [
+      ...(result.content || []),
+      { type: "text", text: `[OrbytLink] This same sequence (${repeat.tools.join(" → ")}) has now run on ${repeat.count} separate occasions. If it is a task the user repeats, offer to save it as a workflow with orbytlink__save_workflow, so next time it is one call.` },
+    ],
+  };
+}
+async function runTool(store: Store, services: ServiceAdapters, identity: Identity, name: string, args: Record<string, unknown>) {
   const w = identity.workspace;
   const own = await callOwnTool(store, services, identity, name, args);
   if (own) return own;
@@ -483,6 +507,16 @@ function ownTools(store: Store, w: string, identity: Identity) {
       inputSchema: aiInputSchema,
       annotations: { openWorldHint: true },
     });
+  // A real browser for web tasks no app or API covers; billed per page action from the same credit.
+  if (browserConfigured() && aiSummary(store, w).enabled)
+    tools.push({
+      name: BROWSER_TOOL,
+      title: "Use a web browser",
+      description:
+        "Open a public website in a real browser and carry out a task there (find information, fill a form, click through pages), then get what it found. Use it only when no connected app, API or MCP tool can do the job. Give a start url and a specific goal. Each page action is charged to this workspace's credit; the most it may cost is held until the run ends. It cannot log in to sites and opens public pages only.",
+      inputSchema: browserInputSchema,
+      annotations: { openWorldHint: true },
+    });
   tools.push({
     name: "orbytlink__use_skill",
     title: "Load a skill",
@@ -490,6 +524,38 @@ function ownTools(store: Store, w: string, identity: Identity) {
     inputSchema: { type: "object", properties: { name: { type: "string", description: "Skill id, e.g. tdd" } }, required: ["name"] },
     annotations: { readOnlyHint: true },
   });
+  tools.push(
+    {
+      name: SAVE_TOOL,
+      title: "Save a task as a workflow",
+      description:
+        "Save a task you just did through OrbytLink as a reusable workflow, built from the tool calls that actually ran (not retyped). Give the tools in the order you used them (or none to take every call since the last save), and the values the user supplied as inputs (name → the value used this time); values that came out of an earlier call are linked automatically. Add judgments where you decided something along the way. Saved as a draft, private to the user, until they enable it in OrbytLink → Workflows. replaces: a workflow's name, to fix one that broke.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "Short name, e.g. Weekly lead digest" },
+          description: { type: "string", description: "What it does, for whoever calls it next" },
+          tools: { type: "array", items: { type: "string" }, description: "Tool names in the order you called them" },
+          inputs: { type: "object", additionalProperties: { type: "string" }, description: "Input name → the exact value used this time, e.g. {\"channel\": \"C0123\"}" },
+          judgments: {
+            type: "array",
+            items: { type: "object", properties: { before: { type: "integer", description: "Step number it comes before (1 = first)" }, prompt: { type: "string", description: "What to decide, may use {{steps.<id>.text}}" }, returns: { type: "string" }, mode: { type: "string", enum: ["ai", "agent"] } }, required: ["before", "prompt"] },
+          },
+          judgment: { type: "string", enum: ["ai", "agent"], description: "Who decides by default: an AI model (automatic, uses AI credit) or the agent/person running it" },
+          overrides: { type: "array", items: { type: "object", properties: { step: { type: "integer" }, arg: { type: "string" }, value: { type: "string" } }, required: ["step", "arg", "value"] } },
+          replaces: { type: "string", description: "Name of an existing workflow to update instead" },
+        },
+        required: ["name"],
+      },
+    },
+    {
+      name: EXPORT_TOOL,
+      title: "Export a workflow file",
+      description: "Get a workflow as its workflow_<name>.md file (front matter + a ```yaml workflow block), to save in a repository or share. Importing the file in OrbytLink gives the same workflow.",
+      inputSchema: { type: "object", properties: { name: { type: "string", description: "The workflow's name or workflow__ tool name" } }, required: ["name"] },
+      annotations: { readOnlyHint: true },
+    },
+  );
   tools.push({
     name: "orbytlink__create_workflow",
     title: "Draft a workflow",
@@ -551,7 +617,15 @@ function ownTools(store: Store, w: string, identity: Identity) {
       required: ["name", "steps"],
     },
   });
-  for (const { name, workflow } of visibleWorkflowTools(store, identity))
+  const workflows = visibleWorkflowTools(store, identity);
+  if (workflows.some(({ workflow }) => (workflow.steps || []).some((st: Row) => st.tool === "judge")))
+    tools.push({
+      name: RESUME_TOOL,
+      title: "Continue a paused workflow",
+      description: "Answer the decision a workflow paused for, and let it finish. Use the run id and the question from the paused workflow's reply.",
+      inputSchema: { type: "object", properties: { run: { type: "string" }, answer: { type: "string", description: "Your decision, in the shape the workflow asked for" } }, required: ["run", "answer"] },
+    });
+  for (const { name, workflow } of workflows)
     tools.push({
       name,
       title: `Workflow · ${workflow.name}`,
@@ -559,6 +633,17 @@ function ownTools(store: Store, w: string, identity: Identity) {
       inputSchema: workflowInputSchema(workflow),
     });
   return tools;
+}
+const RESUME_TOOL = "orbytlink__resume_workflow",
+  SAVE_TOOL = "orbytlink__save_workflow",
+  EXPORT_TOOL = "orbytlink__export_workflow";
+// What an agent reads back from a run: the result, the failure, or the decision it has to make.
+function outcomeText(outcome: RunOutcome) {
+  if (outcome.status === "waiting")
+    return toolText(
+      `The workflow paused for a decision (run ${outcome.runId}).\n\nDecide: ${outcome.question}${outcome.returns ? `\n\nAnswer with ${outcome.returns}.` : ""}\n\nThen call ${RESUME_TOOL} with {"run": "${outcome.runId}", "answer": "<your decision>"} and the rest of the workflow runs.`,
+    );
+  return toolText(outcome.status === "succeeded" ? outcome.output || "Workflow finished." : `Workflow failed. ${outcome.error}`, outcome.status !== "succeeded");
 }
 async function callOwnTool(store: Store, services: ServiceAdapters, identity: Identity, name: string, args: Record<string, unknown>) {
   const w = identity.workspace;
@@ -587,6 +672,16 @@ async function callOwnTool(store: Store, services: ServiceAdapters, identity: Id
     const out = connectApp(store, w, canConfigure(identity), args);
     return toolText("error" in out ? (out.error as string) : JSON.stringify(out, null, 1), "error" in out);
   }
+  if (name === BROWSER_TOOL) {
+    try {
+      const r = await browse(store, identity, args, "agent");
+      store.audit(w, identity.user, "browser.run", `${r.status} · ${r.steps} steps · $${usd(r.costMicro).toFixed(2)}`);
+      return toolText(browseText(r), r.status === "failed");
+    } catch (error) {
+      const issues = (error as any)?.issues as { path: (string | number)[]; message: string }[] | undefined;
+      return toolText(issues ? issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ") : (error as Error).message, true);
+    }
+  }
   if (name === AI_TOOL) {
     try {
       const r = await generate(store, identity, args, "agent");
@@ -604,7 +699,7 @@ async function callOwnTool(store: Store, services: ServiceAdapters, identity: Id
   }
   if (name === "orbytlink__create_workflow") {
     try {
-      const known = new Set([...gatewayTools(store, w).map((t) => t.name), ...visibleWorkflowTools(store, identity).map((t) => t.name), ...(enabledApis(store, w).length ? [API_REQUEST_TOOL] : []), ...(aiConfigured() ? [AI_TOOL] : [])]);
+      const known = new Set([...gatewayTools(store, w).map((t) => t.name), ...visibleWorkflowTools(store, identity).map((t) => t.name), ...(enabledApis(store, w).length ? [API_REQUEST_TOOL] : []), ...(aiConfigured() ? [AI_TOOL] : []), ...(browserConfigured() ? [BROWSER_TOOL] : [])]);
       const unknown = ((args.steps as any[]) || []).map((s) => s?.tool).filter((t) => !known.has(t));
       if (unknown.length) return toolText(`Unknown tools: ${unknown.join(", ")}. Use names exactly as listed by this server.`, true);
       const row = saveWorkflow(store, identity, { visibility: "private", ...args, enabled: false, schedule: null }, undefined, "agent");
@@ -614,11 +709,46 @@ async function callOwnTool(store: Store, services: ServiceAdapters, identity: Id
       return toolText(issues ? `The workflow is not valid: ${issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")}` : (error as Error).message, true);
     }
   }
+  if (name === SAVE_TOOL) {
+    try {
+      const saved = captureWorkflow(store, identity, args);
+      const steps = saved.row.steps.map((s: Row, i: number) => `${i + 1}. ${s.id}${s.tool === "judge" ? ` (decision by ${s.mode || saved.row.judgment})` : ` (${s.tool})`}`).join("\n");
+      return toolText(
+        [
+          `Saved "${saved.row.name}" as a draft workflow${saved.row.visibility === "private" ? ", private to the user" : ""}. Once they enable it in OrbytLink → Workflows it becomes the tool ${saved.tool}.`,
+          `Steps:\n${steps}`,
+          saved.row.inputs.length ? `Inputs: ${saved.row.inputs.map((i: Row) => i.name).join(", ")}` : "No inputs: it does the same thing every time.",
+          saved.linked.length ? `Linked from earlier steps: ${saved.linked.join("; ")}` : "",
+          saved.fixed.length ? `Fixed values (check these should not be inputs): ${saved.fixed.slice(0, 12).join("; ")}` : "",
+          `File: ${workflowFileName(saved.row)} (${EXPORT_TOOL} returns it).`,
+          "Tell the user what was saved, and ask them to review and enable it.",
+        ]
+          .filter(Boolean)
+          .join("\n\n"),
+      );
+    } catch (error) {
+      const issues = (error as any)?.issues as { path: (string | number)[]; message: string }[] | undefined;
+      return toolText(issues ? `The workflow is not valid: ${issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")}` : (error as Error).message, true);
+    }
+  }
+  if (name === EXPORT_TOOL) {
+    const want = String(args.name || "").toLowerCase();
+    const wf = store.list(w, "workflows").find((r) => visibleTo(r, identity) && (r.name.toLowerCase() === want || workflowToolName(r) === want));
+    if (!wf) return toolText("No workflow by that name that you can see.", true);
+    return toolText(`${workflowFileName(wf)}\n\n${toMarkdown(wf)}`);
+  }
+  if (name === RESUME_TOOL) {
+    if (typeof args.run !== "string" || typeof args.answer !== "string" || !args.answer.trim()) return toolText("Give the run id and your answer.", true);
+    try {
+      return outcomeText(await resumeWorkflow(store, services, identity, args.run, args.answer, "agent"));
+    } catch (error) {
+      return toolText((error as Error).message, true);
+    }
+  }
   const match = visibleWorkflowTools(store, identity).find((t) => t.name === name);
   if (!match) return;
   try {
-    const outcome = await runWorkflow(store, services, identity, match.workflow, args, "agent");
-    return toolText(outcome.status === "succeeded" ? outcome.output || "Workflow finished." : `Workflow failed. ${outcome.error}`, outcome.status !== "succeeded");
+    return outcomeText(await runWorkflow(store, services, identity, match.workflow, args, "agent"));
   } catch (error) {
     return toolText((error as Error).message, true);
   }

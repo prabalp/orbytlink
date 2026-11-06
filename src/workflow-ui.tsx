@@ -3,6 +3,7 @@
 // in the editor. One renderer here draws every workflow from that description, so no code is
 // generated or loaded per workflow. Anything it doesn't describe falls back to a sensible guess.
 import type { ReactNode } from "react";
+import { cacheOptions, cacheText } from "./workflow-flow";
 
 type Data = Record<string, any>;
 export const fieldTypes = ["text", "textarea", "number", "date", "email", "url", "select", "checkbox"] as const;
@@ -145,11 +146,23 @@ export function ResultView({ workflow, data, text }: { workflow: Data; data?: un
 // ── Editor parts ─────────────────────────────────────────────────────────────
 export function StepOptions({ step, onChange }: { step: Data; onChange: (patch: Data) => void }) {
   const set = (patch: Data) => onChange(patch);
-  const open = !!(step.forEach || step.when || step.retries || step.onError === "continue");
+  const open = !!(step.forEach || step.when || step.retries || step.onError === "continue" || step.cache || Object.keys(step.remember || {}).length);
+  const memo: [string, string][] = Object.entries(step.remember || {});
+  const setMemo = (rows: [string, string][]) => set({ remember: Object.fromEntries(rows) });
   return (
-    <details className="wf-options" open={open}>
-      <summary>Loop, condition and errors</summary>
-      <label className="wf-arg"><span>For each</span><input value={step.forEach || ""} onChange={(e) => set({ forEach: e.target.value || undefined })} placeholder="{{steps.find.json.items}} — then use {{item}} in arguments" /></label>
+    <details className="wf-options" open={open || step.tool === "judge"}>
+      <summary>{step.tool === "judge" ? "Who decides, condition and errors" : "Loop, condition, errors, cache and memory"}</summary>
+      {step.tool === "judge" && (
+        <label className="wf-arg">
+          <span>Decided by</span>
+          <select aria-label="Decided by" value={step.mode || ""} onChange={(e) => set({ mode: e.target.value || undefined })}>
+            <option value="">The workflow’s default</option>
+            <option value="ai">An AI model (automatic, uses AI credit)</option>
+            <option value="agent">The agent or person running it (it pauses and asks)</option>
+          </select>
+        </label>
+      )}
+      {step.tool !== "judge" && <label className="wf-arg"><span>For each</span><input value={step.forEach || ""} onChange={(e) => set({ forEach: e.target.value || undefined })} placeholder="{{steps.find.json.items}} — then use {{item}} in arguments" /></label>}
       <div className="wf-arg">
         <span>Run only when</span>
         <div className="wf-when">
@@ -177,6 +190,30 @@ export function StepOptions({ step, onChange }: { step: Data; onChange: (patch: 
           </select>
         </div>
       </div>
+      {step.tool !== "judge" && (
+        <label className="wf-arg">
+          <span>Reuse the result</span>
+          <select aria-label="Reuse the result" value={step.cache || 0} onChange={(e) => set({ cache: Number(e.target.value) })}>
+            {cacheOptions.map((n) => <option key={n} value={n}>{n ? `${cacheText(n)}, when called with the same arguments` : "No, run it every time"}</option>)}
+          </select>
+        </label>
+      )}
+      {step.tool !== "judge" && (
+        <div className="wf-arg">
+          <span>Remember</span>
+          <div className="wf-memo">
+            {memo.map(([k, v], n) => (
+              <div className="wf-when" key={n}>
+                <input aria-label="Name to remember" className="code-input" value={k} onChange={(e) => setMemo(memo.map((row, j): [string, string] => (j === n ? [e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "_"), row[1]] : row)))} placeholder="name" />
+                <input aria-label="Value to remember" value={v} onChange={(e) => setMemo(memo.map((row, j): [string, string] => (j === n ? [row[0], e.target.value] : row)))} placeholder={`{{steps.${step.id}.json.id}}`} />
+                <button type="button" className="icon-button" aria-label="Forget this value" onClick={() => setMemo(memo.filter((_, j) => j !== n))}>×</button>
+              </div>
+            ))}
+            {memo.length < 10 && <button type="button" className="text-button add-row" onClick={() => setMemo([...memo, [`value_${memo.length + 1}`, ""]])}>Save a value for the next run</button>}
+            {memo.length > 0 && <small>Read it in any step as <code>{`{{state.${memo[0][0]}}}`}</code>. It is kept for this workflow until reset.</small>}
+          </div>
+        </div>
+      )}
     </details>
   );
 }
@@ -253,6 +290,16 @@ export function WorkflowSettings({ wf, set, canConfigure }: { wf: Data; set: (pa
       <div className="wf-section">
         <div className="wf-section-head"><h3>Schedule and access</h3></div>
         <div className="wf-arg">
+          <span>Decisions</span>
+          <div className="wf-when">
+            <select aria-label="Who makes decisions" value={wf.judgment || "agent"} onChange={(e) => set({ judgment: e.target.value })}>
+              <option value="agent">The agent or person running it decides</option>
+              <option value="ai">An AI model decides (automatic, uses AI credit)</option>
+            </select>
+            {wf.judgment === "ai" && <input aria-label="Model" className="code-input" value={wf.judgeModel || "anthropic/claude-haiku-4.5"} onChange={(e) => set({ judgeModel: e.target.value })} placeholder="anthropic/claude-haiku-4.5" />}
+          </div>
+        </div>
+        <div className="wf-arg">
           <span>Who can use it</span>
           <select aria-label="Visibility" value={canConfigure ? wf.visibility || "workspace" : "private"} disabled={!canConfigure} onChange={(e) => set({ visibility: e.target.value })}>
             <option value="workspace">Everyone in this workspace</option>
@@ -289,8 +336,12 @@ export function WorkflowSettings({ wf, set, canConfigure }: { wf: Data; set: (pa
           </>
         )}
         <label className="check-row">
+          <input type="checkbox" checked={wf.logData !== false} onChange={(e) => set({ logData: e.target.checked })} />
+          <span>Keep step data for debugging<small>The latest ten runs keep a short, trimmed copy of what went into and came out of each step, for 14 days, visible to whoever ran it and admins. Turn it off for workflows that handle sensitive data.</small></span>
+        </label>
+        <label className="check-row">
           <input type="checkbox" checked={!!wf.keepLastResult} onChange={(e) => set({ keepLastResult: e.target.checked })} />
-          <span>Keep the latest result<small>Stored for each person, so the run screen shows it again (for example after a scheduled run). Off by default: runs otherwise keep no data.</small></span>
+          <span>Keep the latest result<small>Stored for each person, so the run screen shows it again (for example after a scheduled run).</small></span>
         </label>
       </div>
     </>

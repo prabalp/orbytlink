@@ -135,7 +135,7 @@ test("turns a skill on, reads it, and sees workflow templates", async ({ page })
 
   await page.locator(".sidebar nav").getByRole("link", { name: "Workflows" }).click();
   await expect(page.getByRole("button", { name: "Use template: File an issue and announce it" })).toBeVisible();
-  await expect(page.getByText("Needs Linear and Slack")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Use template: File an issue and announce it" }).getByText("Needs Linear and Slack")).toBeVisible();
   await page.getByRole("button", { name: "New workflow" }).click();
   await expect(page.getByRole("dialog", { name: "New workflow" }).getByText("No tools are available yet")).toBeVisible();
 });

@@ -28,6 +28,21 @@ services:
       options:
         max-size: "10m"
         max-file: "5"
+  # Optional: a web browser for tasks with no API or MCP. Reachable only from the api container.
+  # Set BROWSER_URL=http://browser:8800 and BROWSER_TOKEN in .env, and TYPESAFE_API_KEY and
+  # TEXT_MODEL_API_KEY for Jev. Leave BROWSER_URL unset to keep the feature off.
+  browser:
+    build: ./browser
+    container_name: OrbytLink-Browser
+    restart: unless-stopped
+    profiles: ["browser"]
+    environment:
+      BROWSER_TOKEN: ${BROWSER_TOKEN}
+      TYPESAFE_API_KEY: ${TYPESAFE_API_KEY}
+      TEXT_MODEL_API_KEY: ${TEXT_MODEL_API_KEY}
+    shm_size: 1gb
+    mem_limit: 2g
+    expose: ["8800"]
 volumes:
   orbytlink-data:
   orbytlink-backups:

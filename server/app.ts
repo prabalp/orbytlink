@@ -18,7 +18,11 @@ import { addSkill, libraryEntry, removeSkill, skillCatalog, skillText } from "./
 import { authoredDetail, createAuthored, deleteAuthored, initializeLibrary, libraryCount, librarySearch, updateAuthored, viewerFor, type Scope } from "./library.js";
 import { MIN_INSTALLS, searchRegistry } from "./skill-registry.js";
 import { AI_TOOL, aiConfigured, aiSummary, generate, saveAiSettings } from "./ai.js";
-import { forgetResults, lastResult, listedFor, manageable, runWorkflow, saveWorkflow, visibleTo } from "./workflows.js";
+import { BROWSER_TOOL, browserConfigured, browserSummary } from "./browser.js";
+import { alreadySaved, captureWorkflow, dismissSuggestion, keyFor, suggestionsFor } from "./capture.js";
+import { fromMarkdown, toMarkdown, workflowFileName } from "./workflow-md.js";
+import { clearCache, forgetState, forgetWorkflowData, listState, stepLogs } from "./workflow-data.js";
+import { continueRun, forgetResults, initializeWorkflows, lastResult, listedFor, manageable, resumeWorkflow, runWorkflow, saveWorkflow, unschedule, visibleTo } from "./workflows.js";
 import { apiCall, apiSchema, fetchDocs, fetchLogo, ingestDocs, publicApi } from "./apis.js";
 import {
   connectionSchema,
@@ -88,6 +92,7 @@ export function createApp(
   });
   const emailAuth = configureEmailAuth(app, store);
   initializeLibrary(store);
+  initializeWorkflows(store);
   const oauthKey = derive(store, "orbytlink:oauth:v1");
   configureOAuthCallback(
     app,
@@ -196,9 +201,11 @@ export function createApp(
           .filter((r) => r.user === i.user || listedFor(store, i).some((wf) => wf.id === r.workflowId && visibleTo(wf, i)))
           .slice(0, 50),
         ai: aiSummary(store, i.workspace),
+        browser: browserSummary(),
         // Steps can also call stored APIs, AI models and other workflows, besides app tools.
         workflowStepTools: [
           ...(aiConfigured() ? [{ name: AI_TOOL, title: "Ask an AI model", app: "AI models", args: ["model", "prompt", "system", "maxTokens", "temperature", "json"] }] : []),
+          ...(browserConfigured() ? [{ name: BROWSER_TOOL, title: "Use a web browser", app: "Browser", args: ["url", "goal", "maxSteps"] }] : []),
           ...(enabledApis(store, i.workspace).length
             ? [{ name: API_REQUEST_TOOL, title: "Call a stored API", app: "APIs", args: ["api", "method", "path", "query", "body"], apis: enabledApis(store, i.workspace).map((a) => a.slug) }]
             : []),
@@ -382,6 +389,8 @@ export function createApp(
     if (!manageable(wf, i)) throw Object.assign(new Error("Only an admin or the workflow's owner can delete it."), { status: 403 });
     store.remove(i.workspace, "workflows", wf.id);
     forgetResults(store, i.workspace, wf.id);
+    forgetWorkflowData(store, wf.id);
+    unschedule(store, wf.id);
     store.audit(i.workspace, i.user, "workflow.deleted", wf.name);
     res.json({ ok: true });
   });
@@ -467,6 +476,72 @@ export function createApp(
     const r = await generate(store, i, req.body, "console");
     store.audit(i.workspace, i.user, "ai.generate", `${r.model} · console`);
     res.json(r);
+  });
+  // workflow_<name>.md: download one, or import one as a draft.
+  app.get("/api/workflows/:id/markdown", permit("read"), (req, res) => {
+    const i = identity(res),
+      wf = store.get(i.workspace, "workflows", String(req.params.id));
+    if (!visibleTo(wf, i)) throw Object.assign(new Error("Record not found"), { status: 404 });
+    res.setHeader("Content-Type", "text/markdown; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${workflowFileName(wf)}"`);
+    res.send(toMarkdown(wf));
+  });
+  app.post("/api/workflows/import", permit("call"), (req, res) => {
+    const i = identity(res);
+    const { markdown } = z.object({ markdown: z.string().min(10).max(400_000) }).parse(req.body);
+    const data = fromMarkdown(markdown);
+    // Members keep private workflows only; an admin's import keeps the file's choice.
+    const visibility = i.permissions.includes("configure") ? data.visibility : "private";
+    res.json(saveWorkflow(store, i, { ...data, visibility }, undefined, "console"));
+  });
+  // Tasks this person has done the same way three times: a click turns one into a draft.
+  app.get("/api/workflows/suggestions", permit("call"), (_req, res) => {
+    const i = identity(res);
+    res.json(suggestionsFor(keyFor(i)).filter((p) => !alreadySaved(store, i, p.tools)).map((p) => ({ tools: p.tools, count: p.count, lastAt: new Date(p.lastAt).toISOString() })));
+  });
+  app.post("/api/workflows/suggestions/draft", permit("call"), (req, res) => {
+    const i = identity(res);
+    const { tools, name } = z.object({ tools: z.array(z.string().max(64)).min(2).max(20), name: z.string().trim().min(2).max(80) }).parse(req.body);
+    const saved = captureWorkflow(store, i, { name, tools });
+    res.json(saved.row);
+  });
+  app.post("/api/workflows/suggestions/dismiss", permit("call"), (req, res) => {
+    const { tools } = z.object({ tools: z.array(z.string().max(64)).min(1).max(20) }).parse(req.body);
+    dismissSuggestion(keyFor(identity(res)), tools);
+    res.json({ ok: true });
+  });
+  // A run paused at a judgment step goes on once the person who started it answers.
+  app.post("/api/workflows/runs/:id/resume", permit("call"), async (req, res) => {
+    const { answer } = z.object({ answer: z.string().min(1).max(20_000) }).parse(req.body);
+    res.json(await resumeWorkflow(store, services, identity(res), String(req.params.id), answer, "console"));
+  });
+  // Carry on a run that a restart interrupted, from the step it had reached.
+  app.post("/api/workflows/runs/:id/continue", permit("call"), async (req, res) => {
+    res.json(await continueRun(store, services, identity(res), String(req.params.id)));
+  });
+  // What went into and came out of each step of a recent run: for the person who ran it, or an admin.
+  app.get("/api/workflows/runs/:id/steps", permit("call"), (req, res) => {
+    const i = identity(res),
+      run = store.list(i.workspace, "workflow_runs").find((r) => r.id === String(req.params.id));
+    if (!run || (run.user !== i.user && !i.permissions.includes("configure"))) throw Object.assign(new Error("Record not found"), { status: 404 });
+    res.json(stepLogs(store, i.workspace, run.id));
+  });
+  // What a workflow remembers between runs, and the way to forget it.
+  app.get("/api/workflows/:id/state", permit("call"), (req, res) => {
+    const i = identity(res),
+      wf = store.get(i.workspace, "workflows", String(req.params.id));
+    if (!visibleTo(wf, i)) throw Object.assign(new Error("Record not found"), { status: 404 });
+    res.json(listState(store, wf.id));
+  });
+  app.delete("/api/workflows/:id/state", permit("call"), (req, res) => {
+    const i = identity(res),
+      wf = store.get(i.workspace, "workflows", String(req.params.id));
+    if (!manageable(wf, i)) throw Object.assign(new Error("Only an admin or the workflow's owner can reset what it remembers."), { status: 403 });
+    forgetState(store, wf.id, typeof req.query.key === "string" ? req.query.key : undefined);
+    res.json({ ok: true });
+  });
+  app.delete("/api/workflow-cache", permit("configure"), (_req, res) => {
+    res.json({ cleared: clearCache(store, identity(res).workspace) });
   });
   // The latest kept result of a workflow, for the person asking.
   app.get("/api/workflows/:id/result", permit("call"), (req, res) => {

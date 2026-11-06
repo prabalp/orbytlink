@@ -315,3 +315,54 @@ export function Sparkles(p: IconProps) {
     </Glyph>
   );
 }
+export function Database(p: IconProps) {
+  return (
+    <Glyph {...p}>
+      <ellipse cx="12" cy="5" rx="8" ry="3" />
+      <path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5" />
+      <path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6" />
+    </Glyph>
+  );
+}
+export function Filter(p: IconProps) {
+  return (
+    <Glyph {...p}>
+      <path d="M3 5h18l-7 8v6l-4-2v-4z" />
+    </Glyph>
+  );
+}
+export function Flag(p: IconProps) {
+  return (
+    <Glyph {...p}>
+      <path d="M5 21V4M5 4h11l-2 4 2 4H5" />
+    </Glyph>
+  );
+}
+export function RefreshCw(p: IconProps) {
+  return (
+    <Glyph {...p}>
+      <path d="M20 12a8 8 0 0 0-14-5.3L4 9M4 4v5h5M4 12a8 8 0 0 0 14 5.3L20 15M20 20v-5h-5" />
+    </Glyph>
+  );
+}
+export function Repeat(p: IconProps) {
+  return (
+    <Glyph {...p}>
+      <path d="M17 2l4 4-4 4M3 11V9a3 3 0 0 1 3-3h15M7 22l-4-4 4-4M21 13v2a3 3 0 0 1-3 3H3" />
+    </Glyph>
+  );
+}
+export function SkipForward(p: IconProps) {
+  return (
+    <Glyph {...p}>
+      <path d="M5 4l10 8-10 8zM19 5v14" />
+    </Glyph>
+  );
+}
+export function Bolt(p: IconProps) {
+  return (
+    <Glyph {...p}>
+      <path d="M13 2L4 14h7l-1 8 9-12h-7z" />
+    </Glyph>
+  );
+}

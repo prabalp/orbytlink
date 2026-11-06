@@ -13,6 +13,7 @@ import {
   CircleHelp,
   Code2,
   Copy,
+  Download,
   Ellipsis,
   Eye,
   EyeOff,
@@ -44,7 +45,8 @@ import { logoFiles } from "./brand-logos";
 import { moreApps, type ListedApp } from "./catalog-more";
 import { brands, monograms } from "./brand-icons";
 import { agents } from "./agents";
-import { workflowTemplates, type WorkflowTemplate } from "./workflow-templates";
+import { bindTemplate, missingApps, templateLogos, workflowTemplates, type WorkflowTemplate } from "./workflow-templates";
+import { FlowDiagram, type Describe, type StepNote } from "./workflow-flow";
 import { describeSchedule, ResultView, RunFields, StepOptions, WorkflowSettings } from "./workflow-ui";
 import { AiCredit, callable, ModelDetail, type ModelRow } from "./ai-ui";
 import { LibraryView } from "./library-ui";
@@ -451,7 +453,7 @@ export function App() {
     settings = s.settings[0],
     // Old links to #connect-claude still land on the renamed page.
     // Old links: #connect-claude is now Connect agents. #apis and #ai-models are Catalog views.
-    title = nav.find(([n]) => slug(n) === (page === "connect-claude" ? "connect-agents" : page === "apis" || page === "ai-models" ? "catalog" : page))?.[0] || "Connections",
+    title = nav.find(([n]) => slug(n) === (page === "connect-claude" ? "connect-agents" : page === "apis" || page === "ai-models" || page === "browser" ? "catalog" : page))?.[0] || "Connections",
     filtered = s.connections.filter((c: Data) =>
       `${c.name} ${c.description || ""} ${c.endpoint || ""}`
         .toLowerCase()
@@ -638,7 +640,7 @@ export function App() {
               onToolMode={(t: Data, toolMode: string) => act(() => api(`/tokens/${t.id}`, { toolMode }, "PUT"), toolModeSaved[toolMode] || "Saved", false)} />
           )}
           {title === "Catalog" && (
-            <CatalogPage key={page} initialView={page === "apis" ? "api" : page === "ai-models" ? "models" : "mcp"} state={s} canConfigure={canConfigure} search={search} setSearch={setSearch} onConnect={(p: Preset) => setDialog({ type: "connection", data: presetDraft(p) })} onApi={(p: ApiPreset) => setDialog({ type: "api", data: presetApiDraft(p) })} onModel={(m: ModelRow) => setDialog({ type: "model", data: m })} />
+            <CatalogPage key={page} initialView={page === "apis" ? "api" : page === "ai-models" ? "models" : page === "browser" ? "browser" : "mcp"} state={s} canConfigure={canConfigure} search={search} setSearch={setSearch} onConnect={(p: Preset) => setDialog({ type: "connection", data: presetDraft(p) })} onApi={(p: ApiPreset) => setDialog({ type: "api", data: presetApiDraft(p) })} onModel={(m: ModelRow) => setDialog({ type: "model", data: m })} />
           )}
           {title === "Skills" && (
             <SkillsPage state={s} busy={busy} canConfigure={canConfigure} search={search} setSearch={setSearch} onOpen={(skill: Data) => setDialog({ type: "skill", data: skill })} onToggle={(skill: Data, enabled: boolean) => act(() => api(`/skills/${skill.id}`, { enabled }, "PUT"), enabled ? `${skill.title} is on for your agents` : `${skill.title} is off`, false)} onChanged={() => void refresh()} notify={setToast} />
@@ -651,8 +653,11 @@ export function App() {
               onEdit={(wf: Data) => setDialog({ type: "workflow", data: { id: wf.id, draft: wf } })}
               onTemplate={(t: WorkflowTemplate) => setDialog({ type: "workflow", data: { draft: bindTemplate(t, toolIndex(s)), template: true } })}
               onRun={(wf: Data) => setDialog({ type: "run", data: wf })}
+              onRunDetail={(r: Data) => setDialog({ type: "run-detail", data: r })}
               onToggle={(wf: Data) => act(() => api(`/workflows/${wf.id}`, { ...cleanWorkflow(wf), enabled: !wf.enabled }, "PUT"), wf.enabled ? "Workflow disabled" : "Workflow enabled", false)}
               onDelete={(wf: Data) => setDialog({ type: "delete-workflow", data: wf })}
+              onChanged={() => void refresh()}
+              notify={setToast}
             />
           )}
           {title === "Team" && (
@@ -763,11 +768,12 @@ export function App() {
             "delete-api": "Remove API",
             workflow: dialog.data?.id ? "Edit workflow" : dialog.data?.template ? "New workflow from template" : "New workflow",
             run: `Run · ${dialog.data?.name}`,
+            "run-detail": `Run · ${dialog.data?.workflow}`,
             "delete-workflow": "Delete workflow",
           } as Data)[dialog.type]}
           subtitle={dialog.type === "tools" ? "Choose which tools Claude can see and call." : dialog.type === "skill" ? dialog.data?.description : undefined}
           onClose={close}
-          wide={["tools", "skill", "workflow", "run", "api-detail", "model", "skill-editor"].includes(dialog.type)}
+          wide={["tools", "skill", "workflow", "run", "run-detail", "api-detail", "model", "skill-editor"].includes(dialog.type)}
         >
           {error && <div className="error modal-error" role="alert">{error}</div>}
           {dialog.type === "skill-editor" && (
@@ -1099,6 +1105,16 @@ export function App() {
             />
           )}
           {dialog.type === "run" && <RunWorkflow workflow={dialog.data!} onDone={() => void refresh()} />}
+          {dialog.type === "run-detail" && (
+            <RunDetail
+              run={dialog.data!}
+              workflow={s.workflows.find((w: Data) => w.id === dialog.data!.workflowId)}
+              describe={describeFor(toolIndex(s))}
+              me={s.identity.user}
+              canConfigure={canConfigure}
+              onDone={() => void refresh()}
+            />
+          )}
           {dialog.type === "delete-workflow" && (
             <div className="form-body">
               <p>Delete <strong>{dialog.data!.name}</strong>? Agents lose its tool immediately. Its run history is kept.</p>
@@ -1467,8 +1483,35 @@ function presetDraft(p: Preset): Data {
   };
 }
 const SOON = "Coming soon";
-type CatalogView = "mcp" | "api" | "models";
-const viewHash: Record<CatalogView, string> = { mcp: "#catalog", api: "#apis", models: "#ai-models" };
+type CatalogView = "mcp" | "api" | "models" | "browser";
+const viewHash: Record<CatalogView, string> = { mcp: "#catalog", api: "#apis", models: "#ai-models", browser: "#browser" };
+// A real browser for tasks with no API or MCP server. It is a tool, not a connection, so this is its status page.
+function BrowserView({ state: s }: any) {
+  const on = !!s.browser?.configured;
+  const per = (s.browser?.microPerStep || 0) / 1_000_000;
+  return (
+    <section className="panel">
+      <div className="section-heading">
+        <h2>Browser</h2>
+        <span className="count">{on ? "On" : "Not switched on"}</span>
+      </div>
+      <p className="muted browser-note">For jobs that have no API or MCP server: reading a public web page, finding a price, filling a form. Agents get it as the tool <code>orbytlink__browse</code>, and it is a step type in workflows, so retries, reuse and run logs work the same way.</p>
+      {on ? (
+        <div className="table-scroll">
+          <table>
+            <tbody>
+              <tr><td>Price</td><td>${per.toFixed(2)} per page action, charged from your AI credit</td></tr>
+              <tr><td>Limits</td><td>Up to {s.browser.maxSteps} actions and about two minutes per run; public https pages only, no sign-in</td></tr>
+              <tr><td>Credit</td><td>${((s.ai?.balance || 0) / 1_000_000).toFixed(2)} available. The most a run can cost is held first, and unused credit is returned.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <Empty icon={LayoutGrid} title="The browser is not switched on for this server">The operator needs to start the browser service and set <code>BROWSER_URL</code> and <code>BROWSER_TOKEN</code>. Once it is on, it appears here, in the agents' tools and in the workflow step list.</Empty>
+      )}
+    </section>
+  );
+}
 // Views of the catalog: MCP servers (with apps coming soon), APIs, and AI models with their prices.
 function CatalogPage({ state: s, canConfigure, search, setSearch, onConnect, onApi, onModel, initialView = "mcp" }: any) {
   const [view, setView] = useState<CatalogView>(initialView);
@@ -1481,11 +1524,18 @@ function CatalogPage({ state: s, canConfigure, search, setSearch, onConnect, onA
   };
   const viewSwitch = (
     <div className="segmented catalog-view" role="radiogroup" aria-label="Catalog">
-      {([["mcp", "MCP servers"], ["api", "APIs"], ["models", "AI models"]] as const).map(([v, label]) => (
+      {([["mcp", "MCP servers"], ["api", "APIs"], ["models", "AI models"], ["browser", "Browser"]] as const).map(([v, label]) => (
         <button type="button" role="radio" aria-checked={view === v} className={view === v ? "active" : ""} key={v} onClick={() => switchView(v)}>{label}</button>
       ))}
     </div>
   );
+  if (view === "browser")
+    return (
+      <>
+        {viewSwitch}
+        <BrowserView state={s} />
+      </>
+    );
   if (view === "models")
     return (
       <>
@@ -2112,9 +2162,10 @@ function AgentsPage({ state: s, busy, copy, freshToken, onQuickCreate, onCreate,
       <header className="agents-hero">
         <BrandTile id="agent-mcp" name="MCP" />
         <h1>Connect any agent</h1>
-        <p>One address gives any MCP client every app in this gateway. Paste it in, add your token, and you’re done.</p>
+        <p>Connect once to use every app in this gateway. Copy the address, create a token, then follow the steps for your agent.</p>
+        <span className="agents-field-label">Gateway address</span>
         <div className="hero-url">
-          <code>{url}</code>
+          <code id="gateway-mcp-url">{url}</code>
           <button className="primary compact" onClick={() => copy(url, "MCP URL")}><Copy size={14} /> Copy</button>
         </div>
         {/* One click: a token named after the chosen agent, valid 90 days. Custom names and expiry live in the tokens table. */}
@@ -2138,8 +2189,8 @@ function AgentsPage({ state: s, busy, copy, freshToken, onQuickCreate, onCreate,
         )}
       </header>
 
-      <section className="agents-presets" aria-label="Quick setup">
-        <span className="agents-label">Quick setup for</span>
+      <section className="agents-presets" aria-label="Choose your agent">
+        <span className="agents-label">Choose your agent</span>
         <div className="agent-chips" role="radiogroup" aria-label="Agent">
           {presets.map((a) => (
             <button
@@ -2157,7 +2208,7 @@ function AgentsPage({ state: s, busy, copy, freshToken, onQuickCreate, onCreate,
         </div>
       </section>
 
-      <section className="agent-guide" aria-label={`Set up ${agent.name}`}>
+      <section className="agent-guide" aria-label={`Setup instructions for ${agent.name}`}>
         <div className="agent-guide-head">
           <div className="agent-heading">
             <BrandTile id={agent.logo} name={agent.name} />
@@ -2644,9 +2695,20 @@ function toolIndex(s: Data): ToolInfo[] {
     app: t.app,
     def: { name: t.name, title: t.title, inputSchema: { properties: Object.fromEntries(t.args.map((a: string) => [a, { type: "string", description: a === "api" ? `One of: ${t.apis.join(", ")}` : a === "body" ? "JSON, e.g. {\"text\": \"{{steps.a.text}}\"}" : undefined }])), required: t.name === "orbytlink__api_request" ? ["api", "method", "path"] : [] } },
   }));
-  return [...apps, ...own];
+  // A decision step: made by an AI model or by whoever runs the workflow.
+  const judge = {
+    name: "judge",
+    app: "Decisions",
+    def: { name: "judge", title: "Make a decision", inputSchema: { properties: { prompt: { type: "string", description: "What to decide, e.g. Which of {{steps.list.text}} is most urgent?" }, returns: { type: "string", description: 'The answer\'s shape, e.g. JSON {"id": string}' } }, required: ["prompt"] } },
+  };
+  return [...apps, ...own, judge];
 }
-const blankWorkflow = (shared = true) => ({ name: "", description: "", inputs: [], steps: [{ id: "step_1", tool: "", args: {} }], enabled: false, visibility: shared ? "workspace" : "private", keepLastResult: false, schedule: null });
+// How the flow diagram names a step: the tool's title, its app and mark.
+const describeFor = (tools: ToolInfo[]): Describe => (tool) => {
+  const t = tools.find((x) => x.name === tool);
+  return { title: t?.def.title || t?.def.name || tool.split("__").pop()!.replace(/_/g, " "), app: t?.app, mark: t?.connection ? <AppLogo preset={presetFor(t.connection)} kind="mcp" /> : undefined };
+};
+const blankWorkflow = (shared = true) => ({ name: "", description: "", inputs: [], steps: [{ id: "step_1", tool: "", args: {} }], enabled: false, visibility: shared ? "workspace" : "private", keepLastResult: false, logData: true, schedule: null });
 const cleanWorkflow = (wf: Data) => ({
   name: wf.name,
   description: wf.description || "",
@@ -2659,10 +2721,17 @@ const cleanWorkflow = (wf: Data) => ({
     ...(st.when?.value?.trim() ? { when: { value: st.when.value, op: st.when.op || "truthy", to: st.when.to || "" } } : {}),
     retries: st.retries || 0,
     onError: st.onError || "stop",
+    ...(st.cache && st.tool !== "judge" ? { cache: st.cache } : {}),
+    ...(st.tool !== "judge" && Object.keys(st.remember || {}).length ? { remember: Object.fromEntries(Object.entries(st.remember).filter(([k, v]) => k && String(v).trim())) } : {}),
+    ...(st.tool === "judge" && st.mode ? { mode: st.mode } : {}),
   })),
+  judgment: wf.judgment || "agent",
+  judgeModel: wf.judgeModel || "anthropic/claude-haiku-4.5",
+  notes: wf.notes || "",
   enabled: !!wf.enabled,
   visibility: wf.visibility || "workspace",
   keepLastResult: !!wf.keepLastResult,
+  logData: wf.logData !== false,
   schedule: wf.schedule || null,
   // Drop run-screen settings for inputs that no longer exist, and a "from" step that was removed.
   ...(wf.ui
@@ -2674,25 +2743,6 @@ const cleanWorkflow = (wf: Data) => ({
       }
     : {}),
 });
-// Bind a template to the tools actually connected; unmatched steps keep a hint for the person.
-function bindTemplate(t: WorkflowTemplate, tools: ToolInfo[]) {
-  return {
-    name: t.name,
-    description: t.description,
-    inputs: t.inputs,
-    enabled: false,
-    steps: t.steps.map((st) => {
-      const match = tools.find((x) => st.tool.test(x.name));
-      const props = Object.keys(match?.def.inputSchema?.properties || {});
-      const args: Record<string, string> = {};
-      for (const key of props) {
-        const hint = st.args.find(([re]) => re.test(key));
-        if (hint) args[key] = hint[1];
-      }
-      return { id: st.id, tool: match?.name || "", args, hint: match ? undefined : { app: st.app, label: st.label } };
-    }),
-  };
-}
 function AppMarks({ tools, steps }: { tools: ToolInfo[]; steps: Data[] }) {
   const apps: ToolInfo[] = [];
   for (const st of steps) {
@@ -2706,7 +2756,7 @@ function AppMarks({ tools, steps }: { tools: ToolInfo[]; steps: Data[] }) {
     </span>
   );
 }
-function WorkflowsPage({ state: s, busy, canConfigure, onEdit, onTemplate, onRun, onToggle, onDelete }: any) {
+function WorkflowsPage({ state: s, busy, canConfigure, onEdit, onTemplate, onRun, onRunDetail, onToggle, onDelete, onChanged, notify }: any) {
   const tools = toolIndex(s);
   const me = s.identity.user;
   const mine = (wf: Data) => canConfigure || (wf.visibility === "private" && wf.createdBy === me);
@@ -2719,8 +2769,15 @@ function WorkflowsPage({ state: s, busy, canConfigure, onEdit, onTemplate, onRun
       {drafts > 0 && canConfigure && (
         <div className="info-row"><Workflow size={17} /><p><strong>{drafts} {drafts === 1 ? "draft" : "drafts"} from agents</strong> {drafts === 1 ? "needs" : "need"} review. Open it, check each step, then enable it.</p></div>
       )}
+      <Suggestions canCreate={canCreate} onChanged={onChanged} notify={notify} />
       <section className="panel">
-        <div className="section-heading"><h2>Your workflows</h2><span className="count">{workflows.length}</span></div>
+        <div className="section-heading">
+          <h2>Your workflows</h2>
+          <span className="wf-heading-actions">
+            {canCreate && <ImportWorkflow onChanged={onChanged} notify={notify} />}
+            <span className="count">{workflows.length}</span>
+          </span>
+        </div>
         {workflows.length ? (
           <div className="table-scroll">
             <table className="wf-table">
@@ -2744,6 +2801,7 @@ function WorkflowsPage({ state: s, busy, canConfigure, onEdit, onTemplate, onRun
                         <button className="secondary compact" disabled={busy || (!wf.enabled && !mine(wf)) || (wf.visibility === "private" && wf.createdBy !== me)} onClick={() => onRun(wf)}><Play size={12} /> Run</button>
                         {mine(wf) && <button className="text-button" onClick={() => onEdit(wf)}>{wf.source === "agent" && !wf.enabled ? "Review" : "Edit"}</button>}
                         {mine(wf) && <button className="text-button" disabled={busy} onClick={() => onToggle(wf)}>{wf.enabled ? "Disable" : "Enable"}</button>}
+                        <a className="icon-button" href={`/api/workflows/${wf.id}/markdown`} aria-label={`Download ${wf.name} as a file`} title="Download workflow_<name>.md"><Download size={15} /></a>
                         {mine(wf) && <button className="icon-button" aria-label={`Delete ${wf.name}`} onClick={() => onDelete(wf)}><Trash2 size={15} /></button>}
                       </div>
                     </td>
@@ -2758,18 +2816,21 @@ function WorkflowsPage({ state: s, busy, canConfigure, onEdit, onTemplate, onRun
       </section>
       <section className="catalog-segment" aria-label="Templates">
         <h2>Start from a template</h2>
-        <div className="catalog-grid">
+        <div className="tpl-grid">
           {workflowTemplates.map((t) => {
-            const missing = t.steps.filter((st) => !tools.some((x) => st.tool.test(x.name))).map((st) => st.app);
+            const missing = missingApps(t, tools);
+            const decides = t.steps.some((st) => st.judge);
             return (
-              <button type="button" className="catalog-card" key={t.id} disabled={!canCreate} onClick={() => onTemplate(t)} aria-label={`Use template: ${t.name}`}>
-                <span className="template-marks">{[...new Set(t.steps.map((st) => st.logo))].map((l) => <BrandTile key={l} id={l} name={l} />)}</span>
-                <span className="catalog-body">
-                  <span className="catalog-name">{t.name}</span>
-                  <span className="catalog-desc">{t.description}</span>
-                  {missing.length > 0 && <span className="template-needs">Needs {[...new Set(missing)].join(" and ")}</span>}
+              <button type="button" className="tpl-card" key={t.id} disabled={!canCreate} onClick={() => onTemplate(t)} aria-label={`Use template: ${t.name}`}>
+                <span className="tpl-top">
+                  <span className="template-marks">{templateLogos(t).map((l) => <BrandTile key={l} id={l} name={l} />)}</span>
                 </span>
-                <ArrowUpRight className="catalog-arrow" size={16} />
+                <span className="tpl-name">{t.name}</span>
+                <span className="tpl-desc">{t.description}</span>
+                <span className="tpl-foot">
+                  <span>{missing.length > 0 ? `Needs ${missing.join(" and ")}` : `${t.steps.length} steps${decides ? " · includes a decision" : ""}`}</span>
+                  <ArrowUpRight size={16} />
+                </span>
               </button>
             );
           })}
@@ -2777,14 +2838,14 @@ function WorkflowsPage({ state: s, busy, canConfigure, onEdit, onTemplate, onRun
       </section>
       <div className="info-row">
         <Workflow size={17} />
-        <p>Or describe the task to your agent, for example: <em>“Make an OrbytLink workflow that files a Linear issue and posts it in #eng.”</em> It drafts one with <code>orbytlink__create_workflow</code>, and the draft waits here until an admin enables it.</p>
+        <p>The easiest way is to do a task with your agent first, then say <em>“save this as a workflow.”</em> It builds the workflow from the calls that actually ran (<code>orbytlink__save_workflow</code>), and the draft waits here for you to enable it. Next time it is one call.</p>
       </div>
       <section className="panel">
         <div className="section-heading"><h2>Recent runs</h2><span className="count">{runs.length}</span></div>
         {runs.length ? (
           <div className="table-scroll">
             <table>
-              <thead><tr><th>Workflow</th><th>Result</th><th>Steps</th><th>Started by</th><th>When</th></tr></thead>
+              <thead><tr><th>Workflow</th><th>Result</th><th>Steps</th><th>Started by</th><th>When</th><th><span className="sr-only">Details</span></th></tr></thead>
               <tbody>
                 {runs.map((r) => (
                   <tr key={r.id}>
@@ -2793,16 +2854,93 @@ function WorkflowsPage({ state: s, busy, canConfigure, onEdit, onTemplate, onRun
                     <td className="muted">{r.steps.filter((x: Data) => x.status === "ok").length}/{r.steps.length} · {r.steps.reduce((n: number, x: Data) => n + x.ms, 0)} ms</td>
                     <td className="muted">{({ agent: "Agent", schedule: "Schedule", workflow: "Workflow" } as Data)[r.trigger] || "Console"} · {r.user}</td>
                     <td className="muted">{when(r.createdAt)}</td>
+                    <td><button className="compact secondary" onClick={() => onRunDetail(r)}>{r.status === "interrupted" && r.resumable ? "Continue" : "Details"}</button></td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         ) : (
-          <Empty icon={Activity} title="No runs yet">Runs record each step’s result and timing. Inputs and outputs are not stored, unless a workflow is set to keep its latest result.</Empty>
+          <Empty icon={Activity} title="No runs yet">Each run is recorded step by step, with a short, trimmed copy of what went in and came out for your latest runs.</Empty>
         )}
       </section>
     </>
+  );
+}
+// Tasks done the same way three times through an agent, offered as workflows.
+function Suggestions({ canCreate, onChanged, notify }: { canCreate: boolean; onChanged: () => void; notify: (m: string) => void }) {
+  const [items, setItems] = useState<Data[]>([]);
+  const [busy, setBusy] = useState("");
+  const load = () => api("/workflows/suggestions").then(setItems, () => setItems([]));
+  useEffect(() => {
+    if (canCreate) void load();
+  }, [canCreate]);
+  if (!items.length) return null;
+  const label = (tools: string[]) => tools.map((t) => t.split("__").pop()!.replace(/_/g, " ")).join(" → ");
+  return (
+    <section className="panel">
+      <div className="section-heading"><h2>Suggested from your work</h2><span className="count">Done the same way {items[0].count}+ times</span></div>
+      <div className="skill-list">
+        {items.map((p) => {
+          const key = p.tools.join(">");
+          return (
+            <div className="skill-row lib" key={key}>
+              <div className="skill-main">
+                <strong>{label(p.tools)}</strong>
+                <span className="skill-meta">{p.tools.join(" → ")} · {p.count} times, last {when(p.lastAt)}</span>
+              </div>
+              <span className="row-actions">
+                <button
+                  className="secondary compact"
+                  disabled={!!busy}
+                  onClick={async () => {
+                    setBusy(key);
+                    try {
+                      await api("/workflows/suggestions/draft", { tools: p.tools, name: label(p.tools).replace(/^./, (c) => c.toUpperCase()).slice(0, 80) });
+                      notify("Draft created. Open it to name its inputs, then enable it.");
+                      onChanged();
+                      await load();
+                    } catch (e) {
+                      notify((e as Error).message);
+                    } finally {
+                      setBusy("");
+                    }
+                  }}
+                >
+                  {busy === key ? <LoaderCircle size={13} className="spin" /> : <Plus size={13} />} Create draft
+                </button>
+                <button className="text-button" disabled={!!busy} onClick={async () => { await api("/workflows/suggestions/dismiss", { tools: p.tools }); await load(); }}>Dismiss</button>
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+// Import a workflow_<name>.md as a draft.
+function ImportWorkflow({ onChanged, notify }: { onChanged: () => void; notify: (m: string) => void }) {
+  return (
+    <label className="text-button wf-import">
+      Import file
+      <input
+        type="file"
+        accept=".md,text/markdown"
+        hidden
+        onChange={async (e) => {
+          const f = e.target.files?.[0];
+          e.target.value = "";
+          if (!f) return;
+          try {
+            const wf = await api("/workflows/import", { markdown: await f.text() });
+            notify(`Imported ${wf.name} as a draft`);
+            onChanged();
+          } catch (err) {
+            notify((err as Error).message);
+          }
+        }}
+      />
+    </label>
   );
 }
 function WorkflowEditor({ state: s, data, busy, copy, onSave, onCancel, canConfigure }: any) {
@@ -2843,8 +2981,13 @@ function WorkflowEditor({ state: s, data, busy, copy, onSave, onCancel, canConfi
       </div>
 
       <div className="wf-section">
+        <div className="wf-section-head"><h3>Flow</h3><small>What this workflow does, drawn from the steps below. It updates as you edit.</small></div>
+        <FlowDiagram workflow={wf} describe={describeFor(tools)} />
+      </div>
+
+      <div className="wf-section">
         <div className="wf-section-head"><h3>Steps</h3><small>Run in order. A failed step stops the run.</small></div>
-        {!tools.length && <div className="info-row"><LockKeyhole size={17} /><p>No tools are available yet. Connect an app and pass its test first.</p></div>}
+        {!tools.some((t) => t.name !== "judge") && <div className="info-row"><LockKeyhole size={17} /><p>No tools are available yet. Connect an app and pass its test first.</p></div>}
         <ol className="wf-steps">
           {wf.steps.map((st: Data, i: number) => {
             const tool = tools.find((t) => t.name === st.tool);
@@ -2901,12 +3044,73 @@ function WorkflowEditor({ state: s, data, busy, copy, onSave, onCancel, canConfi
     </form>
   );
 }
+// One finished run: the flow with each step coloured, what went in and came out of it, what the
+// workflow remembers, and, for a run a restart interrupted, a way to carry on.
+function RunDetail({ run, workflow, describe, me, canConfigure, onDone }: { run: Data; workflow?: Data; describe: Describe; me: string; canConfigure: boolean; onDone: () => void }) {
+  const [logs, setLogs] = useState<Data[] | null>(null);
+  const [saved, setSaved] = useState<Data[]>([]);
+  const [shown, setShown] = useState<Data>(run);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const load = () => {
+    api(`/workflows/runs/${shown.id}/steps`).then(setLogs, () => setLogs([]));
+    if (workflow) api(`/workflows/${workflow.id}/state`).then(setSaved, () => setSaved([]));
+  };
+  useEffect(load, [shown.id]);
+  const notes: Record<string, StepNote> = {};
+  (shown.steps || []).forEach((st: Data, i: number) => {
+    const l = logs?.find((x) => x.idx === i);
+    notes[st.id] = { status: st.status, ms: st.ms, note: st.note, cached: st.cached, items: st.items, error: st.error, input: l?.input || undefined, output: l?.output || undefined };
+  });
+  const shape = workflow || { inputs: [], steps: (shown.steps || []).map((st: Data) => ({ id: st.id, tool: st.tool })) };
+  const canResume = shown.status === "interrupted" && shown.resumable && shown.user === me;
+  const manage = !!workflow && (canConfigure || (workflow.visibility === "private" && workflow.createdBy === me));
+  const forget = async () => {
+    await api(`/workflows/${workflow!.id}/state`, {}, "DELETE");
+    setSaved([]);
+  };
+  const memory = saved.length > 0 && (
+    <>
+      <small>Saved now</small>
+      {saved.map((x) => <div className="flow-mem-row" key={x.key}><code>{x.key}</code><small>{x.preview}{x.size > 300 ? "…" : ""}</small></div>)}
+      {manage && <button className="compact secondary" onClick={() => void forget()}>Forget these</button>}
+    </>
+  );
+  return (
+    <div className="form-body">
+      <div className="wf-section-head"><Status value={shown.status} /><small>{({ agent: "Agent", schedule: "Schedule", workflow: "Workflow" } as Data)[shown.trigger] || "Console"} · {shown.user} · {when(shown.createdAt)}</small></div>
+      {shown.status === "interrupted" && <div className="info-row"><LockKeyhole size={17} /><p>{canResume ? "The server restarted during this run. Continue picks it up from the step it had reached; the step that was running starts again, so check it didn’t already take effect." : "The server restarted during this run, and there is nothing to continue from. Start the workflow again."}</p></div>}
+      <FlowDiagram workflow={shape} describe={describe} notes={notes} memory={memory || undefined} />
+      {logs && !logs.length && shown.steps?.length > 0 && <p className="muted">No step data was kept for this run: the workflow keeps none, or this run is older than its latest ten.</p>}
+      {error && <div className="error">{error}</div>}
+      {canResume && (
+        <div className="form-footer">
+          <button className="primary" disabled={busy} onClick={async () => {
+            setBusy(true);
+            setError("");
+            try {
+              const out = await api(`/workflows/runs/${shown.id}/continue`, {});
+              setShown({ ...shown, status: out.status, resumable: false, steps: out.steps });
+              onDone();
+              load();
+            } catch (e) {
+              setError((e as Error).message);
+            } finally {
+              setBusy(false);
+            }
+          }}>{busy ? "Continuing…" : "Continue this run"}</button>
+        </div>
+      )}
+    </div>
+  );
+}
 function RunWorkflow({ workflow, onDone }: { workflow: Data; onDone: () => void }) {
   const [values, setValues] = useState<Record<string, string>>({});
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<Data | null>(null);
   const [kept, setKept] = useState<Data | null>(null);
   const [error, setError] = useState("");
+  const [answer, setAnswer] = useState("");
   // The latest kept result (for example from a scheduled run), loaded only when asked to keep one.
   useEffect(() => {
     if (!workflow.keepLastResult) return;
@@ -2947,14 +3151,44 @@ function RunWorkflow({ workflow, onDone }: { workflow: Data; onDone: () => void 
                 <span className="run-dot" />
                 <code>{st.id}</code>
                 <span className="muted">{st.tool}{st.items !== undefined ? ` · ${st.items} items` : ""}</span>
-                <span className="run-ms">{st.status === "skipped" ? st.note || "skipped" : `${st.ms} ms`}</span>
+                <span className="run-ms">{st.status === "skipped" ? st.note || "skipped" : st.note || `${st.ms} ms`}</span>
                 {st.error && <p>{st.error}</p>}
               </li>
             ))}
           </ol>
         </div>
       )}
-      {shown && (shown.data != null || shown.output) && (
+      {result?.status === "waiting" && (
+        <div className="wf-section wf-decision">
+          <div className="wf-section-head"><h3>Your decision</h3><small>The workflow paused here and goes on with your answer.</small></div>
+          <pre className="code-block wf-text">{result.question}</pre>
+          {result.returns && <small className="muted">Answer with {result.returns}.</small>}
+          <textarea aria-label="Your answer" value={answer} onChange={(e) => setAnswer(e.target.value)} rows={3} />
+          <div>
+            <button
+              type="button"
+              className="secondary"
+              disabled={running || !answer.trim()}
+              onClick={async () => {
+                setRunning(true);
+                setError("");
+                try {
+                  setResult(await api(`/workflows/runs/${result.runId}/resume`, { answer }));
+                  setAnswer("");
+                  onDone();
+                } catch (err) {
+                  setError((err as Error).message);
+                } finally {
+                  setRunning(false);
+                }
+              }}
+            >
+              Continue
+            </button>
+          </div>
+        </div>
+      )}
+      {shown && shown.status !== "waiting" && (shown.data != null || shown.output) && (
         <div className="wf-section">
           <div className="wf-section-head"><h3>Result</h3>{!result && kept && <small>Kept from {when(kept.createdAt)}</small>}</div>
           <ResultView workflow={workflow} data={shown.data ?? undefined} text={shown.output} />

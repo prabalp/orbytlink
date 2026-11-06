@@ -28,9 +28,9 @@ export function aiSummary(store: Store, w: string) {
     pricesAsOf: PRICES_AS_OF,
   };
 }
-const addBalance = (store: Store, w: string, micro: number) =>
+export const addBalance = (store: Store, w: string, micro: number) =>
   store.put(w, "ai_credits", { id: "balance", micro: (row(store, w, "ai_credits", "balance")?.micro || 0) + micro });
-const addMonth = (store: Store, w: string, micro: number) => {
+export const addMonth = (store: Store, w: string, micro: number) => {
   const id = month();
   store.put(w, "ai_months", { id, micro: Math.max(0, (row(store, w, "ai_months", id)?.micro || 0) + micro) });
 };

@@ -6,7 +6,7 @@ import type { Express } from "express";
 import { createApp } from "../server/app";
 import { Store } from "../server/store";
 import type { ServiceAdapters } from "../server/adapters";
-import { dueKey, retryDelay, runDueWorkflows } from "../server/workflows";
+import { dueKey, nextDue, retryDelay, runDueWorkflows, scheduleClock } from "../server/workflows";
 import { inject } from "./inject";
 
 const KEY = "sk_live_51Hsecretvalue9f2a";
@@ -190,6 +190,8 @@ it("lets an agent write the run screen, and keeps the latest result per person w
 
 it("runs a schedule once in its minute, in its own time zone, as the person who set it", async () => {
   await addApp("CRM", ["notify"]);
+  // The schedule index is computed from the moment the workflow is saved.
+  scheduleClock.now = () => Date.parse("2026-11-06T00:00:00Z");
   const daily = { every: "day", at: "09:30", timezone: "Asia/Kolkata", inputs: { who: "team" } };
   expect((await save({ name: "Needs input", inputs: [{ name: "who" }], steps: [{ id: "a", tool: "crm__notify" }], schedule: { ...daily, inputs: {} } })).status).toBe(400);
   const wf = (await save({ name: "Morning ping", inputs: [{ name: "who" }], steps: [{ id: "a", tool: "crm__notify", args: { to: "{{input.who}}" } }], schedule: daily })).data;
@@ -205,6 +207,10 @@ it("runs a schedule once in its minute, in its own time zone, as the person who 
   const runs = (await api("/api/state")).data.workflowRuns;
   expect(runs[0]).toMatchObject({ trigger: "schedule", status: "succeeded", user: "alice@example.invalid" });
   expect(vi.mocked(services.call).mock.calls.at(-1)?.[2]).toEqual({ to: "team" });
+  // The next due time moved on to tomorrow's 09:30 in India.
+  expect(nextDue(daily, Date.parse("2026-11-06T04:01:00Z"))).toBe(Date.parse("2026-11-07T04:00:00Z"));
+  expect(nextDue({ every: "week", at: "05:45", day: 1, timezone: "Asia/Kathmandu" }, Date.parse("2026-11-06T00:00:00Z"))).toBe(Date.parse("2026-11-09T00:00:00Z"));
   await api(`/api/workflows/${wf.id}`, { ...wf, enabled: false }, "PUT");
   expect(await runDueWorkflows(store, services, new Date("2026-11-07T04:00:00Z"))).toBe(0);
+  scheduleClock.now = () => Date.now();
 });
