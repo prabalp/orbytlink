@@ -1,0 +1,134 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-03T07:38:13.245096+00:00",
+  "title": "Design System: OrbytLink Landing",
+  "extensions": {
+    "sourceDocument": "docs/LANDING-DESIGN.md",
+    "scope": "Landing only; docs/DESIGN.md continues to govern the product console.",
+    "motion": [
+      {
+        "name": "ease",
+        "value": "cubic-bezier(.22,1,.36,1)",
+        "purpose": "Landing transitions"
+      },
+      {
+        "name": "color-opacity",
+        "value": "300ms",
+        "purpose": "Control feedback"
+      },
+      {
+        "name": "transform",
+        "value": "500ms",
+        "purpose": "Control movement"
+      },
+      {
+        "name": "word-stagger",
+        "value": "90ms",
+        "purpose": "Statement reveal; disabled for reduced motion"
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "navigation-and-demo",
+        "value": "1050px"
+      },
+      {
+        "name": "inherited-stacked-layout",
+        "value": "900px"
+      },
+      {
+        "name": "inherited-compact",
+        "value": "767px"
+      },
+      {
+        "name": "mobile",
+        "value": "700px"
+      }
+    ],
+    "shadows": [
+      {
+        "name": "major-surfaces",
+        "value": "none",
+        "purpose": "Flat cards, frames, buttons"
+      }
+    ],
+    "focus": {
+      "outline": "3px solid #7d56ac",
+      "offset": "4px"
+    },
+    "backdropBlur": {
+      "header": "16px",
+      "mobileMenu": "24px"
+    }
+  },
+  "components": [
+    {
+      "name": "Primary button",
+      "kind": "button",
+      "description": "Primary button from the landing implementation.",
+      "html": "<button class=\"ds-primary\">Get early access</button>",
+      "css": ".ds-primary{font-family:var(--font,Manrope,sans-serif);transition:background-color 300ms cubic-bezier(.22,1,.36,1),transform 500ms cubic-bezier(.22,1,.36,1);background:var(--btn-bg,#222326);color:var(--btn-fg,#fff);border:0;border-radius:8px;padding:8px 12px;min-height:40px;font-size:14px;font-weight:600;line-height:20px;cursor:pointer;}.ds-primary:focus-visible{outline:3px solid #7d56ac;outline-offset:4px}.ds-primary:hover{background:var(--btn-hover,#45404d);transform:translateY(-2px)}.ds-primary:active{transform:translateY(1px)}"
+    },
+    {
+      "name": "Secondary button",
+      "kind": "button",
+      "description": "Secondary button from the landing implementation.",
+      "html": "<button class=\"ds-secondary\">Download example</button>",
+      "css": ".ds-secondary{font-family:var(--font,Manrope,sans-serif);transition:background-color 300ms cubic-bezier(.22,1,.36,1),transform 500ms cubic-bezier(.22,1,.36,1);background:var(--surface-2,#e6e6e9);color:var(--text,#202122);border:0;border-radius:8px;padding:8px 12px;min-height:40px;font-size:14px;line-height:20px;font-weight:600;}.ds-secondary:focus-visible{outline:3px solid #7d56ac;outline-offset:4px}.ds-secondary:hover{background:color-mix(in srgb,var(--surface-2,#e6e6e9) 80%,var(--text,#202122) 12%)}.ds-secondary:active{transform:translateY(1px)}"
+    },
+    {
+      "name": "Signup email",
+      "kind": "input",
+      "description": "Signup email from the landing implementation.",
+      "html": "<input class=\"ds-email\" type=\"email\" aria-label=\"Work email\" placeholder=\"Work email\">",
+      "css": ".ds-email{font-family:var(--font,Manrope,sans-serif);transition:background-color 300ms cubic-bezier(.22,1,.36,1),transform 500ms cubic-bezier(.22,1,.36,1);background:var(--paper,#f9f7fc);color:#30243e;border:0;border-radius:8px;padding:12px 16px;font-size:16px;}.ds-email:focus-visible{outline:3px solid #7d56ac;outline-offset:4px}.ds-email::placeholder{color:#6c6277}"
+    },
+    {
+      "name": "Availability chip",
+      "kind": "chip",
+      "description": "Availability chip from the landing implementation.",
+      "html": "<span class=\"ds-chip\">Early access</span>",
+      "css": ".ds-chip{font-family:var(--font,Manrope,sans-serif);transition:background-color 300ms cubic-bezier(.22,1,.36,1),transform 500ms cubic-bezier(.22,1,.36,1);display:inline-block;background:#e8dff5;color:#5a417b;border-radius:6px;padding:3px 7px;font-size:11px;font-weight:500;}.ds-chip:focus-visible{outline:3px solid #7d56ac;outline-offset:4px}"
+    },
+    {
+      "name": "Result panel",
+      "kind": "card",
+      "description": "Result panel from the landing implementation.",
+      "html": "<article class=\"ds-result\"><p>THE FIRST TIME</p><h3>A job done.<br>A process discovered.</h3></article>",
+      "css": ".ds-result{font-family:var(--font,Manrope,sans-serif);transition:background-color 300ms cubic-bezier(.22,1,.36,1),transform 500ms cubic-bezier(.22,1,.36,1);background:var(--paper,#f9f7fc);color:var(--lilac-ink,#30243e);border-radius:12px;padding:24px;}.ds-result:focus-visible{outline:3px solid #7d56ac;outline-offset:4px}.ds-result p{font-size:12px;line-height:16px;letter-spacing:.06em;font-weight:600}.ds-result h3{font-size:24px;line-height:32px;font-weight:600;letter-spacing:-.035em}"
+    },
+    {
+      "name": "Section navigation",
+      "kind": "nav",
+      "description": "Section navigation from the landing implementation.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Example navigation\"><a href=\"#how\">How it works</a><a href=\"#files\">Your files</a></nav>",
+      "css": ".ds-nav{font-family:var(--font,Manrope,sans-serif);transition:background-color 300ms cubic-bezier(.22,1,.36,1),transform 500ms cubic-bezier(.22,1,.36,1);display:flex;gap:8px;}.ds-nav:focus-visible{outline:3px solid #7d56ac;outline-offset:4px}.ds-nav a{font:500 14px/20px var(--font,Manrope,sans-serif);color:var(--text-2,#505256);padding:8px;text-decoration:none;border-radius:8px}.ds-nav a:hover{background:var(--surface,#eeeef0);color:var(--text,#202122)}.ds-nav a:focus-visible{outline:3px solid #7d56ac;outline-offset:4px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The workflow instruction sheet",
+    "overview": "Light paper, lilac fields, large asymmetric type, and a concrete task-to-workflow demonstration. Persuade visitors to request early access. No approved visual comp.",
+    "keyCharacteristics": [
+      "Manrope typography",
+      "Asymmetric hero",
+      "Interactive task-to-workflow illustration",
+      "Light default with persistent dark theme",
+      "Fixed dark technical examples"
+    ],
+    "rules": [
+      {
+        "name": "Landing scope",
+        "body": "Preserve the product console design system and landing/previous/index.html.",
+        "section": "overview"
+      }
+    ],
+    "dos": [
+      "Retain existing signup, login, copy, download, tabs, legal links, and theme support.",
+      "Label example performance as illustrative."
+    ],
+    "donts": [
+      "Do not invent testimonials or measured results.",
+      "Do not propagate the landing design into the unchanged console."
+    ]
+  }
+}

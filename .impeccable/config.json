@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "src/styles.css"
+        ],
+        "createdAt": "2026-11-06T06:05:01.746Z",
+        "reason": "Claude: styles.css L646 is the .markdown blockquote 2px neutral --input left border (standard quote styling, committed 2026-10-31), not a colored card accent"
+      }
+    ]
+  }
+}

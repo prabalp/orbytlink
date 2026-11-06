@@ -7,6 +7,9 @@ test.beforeEach(async ({ page }) => {
   await page.locator("#password").fill("Correct-horse-ship-2026");
   await page.locator("#confirm_password").fill("Correct-horse-ship-2026");
   await page.getByRole("button", { name: "Continue", exact: true }).click();
+  // A new account has no agent yet, so the first screen is Connect agents.
+  await expect(page.getByRole("heading", { name: "Connect any agent", level: 1 })).toBeVisible();
+  await page.locator(".sidebar nav").getByRole("link", { name: "Connections" }).click();
   await expect(page.getByRole("heading", { name: "Connections" })).toBeVisible();
 });
 test("navigates the gateway and issues a token for Claude", async ({ page }) => {
@@ -57,7 +60,7 @@ test("creates an organization, invites a teammate by link, and promotes them to 
   await bob.locator("#password").fill("Correct-horse-ship-2026");
   await bob.locator("#confirm_password").fill("Correct-horse-ship-2026");
   await bob.getByRole("button", { name: "Continue", exact: true }).click();
-  await expect(bob.getByRole("heading", { name: "Connections" })).toBeVisible();
+  await expect(bob.getByRole("heading", { name: "Connect any agent", level: 1 })).toBeVisible();
   await bob.goto(link.trim());
   await bob.reload();
   await expect(bob.getByRole("dialog", { name: "Join organization" })).toBeVisible();
@@ -73,19 +76,26 @@ test("creates an organization, invites a teammate by link, and promotes them to 
   await expect(bob.getByRole("button", { name: "Add connection" }).first()).toBeVisible({ timeout: 8000 });
   await guest.close();
 });
-test("browses the catalog by segment and opens a ready-made connection", async ({ page }) => {
+test("browses the catalog with the category dropdown and opens a ready-made connection", async ({ page }) => {
   await page.locator(".sidebar nav").getByRole("link", { name: "Catalog" }).click();
   await expect(page.getByRole("heading", { name: "Catalog", level: 1 })).toBeVisible();
   for (const segment of ["Documents & Files", "Communication", "Project Management"])
     await expect(page.getByRole("region", { name: segment })).toBeVisible();
 
-  await page.getByRole("radio", { name: "Communication" }).click();
+  const category = page.getByLabel("Filter apps by category");
+  await expect(category).toHaveValue("All");
+  await category.selectOption("Communication");
+  await expect(page.getByRole("region", { name: "Communication" })).toBeVisible();
   await expect(page.getByRole("region", { name: "Documents & Files" })).toHaveCount(0);
-  await page.getByRole("radio", { name: "All" }).click();
+  await category.selectOption("All");
+  await expect(page.getByRole("region", { name: "Documents & Files" })).toBeVisible();
 
   // A token-based app opens with its endpoint and bearer auth filled in.
   await page.getByPlaceholder("Search apps…").fill("github");
-  await page.getByRole("button", { name: "Connect GitHub" }).click();
+  const githubCard = page.getByRole("button", { name: "Connect GitHub" });
+  await expect(githubCard.getByRole("img", { name: "GitHub logo" })).toBeVisible();
+  await expect(githubCard.locator(".catalog-desc, .catalog-arrow")).toHaveCount(0);
+  await githubCard.click();
   const dialog = page.getByRole("dialog", { name: "Connect GitHub" });
   await expect(dialog.locator('input[name="endpoint"]')).toHaveValue("https://api.githubcopilot.com/mcp/");
   await expect(dialog.locator("label.field", { hasText: /^Authentication/ }).locator("select")).toHaveValue("bearer");
@@ -130,8 +140,19 @@ test("turns a skill on, reads it, and sees workflow templates", async ({ page })
   await expect(page.getByRole("dialog", { name: "New workflow" }).getByText("No tools are available yet")).toBeVisible();
 });
 test("adds an API with pasted docs and a key that is never shown again", async ({ page }) => {
-  await page.locator(".sidebar nav").getByRole("link", { name: "APIs" }).click();
-  await page.getByRole("button", { name: "Add API" }).first().click();
+  // Ready-made APIs live in the Catalog, next to the MCP servers.
+  await page.locator(".sidebar nav").getByRole("link", { name: "Catalog" }).click();
+  await page.getByRole("radio", { name: "APIs" }).click();
+  const apiCategory = page.getByLabel("Filter APIs by category");
+  await expect(apiCategory).toHaveValue("All");
+  await apiCategory.selectOption("Developer");
+  await expect(page.getByRole("button", { name: "Connect GitHub" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Connect OpenAI" })).toHaveCount(0);
+  await apiCategory.selectOption("All");
+  // Any other API is added from Connections: Add connection → API.
+  await page.locator(".sidebar nav").getByRole("link", { name: "Connections" }).click();
+  await page.getByRole("button", { name: "Add connection" }).first().click();
+  await page.locator(".add-choice button", { hasText: "API" }).click();
   await page.locator('input[name="name"]').fill("Billing");
   await page.getByPlaceholder("https://api.example.com/v1").fill("https://api.billing.example/v1");
   await page.getByRole("radio", { name: "Paste docs" }).click();

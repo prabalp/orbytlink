@@ -1,0 +1,2179 @@
+[
+ {
+  "name": "AccuWeather",
+  "status": "verified",
+  "id": "accuweather",
+  "segment": "Search & Data",
+  "description": "Forecasts, current conditions and weather alerts from AccuWeather Core Weather.",
+  "endpoint": "https://dataservice.accuweather.com/mcp",
+  "auth": "bearer",
+  "notes": [
+   "Get an API key from the subscriptions page at developer.accuweather.com.",
+   "The key must be on the free trial or Elite plan; each tool call counts as one Core Weather call."
+  ],
+  "docs": "https://developer.accuweather.com/documentation/weather-mcp-authentication",
+  "quote": "Most clients provide a field for a header. In that case, use: Authorization: Bearer YOUR_API_KEY",
+  "probe": "HTTP 401 (no www-authenticate header)",
+  "reason": "",
+  "probe2": {
+   "status": 401,
+   "www": ""
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "Apple Maps",
+  "status": "no-remote",
+  "id": "apple-maps",
+  "segment": "Search & Data",
+  "description": "Place search, geocoding and directions from Apple Maps.",
+  "endpoint": "",
+  "auth": "",
+  "notes": [],
+  "docs": "https://developer.apple.com/documentation/applemapsserverapi",
+  "quote": "",
+  "probe": "",
+  "reason": "Apple publishes no MCP server; only the Apple Maps Server REST API. Existing 'apple-maps-mcp' is a community local (uvx) server."
+ },
+ {
+  "name": "Browser Use",
+  "status": "verified",
+  "id": "browser-use",
+  "segment": "Developer Tools",
+  "description": "Runs browser automation tasks on Browser Use cloud browsers and returns the result.",
+  "endpoint": "https://api.browser-use.com/v3/mcp",
+  "auth": "bearer",
+  "notes": [
+   "Create an API key at cloud.browser-use.com/settings (API keys tab).",
+   "Pay as you go: browser time and model tokens are billed to your Browser Use credits.",
+   "The server answers without a key, but its docs require your API key for tool calls."
+  ],
+  "docs": "https://docs.browser-use.com/cloud/guides/mcp-server",
+  "quote": "Use the standard `Authorization: Bearer YOUR_API_KEY` header. The legacy `x-browser-use-api-key` header remains supported for existing integrations.",
+  "probe": "HTTP 200 (initialize answers without auth: serverInfo browser-use-v3-agent 3.0.0; no www-authenticate)",
+  "reason": "",
+  "probe2": {
+   "status": 200,
+   "www": ""
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "Crustdata",
+  "status": "verified",
+  "id": "crustdata",
+  "segment": "Sales & Leads",
+  "description": "Live company and people data from Crustdata for search and enrichment.",
+  "endpoint": "https://install.crustdata.com/mcp",
+  "auth": "oauth",
+  "notes": [
+   "Sign in with your Crustdata account; programmatic clients can instead send an API key from app.crustdata.com as Authorization: Bearer.",
+   "Costs vary by request and plan."
+  ],
+  "docs": "https://docs.crustdata.com/for-agents/mcp",
+  "quote": "Registers the server over streamable HTTP (https://install.crustdata.com/mcp); code and backend jobs send an Authorization: Bearer YOUR_API_KEY header.",
+  "probe": "HTTP 401 www-authenticate: Bearer error=\"invalid_token\", error_description=\"Missing Authorization header\", resource_metadata=\"https://install.crustdata.com/.well-known/oauth-protected-resource/mcp\"",
+  "reason": "",
+  "probe2": {
+   "status": 401,
+   "www": "Bearer error=\"invalid_token\", error_description=\"Missing Authorization header\", resource_metadata=\"https://install.crustdata.com/.well-known/oauth-protected-resource/mcp\"",
+   "prm": true,
+   "as": true,
+   "dcr": true,
+   "cimd": true
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "Fal.ai",
+  "status": "verified",
+  "id": "fal",
+  "segment": "AI & Content",
+  "description": "Generate images, video and audio with fal's hosted models.",
+  "endpoint": "https://mcp.fal.ai/mcp-relay",
+  "auth": "oauth",
+  "notes": [
+   "Sign in with your fal account in the browser; usage is billed to your fal credits.",
+   "The separate docs server at https://fal.ai/docs/mcp only searches docs and does not run models."
+  ],
+  "docs": "https://fal.ai/docs/documentation/model-apis/mcp",
+  "quote": "You don't need to create an API key or add an authorization header for these connections.",
+  "probe": "HTTP 401 www-authenticate: Bearer resource_metadata=\"https://mcp.fal.ai/.well-known/oauth-protected-resource/mcp-relay\"",
+  "reason": "",
+  "probe2": {
+   "status": 401,
+   "www": "Bearer resource_metadata=\"https://mcp.fal.ai/.well-known/oauth-protected-resource/mcp-relay\"",
+   "prm": true,
+   "as": true,
+   "dcr": true,
+   "cimd": true
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "Google Keyword Data (Google Ads Keyword Planner)",
+  "status": "no-remote",
+  "id": "google-ads-keyword-planner",
+  "segment": "Search & Data",
+  "description": "Keyword ideas and search volume from Google Ads Keyword Planner.",
+  "endpoint": "",
+  "auth": "",
+  "notes": [],
+  "docs": "https://github.com/googleads/google-ads-mcp",
+  "quote": "pipx run --spec \"google-ads-mcp==X.Y.Z\" google-ads-mcp",
+  "probe": "",
+  "reason": "Google's official googleads/google-ads-mcp is self-hosted only (stdio or your own streamable-http deployment with a developer token); Google hosts no endpoint. Hosted options (AdPlug, Stape, Ryze) are third-party."
+ },
+ {
+  "name": "Home Depot",
+  "status": "no-remote",
+  "id": "home-depot",
+  "segment": "Search & Data",
+  "description": "Home Depot product search and store inventory.",
+  "endpoint": "",
+  "auth": "",
+  "notes": [],
+  "docs": "https://www.homedepot.com",
+  "quote": "",
+  "probe": "",
+  "reason": "Home Depot has no public developer API or MCP server; only community scrapers (@striderlabs/mcp-homedepot stdio, Apify actors, SerpApi engine)."
+ },
+ {
+  "name": "Jev",
+  "status": "no-remote",
+  "id": "jev",
+  "segment": "AI & Content",
+  "description": "TypeSafe's Jev model for typed yes/no, choice and score decisions.",
+  "endpoint": "",
+  "auth": "",
+  "notes": [],
+  "docs": "https://docs.typesafe.ai/llms.txt",
+  "quote": "",
+  "probe": "",
+  "reason": "TypeSafe docs list only the REST API (api.typesafe.ai); no MCP server. Several community jev-mcp/typesafe-mcp servers exist (stdio, npx/uvx)."
+ },
+ {
+  "name": "Listen Notes",
+  "status": "no-remote",
+  "id": "listen-notes",
+  "segment": "Search & Data",
+  "description": "Search podcasts and episodes in the Listen Notes database.",
+  "endpoint": "",
+  "auth": "",
+  "notes": [],
+  "docs": "https://www.listennotes.com/api/docs/",
+  "quote": "",
+  "probe": "",
+  "reason": "Listen Notes offers the Podcast API plus agent skills and llms.txt docs, no MCP server. Existing MCP options are third-party (Pipeworx, Vinkius, Composio)."
+ },
+ {
+  "name": "Memelord",
+  "status": "verified",
+  "id": "memelord",
+  "segment": "AI & Content",
+  "description": "Search meme templates and generate or edit image and video memes.",
+  "endpoint": "https://www.memelord.com/api/mcp",
+  "auth": "oauth",
+  "notes": [
+   "Sign in with your Memelord account; for headless use, create an mlord_live_ API key in Settings > Developer and send it as Authorization: Bearer.",
+   "API-key sessions get a slightly smaller tool set than OAuth."
+  ],
+  "docs": "https://www.memelord.com/hackers/mcp",
+  "quote": "The Memelord MCP server is hosted at `https://www.memelord.com/api/mcp` (Streamable HTTP). No installation needed.",
+  "probe": "HTTP 401 www-authenticate: Bearer realm=\"Memelord MCP\", resource_metadata=\"https://www.memelord.com/.well-known/oauth-protected-resource/api/mcp\"",
+  "reason": "",
+  "probe2": {
+   "status": 401,
+   "www": "Bearer realm=\"Memelord MCP\", resource_metadata=\"https://www.memelord.com/.well-known/oauth-protected-resource/api/mcp\"",
+   "prm": true,
+   "as": true,
+   "dcr": true,
+   "cimd": false
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "OpenRouter",
+  "status": "verified",
+  "id": "openrouter",
+  "segment": "AI & Content",
+  "description": "Look up OpenRouter models, pricing and rankings, and send prompts or generate images.",
+  "endpoint": "https://mcp.openrouter.ai/mcp",
+  "auth": "oauth",
+  "notes": [
+   "Sign in with your OpenRouter account; the issued key expires within 7 days and starts with a $10 spend cap you can change on the consent screen.",
+   "OpenRouter says the MCP is meant for development; production apps should call the API directly."
+  ],
+  "docs": "https://openrouter.ai/docs/guides/overview/mcp-server",
+  "quote": "An unauthenticated request gets a 401 that points the client to OpenRouter's authorization server.",
+  "probe": "HTTP 401 www-authenticate: Bearer resource_metadata=\"https://mcp.openrouter.ai/mcp/.well-known/oauth-protected-resource\"",
+  "reason": "",
+  "probe2": {
+   "status": 401,
+   "www": "Bearer resource_metadata=\"https://mcp.openrouter.ai/mcp/.well-known/oauth-protected-resource\"",
+   "prm": true,
+   "as": true,
+   "dcr": true,
+   "cimd": false
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "Product Hunt",
+  "status": "no-remote",
+  "id": "product-hunt",
+  "segment": "Search & Data",
+  "description": "Product Hunt launches, upvotes and makers.",
+  "endpoint": "",
+  "auth": "",
+  "notes": [],
+  "docs": "https://api.producthunt.com/v2/docs",
+  "quote": "",
+  "probe": "",
+  "reason": "Product Hunt offers only the v2 GraphQL API; MCP servers are community (jaipandya product-hunt-mcp via pip, Apify actor)."
+ },
+ {
+  "name": "Serper",
+  "status": "no-remote",
+  "id": "serper",
+  "segment": "Search & Data",
+  "description": "Google search results via the Serper API.",
+  "endpoint": "",
+  "auth": "",
+  "notes": [],
+  "docs": "https://serper.dev",
+  "quote": "",
+  "probe": "",
+  "reason": "serper.dev publishes no MCP server; the common serper-mcp-server (garylab, uvx/pip) is a community local server."
+ },
+ {
+  "name": "Steam",
+  "status": "no-remote",
+  "id": "steam",
+  "segment": "Search & Data",
+  "description": "Steam store, player and game data from the Steam Web API.",
+  "endpoint": "",
+  "auth": "",
+  "notes": [],
+  "docs": "https://partner.steamgames.com/doc/webapi_overview",
+  "quote": "",
+  "probe": "",
+  "reason": "Valve offers only the Steam Web API (key passed as a query parameter); all steam-mcp servers are community projects not affiliated with Valve."
+ },
+ {
+  "name": "The Companies API",
+  "status": "no-remote",
+  "id": "the-companies-api",
+  "segment": "Sales & Leads",
+  "description": "Company search and enrichment data.",
+  "endpoint": "",
+  "auth": "",
+  "notes": [],
+  "docs": "https://www.thecompaniesapi.com/api/llms.txt",
+  "quote": "",
+  "probe": "",
+  "reason": "The vendor's API docs and llms.txt mention no MCP server; only a Composio toolkit wraps it."
+ },
+ {
+  "name": "Tripadvisor",
+  "status": "no-remote",
+  "id": "tripadvisor",
+  "segment": "Search & Data",
+  "description": "Tripadvisor locations, reviews and photos via the Content API.",
+  "endpoint": "",
+  "auth": "",
+  "notes": [],
+  "docs": "https://tripadvisor-content-api.readme.io/reference/overview",
+  "quote": "",
+  "probe": "",
+  "reason": "Tripadvisor's docs site has its ReadMe MCP feature disabled (\"mcp\":{\"state\":\"disabled\"}); the Content API key also goes in the query string. Only community servers (pab1it0/tripadvisor-mcp) exist."
+ },
+ {
+  "name": "Wikipedia",
+  "status": "verified",
+  "id": "wikipedia",
+  "segment": "Search & Data",
+  "description": "Search and read Wikipedia articles, with attributed links.",
+  "endpoint": "https://wikipedia-reference-desk.toolforge.org/mcp",
+  "auth": "none",
+  "notes": [
+   "No key needed.",
+   "Experimental server from the Wikimedia Foundation's Future Audiences team, hosted on Toolforge; it may change or go away.",
+   "Experimental: a Wikimedia Foundation Future Audiences prototype hosted on Toolforge, so it may change or go away."
+  ],
+  "docs": "https://wikipedia-reference-desk.toolforge.org/",
+  "quote": "An experiment by the Wikimedia Foundation's Future Audiences team. The MCP endpoint (Streamable HTTP) is at /mcp.",
+  "probe": "HTTP 200 (keyless; no www-authenticate)",
+  "reason": "Source: https://gitlab.wikimedia.org/repos/future-audiences/wikipedia-reference-desk-mcp. Flag as experimental before listing.",
+  "probe2": {
+   "status": 200,
+   "www": ""
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "Ahrefs",
+  "status": "excluded",
+  "id": "ahrefs",
+  "segment": "Search & Data",
+  "reason": "Known from earlier research: Ahrefs terms forbid use through bridges/custom clients. Not re-checked."
+ },
+ {
+  "name": "Apple Music",
+  "status": "no-remote",
+  "id": "apple-music",
+  "segment": "AI & Content",
+  "reason": "No Apple-published MCP server found. Only community local stdio servers exist (PyPI mcp-apple-music-server, applemusic-mcp, akr4/applemusic-mcp-server) that need your own MusicKit key."
+ },
+ {
+  "name": "CarsXE",
+  "status": "verified",
+  "id": "carsxe",
+  "segment": "Search & Data",
+  "description": "Decode VINs and license plates and look up vehicle specs, market value, history, recalls and OBD codes.",
+  "endpoint": "https://mcp.carsxe.com/mcp",
+  "auth": "api-key",
+  "authHeader": "X-API-Key",
+  "notes": [
+   "Get your API key from the CarsXE developer dashboard (carsxe.com/dashboard/developer).",
+   "Tools only work if the key has an active subscription with API credits."
+  ],
+  "docs": "https://docs.carsxe.com/docs/integrations/mcp",
+  "quote": "API-key clients send the key in the X-API-Key header ... supported remote connectors can authorize access with a CarsXE account.",
+  "probe": "HTTP 401 www-authenticate: Bearer realm=\"CarsXE MCP\", resource_metadata=\"https://mcp.carsxe.com/.well-known/oauth-protected-resource\", error_description=\"Missing credentials. Provide an OAuth Bearer token, X-API-Key header, or 'key' query parameter\"",
+  "reason": "OAuth discovery also works (auth server metadata has registration_endpoint https://mcp.carsxe.com/oauth/register), so 'oauth' is an alternative to the documented X-API-Key header.",
+  "probe2": {
+   "status": 401,
+   "www": "Bearer realm=\"CarsXE MCP\", resource_metadata=\"https://mcp.carsxe.com/.well-known/oauth-protected-resource\", error=\"invalid_token\", error_description=\"Missing credentials. Provide an OAuth Bearer token, X-API-Key header, or 'key' query parameter\""
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "Deepgram",
+  "status": "no-remote",
+  "id": "deepgram",
+  "segment": "AI & Content",
+  "docs": "https://developers.deepgram.com/agentic-tools",
+  "reason": "The API MCP server (transcription, TTS etc.) runs only locally via the dg CLI ('dg mcp', stdio or local SSE). The only hosted server, https://api.dx.deepgram.com/kapa/mcp, is a docs-search server (probe: HTTP 401 www-authenticate: Bearer resource_metadata=\"https://api.dx.deepgram.com/.well-known/oauth-protected-resource/kapa/mcp\")."
+ },
+ {
+  "name": "Finnhub",
+  "status": "no-remote",
+  "id": "finnhub",
+  "segment": "Payments & Finance",
+  "docs": "https://finnhub.io/",
+  "reason": "No Finnhub-published MCP server on finnhub.io. Only community servers (cfdude/mcp-finnhub, ach968/finnhub-mcp, mcp.so listings), which are local and unaffiliated."
+ },
+ {
+  "name": "Google Maps",
+  "status": "verified",
+  "id": "google-maps",
+  "segment": "Search & Data",
+  "description": "Search places, look up weather and compute routes with Google Maps data (Grounding Lite).",
+  "endpoint": "https://mapstools.googleapis.com/mcp",
+  "auth": "api-key",
+  "authHeader": "X-Goog-Api-Key",
+  "notes": [
+   "In a Google Cloud project, enable the Maps Grounding Lite (Maps Experience agent tools) API, then create and restrict an API key for it.",
+   "Billed per request after a free monthly allowance; Google's terms say Maps content must not be cached by or used to train the model."
+  ],
+  "docs": "https://developers.google.com/maps/ai/grounding-lite",
+  "quote": "Grounding Lite MCP server uses Streamable HTTP transport ... pass the key in the X-Goog-Api-Key header.",
+  "probe": "HTTP 200 (initialize succeeds without a key; serverInfo StatelessServer). No www-authenticate.",
+  "reason": "OAuth is also documented, but only with your own Google OAuth client (scope https://www.googleapis.com/auth/maps-platform.mapstools); API key is the simpler path.",
+  "probe2": {
+   "status": 200,
+   "www": ""
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "HTML/CSS to Image",
+  "status": "verified",
+  "id": "htmlcsstoimage",
+  "segment": "AI & Content",
+  "description": "Render HTML/CSS or a public URL into an image, and manage image templates.",
+  "endpoint": "https://mcp.hcti.io",
+  "auth": "oauth",
+  "notes": [
+   "Sign in with your HCTI account in the browser; a free account works and images use your account's image credits.",
+   "Proxy routing and storage destinations need the 10,000 images/month plan or higher."
+  ],
+  "docs": "https://docs.htmlcsstoimage.com/integrations/mcp/",
+  "quote": "Server URL: https://mcp.hcti.io ... Transport: Streamable HTTP ... Authentication: OAuth",
+  "probe": "HTTP 401 www-authenticate: Bearer resource_metadata=\"https://mcp.hcti.io/.well-known/oauth-protected-resource/\"",
+  "probe2": {
+   "status": 401,
+   "www": "Bearer resource_metadata=\"https://mcp.hcti.io/.well-known/oauth-protected-resource/\"",
+   "prm": true,
+   "as": true,
+   "dcr": true,
+   "cimd": false
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "Just One API",
+  "status": "verified",
+  "id": "justoneapi",
+  "segment": "Search & Data",
+  "description": "Find and call data APIs for 30+ platforms such as Douyin, Xiaohongshu, Taobao, TikTok and Amazon.",
+  "endpoint": "https://mcp.justoneapi.com/mcp",
+  "auth": "bearer",
+  "notes": [
+   "Get your API token from your Just One API account at justoneapi.com.",
+   "API calls are billed to your Just One API balance."
+  ],
+  "docs": "https://justoneapi.com",
+  "quote": "Official JustOneAPI MCP Server ... https://mcp.justoneapi.com/mcp ... pass your token as a bearer header (\"Authorization\": \"Bearer your_token\").",
+  "probe": "HTTP 401 www-authenticate: Bearer error=\"invalid_token\", error_description=\"Bearer authentication is required\", resource_metadata=\"https://mcp.justoneapi.com/.well-known/oauth-protected-resource/mcp\"",
+  "probe2": {
+   "status": 401,
+   "www": "Bearer error=\"invalid_token\", error_description=\"Bearer authentication is required\", resource_metadata=\"https://mcp.justoneapi.com/.well-known/oauth-protected-resource/mcp\""
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "Logo.dev",
+  "status": "verified",
+  "id": "logo-dev",
+  "segment": "Search & Data",
+  "description": "Look up company logos and brand data by domain, ticker, ISIN, crypto symbol or name.",
+  "endpoint": "https://mcp.logo.dev/mcp",
+  "auth": "oauth",
+  "notes": [
+   "Sign in with your Logo.dev account in the browser; no API key is needed.",
+   "Tool calls spend API credits at the same rates and limits as REST requests."
+  ],
+  "docs": "https://www.logo.dev/docs/mcp/introduction",
+  "quote": "The server uses the streamable HTTP transport ... signs you in with OAuth.",
+  "probe": "HTTP 401 www-authenticate: Bearer resource_metadata=\"https://mcp.logo.dev/.well-known/oauth-protected-resource\"",
+  "probe2": {
+   "status": 401,
+   "www": "Bearer resource_metadata=\"https://mcp.logo.dev/.well-known/oauth-protected-resource\"",
+   "prm": true,
+   "as": true,
+   "dcr": true,
+   "cimd": true
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "Meta Ads",
+  "status": "verified",
+  "id": "meta-ads",
+  "segment": "Sales & Leads",
+  "description": "Manage and report on Meta (Facebook and Instagram) ad campaigns, ad sets, ads and catalogs.",
+  "endpoint": "https://mcp.facebook.com/ads",
+  "auth": "oauth",
+  "notes": [
+   "Sign in with Facebook Login for Business using an account that has access to your ad accounts.",
+   "Admin-role system user tokens cannot access the server; use your own login or an Employee-role system user token.",
+   "Meta may limit which apps can connect; if sign-in is refused, Meta has not opened it to this client yet."
+  ],
+  "docs": "https://developers.facebook.com/documentation/ads-commerce/ads-ai-connectors/ads-mcp-server/ads-mcp-server-get-started",
+  "quote": "Owning a Meta app is not a prerequisite on using the ads MCP server.",
+  "probe": "HTTP 401 www-authenticate: Bearer resource_metadata=\"https://mcp.facebook.com/.well-known/oauth-protected-resource/ads\", scope=\"ads_management ads_read catalog_management business_management pages_show_list pages_manage_ads facebook_branded_content_ads_brand instagram_basic instagram_branded_content_ads_brand ads_mcp_management\"",
+  "reason": "Auth server metadata (https://mcp.facebook.com/.well-known/oauth-authorization-server/ads) advertises a registration_endpoint (dynamic client registration) and PKCE. Docs also allow a user access token as Authorization: Bearer.",
+  "probe2": {
+   "status": 401,
+   "www": "Bearer resource_metadata=\"https://mcp.facebook.com/.well-known/oauth-protected-resource/ads\", scope=\"ads_management ads_read catalog_management business_management pages_show_list pages_manage_ads facebook_branded_content_ads_brand instagram_basic instagram_branded_content_ads_brand ads_mcp_management\"",
+   "prm": true,
+   "as": true,
+   "dcr": true,
+   "cimd": false
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "OpenWeb Ninja",
+  "status": "no-remote",
+  "id": "openweb-ninja",
+  "segment": "Search & Data",
+  "docs": "https://github.com/OpenWeb-Ninja/openwebninja-mcp",
+  "reason": "The official server is local only (npx -y @openwebninja/mcp-server over stdio with OPENWEBNINJA_API_KEY). No hosted MCP URL on openwebninja.com or the repo."
+ },
+ {
+  "name": "Prospeo",
+  "status": "verified",
+  "id": "prospeo",
+  "segment": "Sales & Leads",
+  "description": "Find and verify professional emails and mobile numbers and enrich people and companies.",
+  "endpoint": "https://mcp.prospeo.io",
+  "auth": "oauth",
+  "notes": [
+   "Sign in with your Prospeo account; lookups use your Prospeo credits.",
+   "Alternatively pass an API key from app.prospeo.io/api in the X-KEY header."
+  ],
+  "docs": "https://prospeo.io/api-docs/mcp-quick-start",
+  "quote": "Authentication is handled via OAuth or by passing your API key in the X-KEY header.",
+  "probe": "HTTP 401 www-authenticate: Bearer resource_metadata=\"https://mcp.prospeo.io/.well-known/oauth-protected-resource\" (CORS allow-headers include X-KEY). /mcp path returns 404; the root URL is the endpoint.",
+  "reason": "Auth server metadata advertises registration_endpoint https://prod.prospeo.io/api/v2/oauth/register. api-key alternative: authHeader X-KEY.",
+  "probe2": {
+   "status": 401,
+   "www": "Bearer resource_metadata=\"https://mcp.prospeo.io/.well-known/oauth-protected-resource\"",
+   "prm": true,
+   "as": true,
+   "dcr": true,
+   "cimd": false
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "Shopee",
+  "status": "no-remote",
+  "id": "shopee",
+  "segment": "Platforms",
+  "reason": "No Shopee-published MCP server found. Only community servers built on the Shopee Open Platform API (congminh1254/shopee-mcp, sellabot-mcp, others on Glama), which need your own Shopee partner app."
+ },
+ {
+  "name": "Strale",
+  "status": "verified",
+  "id": "strale",
+  "segment": "Search & Data",
+  "description": "Search and run hundreds of verified data capabilities for agents, such as company, VAT, IBAN and email checks.",
+  "endpoint": "https://api.strale.io/mcp",
+  "auth": "bearer",
+  "notes": [
+   "Get an API key (sk_live_...) and trial credits at strale.dev.",
+   "A few tools (search, ping, some free checks) work without a key; paid capabilities draw from your Strale balance."
+  ],
+  "docs": "https://github.com/strale-io/strale",
+  "quote": "\"type\": \"streamableHttp\" ... \"Authorization\": \"Bearer sk_live_your_key_here\"",
+  "probe": "HTTP 200 (initialize succeeds without a key). No www-authenticate.",
+  "reason": "README URL carries a ?src=gh-readme tracking parameter; the bare https://api.strale.io/mcp works. Docs source is the vendor's own GitHub org (strale-io).",
+  "probe2": {
+   "status": 200,
+   "www": ""
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "Threads",
+  "status": "no-remote",
+  "id": "threads",
+  "segment": "Communication",
+  "docs": "https://developers.facebook.com/documentation/mcp",
+  "reason": "Meta's official MCP list has only Ads, Social Technologies (devtools) and WhatsApp Business Tools servers; nothing for Threads. Only community servers exist (pegasusheavy/threads-mcp, meta-threads-mcp on PyPI)."
+ },
+ {
+  "name": "Trustpilot",
+  "status": "no-remote",
+  "id": "trustpilot",
+  "segment": "Sales & Leads",
+  "docs": "https://developers.trustpilot.com/",
+  "reason": "No Trustpilot-published MCP server. Only third-party options: Truto's managed connector, Apify scraper actors, @pullapi/trustpilot-scraper-mcp (RapidAPI)."
+ },
+ {
+  "name": "X (Twitter)",
+  "status": "verified",
+  "id": "x",
+  "segment": "Communication",
+  "description": "Read and post on X: posts, users, lists, bookmarks, DMs and more via the X API.",
+  "endpoint": "https://api.x.com/mcp",
+  "auth": "oauth",
+  "ownClient": true,
+  "oauth": {
+   "mode": "manual",
+   "authorizationUrl": "https://x.com/i/oauth2/authorize",
+   "tokenUrl": "https://api.x.com/2/oauth2/token",
+   "scopes": [
+    "tweet.read",
+    "tweet.write",
+    "users.read",
+    "offline.access"
+   ]
+  },
+  "notes": [
+   "Create your own app in the X Developer Portal, enroll it in the Pay-per-use package with a Production environment, and register OrbytLink's callback URL.",
+   "X API usage is billed to your developer account; writes have stricter rate limits.",
+   "Paste your X app's client ID below; X has no automatic client registration."
+  ],
+  "docs": "https://docs.x.com/tools/mcp",
+  "quote": "The X API exposes a hosted Streamable HTTP MCP server at https://api.x.com/mcp ... no dynamic client registration ... X's OAuth requires your own developer app.",
+  "probe": "HTTP 401 www-authenticate: Bearer resource_metadata=\"https://api.x.com/.well-known/oauth-protected-resource\"",
+  "reason": "Resource metadata exists, but auth server metadata (https://api.x.com/.well-known/oauth-authorization-server) has no registration_endpoint, so OAuth needs your own client ID/secret (token auth: none or client_secret_basic). Read-only alternative: app-only Bearer token in Authorization header. Scopes listed above are a suggested minimum; full list is in the auth server metadata.",
+  "probe2": {
+   "status": 401,
+   "www": "Bearer resource_metadata=\"https://api.x.com/.well-known/oauth-protected-resource\"",
+   "prm": true,
+   "as": true,
+   "dcr": false,
+   "cimd": false
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "Airbnb",
+  "status": "no-remote",
+  "id": "airbnb",
+  "segment": "Search & Data",
+  "reason": "Airbnb publishes no MCP server. Only community (OpenBnB @openbnb/mcp-server-airbnb, local npx) and paid wrappers (Bright Data, Apify) exist."
+ },
+ {
+  "name": "Artificial Analysis",
+  "status": "no-remote",
+  "id": "artificial-analysis",
+  "segment": "AI & Content",
+  "reason": "No vendor MCP server found. Only community local servers (davidhariri/artificial-analysis-mcp on npm, aa-mcp on PyPI) wrapping the AA API with an x-api-key."
+ },
+ {
+  "name": "Clay",
+  "status": "verified",
+  "id": "clay",
+  "segment": "Sales & Leads",
+  "description": "Search and enrich people and companies and run your Clay workspace functions.",
+  "endpoint": "https://api.clay.com/v3/mcp",
+  "auth": "oauth",
+  "notes": [
+   "Sign in with your Clay account; calls use your workspace's credits at the normal rate.",
+   "A workspace admin must allow unknown MCP clients under Settings > MCP users > Allowed MCP clients, or sign-in is blocked."
+  ],
+  "docs": "https://university.clay.com/docs/connect-to-clay-mcp",
+  "quote": "Remote MCP endpoint: https://api.clay.com/v3/mcp ... OAuth 2.0 authorization code flow with PKCE ... Dynamic Client Registration at https://api.clay.com/oauth/register",
+  "probe": "HTTP 401 www-authenticate: Bearer resource_metadata=\"https://api.clay.com/.well-known/oauth-protected-resource/v3/mcp\"",
+  "probe2": {
+   "status": 401,
+   "www": "Bearer resource_metadata=\"https://api.clay.com/.well-known/oauth-protected-resource/v3/mcp\"",
+   "prm": true,
+   "as": true,
+   "dcr": true,
+   "cimd": false
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "DeepSeek",
+  "status": "no-remote",
+  "id": "deepseek",
+  "segment": "AI & Content",
+  "reason": "DeepSeek hosts no MCP server. The server listed in DeepSeek's integration list (DMontgomery40/deepseek-mcp-server) is an individual developer's npm package."
+ },
+ {
+  "name": "Fish Audio",
+  "status": "verified",
+  "id": "fish-audio",
+  "segment": "AI & Content",
+  "description": "Generate speech, search and clone voices, and transcribe audio with Fish Audio.",
+  "endpoint": "https://api.fish.audio/mcp",
+  "auth": "oauth",
+  "notes": [
+   "Sign in with your Fish Audio account; generations use your account's balance."
+  ],
+  "docs": "https://docs.fish.audio/docs/resources/coding-agents",
+  "quote": "https://api.fish.audio/mcp gives your agent tools instead of docs ... (OAuth sign-in, no API key).",
+  "probe": "HTTP 401 www-authenticate: Bearer resource_metadata=\"https://api.fish.audio/.well-known/oauth-protected-resource/mcp\"",
+  "reason": "Separate docs-only server also exists at https://docs.fish.audio/mcp (keyless, HTTP 200); not the product server.",
+  "probe2": {
+   "status": 401,
+   "www": "Bearer resource_metadata=\"https://api.fish.audio/.well-known/oauth-protected-resource/mcp\"",
+   "prm": true,
+   "as": true,
+   "dcr": true,
+   "cimd": false
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "Google Play",
+  "status": "no-remote",
+  "id": "google-play",
+  "segment": "Developer Tools",
+  "reason": "Google publishes no Play Console / Play Developer API MCP server. Only community local servers (play-store-mcp, google-play-developer-mcp, @wiseappsai/play-console-mcp) and Truto's hosted wrapper."
+ },
+ {
+  "name": "Icypeas",
+  "status": "verified",
+  "id": "icypeas",
+  "segment": "Sales & Leads",
+  "description": "Find and verify work emails and build enriched lead lists with Icypeas.",
+  "endpoint": "https://mcp.icypeas.com/mcp",
+  "auth": "oauth",
+  "notes": [
+   "During sign-in you paste your Icypeas API key (Icypeas account > API).",
+   "Free trial gives 50 credits; higher volume needs a paid plan."
+  ],
+  "docs": "https://www.icypeas.com/blog/connecting-icypeas-mcp-and-claude-ai-a-step-by-step-guide",
+  "quote": "MCP endpoint URL: https://mcp.icypeas.com/mcp ... redirected to a page where you must enter your Icypeas API key.",
+  "probe": "HTTP 401 www-authenticate: Bearer realm=\"https://mcp.icypeas.com\", resource_metadata=\"https://mcp.icypeas.com/.well-known/oauth-protected-resource\" (AS metadata has registration_endpoint https://mcp.icypeas.com/register, PKCE S256)",
+  "probe2": {
+   "status": 401,
+   "www": "Bearer realm=\"https://mcp.icypeas.com\", resource_metadata=\"https://mcp.icypeas.com/.well-known/oauth-protected-resource\"",
+   "prm": true,
+   "as": true,
+   "dcr": true,
+   "cimd": false
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "Kick",
+  "status": "no-remote",
+  "id": "kick",
+  "segment": "Communication",
+  "reason": "Kick.com (streaming) publishes no MCP server; only community KickMCP (nosytlabs, npm kick-mcp). Note: docs.kick.co/use.kick.co/mcp is a different company (Kick bookkeeping), not the streaming platform."
+ },
+ {
+  "name": "Luma Labs",
+  "status": "no-remote",
+  "id": "luma-labs",
+  "segment": "AI & Content",
+  "reason": "No Luma-hosted MCP server documented on lumalabs.ai. Only community local servers (bobtista/luma-ai-mcp-server) and AceDataCloud's mcp-luma wrapper."
+ },
+ {
+  "name": "Microsoft Advertising",
+  "status": "unverified",
+  "id": "microsoft-advertising",
+  "segment": "Sales & Leads",
+  "description": "Explore Microsoft Advertising campaigns, ad groups, ads, keywords and performance.",
+  "endpoint": "https://partner.api.bingads.microsoft.com/ext/mcp/vnext",
+  "auth": "oauth",
+  "notes": [
+   "Needs your own Microsoft Entra app registration (client ID, sign-in audience AzureADandPersonalMicrosoftAccount) with the gateway's callback as a redirect URI.",
+   "Sign in with a work or personal Microsoft account that has access to the ad accounts; connecting is free."
+  ],
+  "docs": "https://learn.microsoft.com/en-us/advertising/guides/mcp-setup?view=bingads-13",
+  "quote": "Use this MCP server URL in each client: https://partner.api.bingads.microsoft.com/ext/mcp/vnext ... Authorization URL https://login.microsoftonline.com/client/oauth2/v2.0/authorize; Token URL https://login.microsoftonline.com/client/oauth2/v2.0/token; Scopes https://ads.microsoft.com/msads.manage offline_access",
+  "probe": "HTTP 401 WWW-Authenticate: Bearer resource_metadata=\"https://partner.api.bingads.microsoft.com/ext/mcp/vnext/.well-known/oauth-protected-resource\" (authorization_servers: login.microsoftonline.com; no DCR, so own client required)",
+  "reason": "Its sign-in server publishes no OAuth metadata to discover, and it needs your own Microsoft Entra app; set it up by hand as a custom connection.",
+  "probe2": {
+   "status": 401,
+   "www": "Bearer resource_metadata=\"https://partner.api.bingads.microsoft.com/ext/mcp/vnext/.well-known/oauth-protected-resource\"",
+   "prm": true,
+   "as": false,
+   "dcr": false,
+   "cimd": false
+  }
+ },
+ {
+  "name": "PDF.co",
+  "status": "no-remote",
+  "id": "pdf-co",
+  "segment": "Documents & Files",
+  "reason": "PDF.co's own server (pdfdotco/pdfco-mcp) is local-only via uvx with X_API_KEY env var; hosted versions are Pipedream/viaSocket/Vinkius/Composio wrappers."
+ },
+ {
+  "name": "Reddit",
+  "status": "no-remote",
+  "id": "reddit",
+  "segment": "Communication",
+  "reason": "Reddit's only official MCP is reddit/devvit-mcp (local npx @devvit/mcp, for building Devvit apps). No hosted Reddit data MCP; others are community/Apify wrappers."
+ },
+ {
+  "name": "Shopify stores",
+  "status": "unverified",
+  "id": "shopify-catalog",
+  "segment": "Platforms",
+  "description": "Search products across all Shopify merchants via Shopify's Global Catalog.",
+  "endpoint": "https://catalog.shopify.com/api/ucp/mcp",
+  "auth": "none",
+  "docs": "https://shopify.dev/docs/agents/catalog/global-catalog",
+  "quote": "Every request must include a meta.ucp-agent.profile URL pointing to your agent's UCP profile.",
+  "probe": "HTTP 200 (initialize and tools/list work keyless); tools/call without profile -> error -32001 'UCP discovery failed: Missing profile uri'",
+  "reason": "Endpoint is real and keyless for discovery, but every tool call needs a meta.ucp-agent.profile argument pointing to a hosted UCP agent profile, which OrbytLink doesn't have. Per-shop variant is https://{storedomain}/api/ucp/mcp (one URL per store). Changelog also mentions bearer tokens from Dev Dashboard client credentials."
+ },
+ {
+  "name": "Substack",
+  "status": "no-remote",
+  "id": "substack",
+  "segment": "AI & Content",
+  "reason": "Substack publishes no MCP server or public API; all servers (dkships, marcomoauro, ty13r) are unofficial community projects."
+ },
+ {
+  "name": "TikHub",
+  "status": "verified",
+  "id": "tikhub",
+  "segment": "Search & Data",
+  "description": "Pull TikTok profiles, videos, comments and trends through TikHub's data API.",
+  "endpoint": "https://mcp.tikhub.io/tiktok/mcp",
+  "auth": "bearer",
+  "notes": [
+   "Get an API key at user.tikhub.io; calls are pay-per-request from your TikHub balance.",
+   "Other platforms use the same pattern: replace 'tiktok' with douyin, instagram, youtube, twitter, threads or xiaohongshu."
+  ],
+  "docs": "https://tikhub.io/mcp",
+  "quote": "Streamable HTTP: https://mcp.tikhub.io/{platform}/mcp ... Authorization: Bearer YOUR_API_KEY",
+  "probe": "HTTP 401 www-authenticate: Bearer realm=\"TikHub MCP\" (no resource_metadata; static key)",
+  "reason": "One endpoint per platform; could be added as several entries (tikhub-tiktok, tikhub-instagram, etc.). SSE also at /{platform}/sse.",
+  "probe2": {
+   "status": 401,
+   "www": "Bearer realm=\"TikHub MCP\""
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "Truth Social",
+  "status": "no-remote",
+  "id": "truth-social",
+  "segment": "Communication",
+  "reason": "Truth Social has no public developer API or MCP server; only community (devrim-1283/truth-social-mcp) and Apify scraper actors."
+ },
+ {
+  "name": "Yahoo SERP",
+  "status": "no-remote",
+  "id": "yahoo-serp",
+  "segment": "Search & Data",
+  "reason": "Yahoo publishes no MCP server. Yahoo results are only available via third-party SERP vendors (SerpApi, SERPHouse) that cover Yahoo as one engine."
+ },
+ {
+  "name": "Akta",
+  "status": "verified",
+  "id": "akta",
+  "segment": "Sales & Leads",
+  "description": "Search companies, pull structured profiles, monitor news and check hiring, traffic and review signals.",
+  "endpoint": "https://mcp.akta.pro/mcp",
+  "auth": "api-key",
+  "authHeader": "x-api-key",
+  "notes": [
+   "Create an API key at playground.akta.pro under Manage > API keys.",
+   "Your key's tier (pay-as-you-go, subscription or enterprise) decides what the tools return."
+  ],
+  "docs": "https://docs.akta.pro/docs/developer-tools/mcp/setup",
+  "quote": "claude mcp add --transport http akta-pro https://mcp.akta.pro/mcp --header \"x-api-key: <YOUR_API_KEY>\"",
+  "probe": "HTTP 401 www-authenticate: Bearer error=\"invalid_token\", resource_metadata=\"https://mcp.akta.pro/.well-known/oauth-protected-resource/mcp\"",
+  "reason": "",
+  "probe2": {
+   "status": 401,
+   "www": "Bearer error=\"invalid_token\", error_description=\"Authentication failed. The provided bearer token is invalid, expired, or no longer recognized by the server. To resolve: clear authentication tokens in your MCP client and reconnect. Your client should automatically re-register and obtain new tokens.\", resource_metadata=\"https://mcp.akta.pro/.well-known/oauth-protected-resource/mcp\""
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "Bing Keyword Data",
+  "status": "no-remote",
+  "id": "bing-keyword-data",
+  "segment": "Search & Data",
+  "description": "Bing keyword impression and search statistics.",
+  "endpoint": "",
+  "auth": "none",
+  "notes": [],
+  "docs": "",
+  "quote": "",
+  "probe": "",
+  "reason": "Microsoft publishes no MCP server for Bing keyword data (Webmaster Tools or Advertising). Only community stdio servers (multivariate-ai-inc, ncosentino) and resellers such as treg.to exist."
+ },
+ {
+  "name": "Cloro",
+  "status": "verified",
+  "id": "cloro",
+  "segment": "Search & Data",
+  "description": "Query ChatGPT, Perplexity, Gemini, Copilot, Grok, Google AI Mode, Google Search and Google News and get structured results.",
+  "endpoint": "https://mcp.cloro.dev/mcp",
+  "auth": "bearer",
+  "notes": [
+   "Get an API key from the cloro dashboard; calls use your cloro credits.",
+   "OAuth sign-in is also offered (discovery at mcp.cloro.dev, Clerk auth server)."
+  ],
+  "docs": "https://cloro.dev/docs/integrations/mcp",
+  "quote": "The hosted server speaks Streamable HTTP. ... use https://mcp.cloro.dev/mcp and send Authorization: Bearer YOUR_CLORO_API_KEY",
+  "probe": "HTTP 200 to unauthenticated initialize (no www-authenticate); /.well-known/oauth-protected-resource/mcp returns authorization_servers [https://clerk.cloro.dev]",
+  "reason": "",
+  "probe2": {
+   "status": 200,
+   "www": ""
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "DuckDuckGo SERP",
+  "status": "no-remote",
+  "id": "duckduckgo-serp",
+  "segment": "Search & Data",
+  "description": "DuckDuckGo web search results.",
+  "endpoint": "",
+  "auth": "none",
+  "notes": [],
+  "docs": "",
+  "quote": "",
+  "probe": "",
+  "reason": "DuckDuckGo publishes no MCP server or search API. Only community stdio servers (nickclyde duckduckgo-mcp-server, ddg-mcp-server) and resellers exist."
+ },
+ {
+  "name": "Gemini (Google Gemini API)",
+  "status": "no-remote",
+  "id": "gemini",
+  "segment": "AI & Content",
+  "description": "Google's Gemini models.",
+  "endpoint": "",
+  "auth": "none",
+  "notes": [],
+  "docs": "https://ai.google.dev",
+  "quote": "",
+  "probe": "",
+  "reason": "Google hosts no MCP server for the Gemini API; the Gemini SDKs act as MCP clients. The only docs MCP (philschmid/gemini-api-docs-mcp) is a personal community project, self-hosted."
+ },
+ {
+  "name": "Google Search Console",
+  "status": "no-remote",
+  "id": "google-search-console",
+  "segment": "Search & Data",
+  "description": "Search performance, URL inspection and sitemaps for your sites.",
+  "endpoint": "",
+  "auth": "none",
+  "notes": [],
+  "docs": "https://docs.cloud.google.com/mcp/release-notes",
+  "quote": "",
+  "probe": "",
+  "reason": "Google's managed MCP servers (Cloud, Workspace, Maps etc.) do not include Search Console. Only community servers (mcp-search-console, gsc-mcp, mcpsearchconsole.com) exist."
+ },
+ {
+  "name": "Ignav Flights",
+  "status": "verified",
+  "id": "ignav-flights",
+  "segment": "Search & Data",
+  "description": "Search live one-way and round-trip flight fares with booking links and airport lookup.",
+  "endpoint": "https://ignav.com/mcp",
+  "auth": "bearer",
+  "notes": [
+   "Create an Ignav account and API key; MCP tool calls require an account.",
+   "1,000 free successful requests, then $2.00 per 1,000. OAuth (discovery at ignav.com) and an X-Api-Key header also work."
+  ],
+  "docs": "https://ignav.com/docs/mcp",
+  "quote": "Streamable HTTP ... Authorization: Bearer YOUR_API_KEY ... There is nothing to install or host.",
+  "probe": "HTTP 200 to unauthenticated initialize (no www-authenticate); /.well-known/oauth-protected-resource returns resource https://ignav.com/mcp, scope flights:search",
+  "reason": "",
+  "probe2": {
+   "status": 200,
+   "www": ""
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "Lazada",
+  "status": "no-remote",
+  "id": "lazada",
+  "segment": "Platforms",
+  "description": "Lazada marketplace products and seller data.",
+  "endpoint": "",
+  "auth": "none",
+  "notes": [],
+  "docs": "",
+  "quote": "",
+  "probe": "",
+  "reason": "Lazada publishes no MCP server. Only a community stdio server (chanoktrue/lazada-mcp) and Apify scraper actors exist."
+ },
+ {
+  "name": "Lusha",
+  "status": "verified",
+  "id": "lusha",
+  "segment": "Sales & Leads",
+  "description": "Find and enrich B2B contacts and companies, with buyer signals and lookalikes.",
+  "endpoint": "https://mcp.lusha.com",
+  "auth": "api-key",
+  "authHeader": "x-api-key",
+  "notes": [
+   "Get your API key from Lusha's API Hub; calls use the same credit pool as the REST API.",
+   "The header must be lowercase x-api-key; Authorization: Bearer fails for custom clients."
+  ],
+  "docs": "https://docs.lusha.com/mcp/setup.md",
+  "quote": "Other clients: URL: https://mcp.lusha.com  Header: x-api-key: YOUR_LUSHA_API_KEY",
+  "probe": "HTTP 401 www-authenticate: Bearer error=\"invalid_request\", error_description=\"missing Authorization header\", scope=\"mcp\", resource_metadata=\"https://mcp.lusha.com/.well-known/oauth-protected-resource\"",
+  "reason": "",
+  "probe2": {
+   "status": 401,
+   "www": "Bearer error=\"invalid_request\", error_description=\"missing Authorization header\", scope=\"mcp\", resource_metadata=\"https://mcp.lusha.com/.well-known/oauth-protected-resource\""
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "MiniMax",
+  "status": "no-remote",
+  "id": "minimax",
+  "segment": "AI & Content",
+  "description": "MiniMax speech, image and video generation.",
+  "endpoint": "",
+  "auth": "none",
+  "notes": [],
+  "docs": "https://github.com/MiniMax-AI/MiniMax-MCP",
+  "quote": "We support two transport types: stdio and sse.",
+  "probe": "",
+  "reason": "Official MiniMax-MCP is a local uvx package (stdio, or self-hosted SSE); MiniMax hosts no remote endpoint."
+ },
+ {
+  "name": "People Data Labs",
+  "status": "no-remote",
+  "id": "people-data-labs",
+  "segment": "Sales & Leads",
+  "description": "Person and company enrichment and search.",
+  "endpoint": "",
+  "auth": "none",
+  "notes": [],
+  "docs": "https://github.com/peopledatalabs",
+  "quote": "",
+  "probe": "",
+  "reason": "PDL's GitHub org and docs list SDKs and an OpenAPI spec only. MCP servers are community (phxdev1, pipeworx) or wrappers (Pipedream, Vinkius)."
+ },
+ {
+  "name": "Remote OK",
+  "status": "no-remote",
+  "id": "remote-ok",
+  "segment": "Search & Data",
+  "description": "Remote job listings.",
+  "endpoint": "",
+  "auth": "none",
+  "notes": [],
+  "docs": "",
+  "quote": "",
+  "probe": "",
+  "reason": "Remote OK publishes no MCP server. Only Pipeworx's mcp-remoteok wrapper and an Apify scraper actor exist."
+ },
+ {
+  "name": "Snapchat",
+  "status": "excluded",
+  "id": "snapchat-ads",
+  "segment": "Platforms",
+  "description": "Read-only Snapchat Ads data across your organizations and ad accounts.",
+  "endpoint": "https://mcp.snapchat.com/ads",
+  "auth": "oauth",
+  "notes": [
+   "Read-only for now; an org Admin must approve each agent during sign-in."
+  ],
+  "docs": "https://developers.snap.com/marketing-api/Ads-MCP/Introduction?lang=en-US",
+  "quote": "Other client ids and dynamic registration are not supported.",
+  "probe": "HTTP 401 www-authenticate: Bearer resource_metadata=\"https://mcp.snapchat.com/.well-known/oauth-protected-resource/ads\"",
+  "reason": "OAuth is limited to Snap-registered client IDs for named agents (claude-snap-ads, chatgpt-snap-ads, codex, gemini, antigravity); no dynamic registration, so a gateway cannot connect."
+ },
+ {
+  "name": "Supadata",
+  "status": "verified",
+  "id": "supadata",
+  "segment": "AI & Content",
+  "description": "Get transcripts from YouTube, TikTok, X and file URLs, and scrape or crawl web pages.",
+  "endpoint": "https://api.supadata.ai/mcp",
+  "auth": "api-key",
+  "authHeader": "x-api-key",
+  "notes": [
+   "Get an API key from the Supadata dashboard; calls use your Supadata credits.",
+   "OAuth 2.1 sign-in is also supported."
+  ],
+  "docs": "https://github.com/supadata-ai/mcp",
+  "quote": "Direct x-api-key header authentication is also accepted on /mcp.",
+  "probe": "HTTP 401 www-authenticate: Bearer realm=\"OAuth\", error=\"invalid_token\", resource_metadata=\"https://api.supadata.ai/.well-known/oauth-protected-resource\"",
+  "reason": "",
+  "probe2": {
+   "status": 401,
+   "www": "Bearer realm=\"OAuth\", error=\"invalid_token\", error_description=\"Missing or invalid access token\", resource_metadata=\"https://api.supadata.ai/.well-known/oauth-protected-resource\""
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "TikTok",
+  "status": "unverified",
+  "id": "tiktok-ads",
+  "segment": "Platforms",
+  "description": "Create, update and report on TikTok ad campaigns through the TikTok Ads API.",
+  "endpoint": "https://business-api.tiktok.com/open_mcp/tt-ads-mcp-flat",
+  "auth": "oauth",
+  "notes": [
+   "Sign in with a TikTok for Business account; reported 30-day token expiry.",
+   "A lighter endpoint, /open_mcp/tt-ads-mcp-layer, loads ~40 core tools instead of ~400."
+  ],
+  "docs": "https://business-api.tiktok.com/portal/docs/tiktok-ads-mcp-server/v1.3",
+  "quote": "",
+  "probe": "HTTP 401 www-authenticate: Bearer resource_metadata=\"https://business-api.tiktok.com/.well-known/oauth-protected-resource/open_mcp/tt-ads-mcp-flat\"; auth server advertises registration_endpoint (DCR) and client_id_metadata_document_supported",
+  "reason": "Endpoint is on TikTok's own domain and live with OAuth discovery + DCR, but the vendor docs page is JS-rendered and I could not read the URL on it; endpoint came from third-party directories (mcpplaygroundonline, zernio). Ads only (TikTok for Business), not consumer TikTok."
+ },
+ {
+  "name": "Twitch",
+  "status": "no-remote",
+  "id": "twitch",
+  "segment": "Platforms",
+  "description": "Twitch channels, streams and chat.",
+  "endpoint": "",
+  "auth": "none",
+  "notes": [],
+  "docs": "",
+  "quote": "",
+  "probe": "",
+  "reason": "Twitch publishes no MCP server. Only community servers (TomCools, mtane0412, BryanCaves) and Pipedream's wrapper exist."
+ },
+ {
+  "name": "Yelp",
+  "status": "no-remote",
+  "id": "yelp",
+  "segment": "Search & Data",
+  "description": "Yelp Fusion AI business search and answers.",
+  "endpoint": "",
+  "auth": "none",
+  "notes": [],
+  "docs": "https://github.com/Yelp/yelp-mcp",
+  "quote": "stdio (default): Standard input/output, ideal for local tools.",
+  "probe": "",
+  "reason": "Official Yelp/yelp-mcp is self-hosted only (stdio, or streamable-http bound to 127.0.0.1 by default); Yelp hosts no remote endpoint."
+ },
+ {
+  "name": "Amazon",
+  "status": "unverified",
+  "id": "amazon",
+  "segment": "Sales & Leads",
+  "reason": "No Amazon shopping/marketplace MCP exists. Amazon Ads has an official MCP Server (open beta, OAuth 2.1, Lite variant at /mcp/lite), but it is limited to Amazon Ads partners with active API credentials and its docs pages (advertising.amazon.com/API/docs/en-us/mcp/...) render no endpoint URL, so the exact endpoint could not be confirmed. The AWS MCP Server (aws-mcp.<region>.api.aws/mcp) is AWS, not Amazon shopping.",
+  "docs": "https://advertising.amazon.com/library/news/amazon-ads-mcp-server-open-beta",
+  "quote": "The Amazon Ads MCP Server and tools are available globally in open beta to Amazon Ads partners with active API credentials."
+ },
+ {
+  "name": "Black Forest Labs",
+  "status": "verified",
+  "id": "black-forest-labs",
+  "segment": "AI & Content",
+  "description": "Generate and edit images with the FLUX models.",
+  "endpoint": "https://mcp.bfl.ai",
+  "auth": "oauth",
+  "notes": [
+   "Sign in with your BFL account and pick the organization to bill.",
+   "Images are billed to that organization at BFL API rates."
+  ],
+  "docs": "https://help.bfl.ai/articles/2286461195-what-is-the-flux-mcp",
+  "quote": "You pay BFL directly ... the organization selected at sign-in is billed for generated images at API rates.",
+  "probe": "HTTP 401 www-authenticate: Bearer error=\"invalid_token\", resource_metadata=\"https://mcp.bfl.ai/.well-known/oauth-protected-resource\"",
+  "probe2": {
+   "status": 401,
+   "www": "Bearer error=\"invalid_token\", error_description=\"Authentication failed. The provided bearer token is invalid, expired, or no longer recognized by the server. To resolve: clear authentication tokens in your MCP client and reconnect. Your client should automatically re-register and obtain new tokens.\", resource_metadata=\"https://mcp.bfl.ai/.well-known/oauth-protected-resource\"",
+   "prm": true,
+   "as": true,
+   "dcr": true,
+   "cimd": false
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "CompanyEnrich",
+  "status": "verified",
+  "id": "companyenrich",
+  "segment": "Sales & Leads",
+  "description": "Enrich, search and find similar companies and people from a B2B database.",
+  "endpoint": "https://mcp.companyenrich.com/mcp",
+  "auth": "bearer",
+  "notes": [
+   "Get an API key from your CompanyEnrich dashboard and use it as the bearer token.",
+   "The server also advertises OAuth discovery."
+  ],
+  "docs": "https://docs.companyenrich.com/docs/mcp-server",
+  "quote": "\"Authorization\": \"Bearer <YOUR TOKEN>\" (the token is your CompanyEnrich API key); server URL https://mcp.companyenrich.com/mcp",
+  "probe": "HTTP 401 www-authenticate: Bearer realm=\"OAuth\", resource_metadata=\"https://mcp.companyenrich.com/.well-known/oauth-protected-resource/mcp\" (/sse returns 404)",
+  "probe2": {
+   "status": 401,
+   "www": "Bearer realm=\"OAuth\", resource_metadata=\"https://mcp.companyenrich.com/.well-known/oauth-protected-resource/mcp\""
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "eBay",
+  "status": "no-remote",
+  "id": "ebay",
+  "segment": "Platforms",
+  "reason": "No eBay-hosted MCP server found on developer.ebay.com. Only community servers (ebay-mcp, ebay-mcp-remote-edition, self-hosted) and an eBay npm package @ebay/npm-public-api-mcp that runs locally.",
+  "docs": "https://developer.ebay.com"
+ },
+ {
+  "name": "Glassdoor",
+  "status": "no-remote",
+  "id": "glassdoor",
+  "segment": "Search & Data",
+  "reason": "No official Glassdoor MCP server or public API; only Apify/scraper-based community wrappers exist.",
+  "docs": "https://www.glassdoor.com"
+ },
+ {
+  "name": "Google Tag Manager",
+  "status": "no-remote",
+  "id": "google-tag-manager",
+  "segment": "Developer Tools",
+  "reason": "Google publishes no GTM MCP server. The hosted gtm-mcp.stape.ai/mcp (OAuth, responds 401) is run by Stape, a third party, not Google.",
+  "docs": "https://github.com/stape-io/google-tag-manager-mcp-server"
+ },
+ {
+  "name": "IMDb",
+  "status": "no-remote",
+  "id": "imdb",
+  "segment": "Search & Data",
+  "reason": "No official IMDb MCP server; only community servers using Cinemagoer scraping or RapidAPI keys, run locally.",
+  "docs": "https://developer.imdb.com"
+ },
+ {
+  "name": "LeadMagic",
+  "status": "verified",
+  "id": "leadmagic",
+  "segment": "Sales & Leads",
+  "description": "Find and verify B2B emails, phones and company data.",
+  "endpoint": "https://mcp.leadmagic.io/mcp",
+  "auth": "oauth",
+  "notes": [
+   "Sign in with your LeadMagic account; calls use your LeadMagic credits.",
+   "Static API keys (x-leadmagic-key) do not work on the hosted server."
+  ],
+  "docs": "https://leadmagic.io/docs/mcp/setup",
+  "quote": "Full catalog: https://mcp.leadmagic.io/mcp (Streamable HTTP) ... Never put a static API key, x-leadmagic-key, or X-API-Key in MCP config.",
+  "probe": "HTTP 401 www-authenticate: Bearer realm=\"LeadMagic MCP\", resource_metadata=\"https://mcp.leadmagic.io/.well-known/oauth-protected-resource/mcp\", scope=\"mcp_all\"",
+  "probe2": {
+   "status": 401,
+   "www": "Bearer realm=\"LeadMagic MCP\", resource_metadata=\"https://mcp.leadmagic.io/.well-known/oauth-protected-resource/mcp\", scope=\"mcp_all\"",
+   "prm": true,
+   "as": true,
+   "dcr": true,
+   "cimd": true
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "MagicSlides",
+  "status": "no-remote",
+  "id": "magicslides",
+  "segment": "AI & Content",
+  "reason": "No official MagicSlides MCP server; only community stdio servers (IndianAppGuy, Pratiksha-Kanoja) and an Activepieces wrapper.",
+  "docs": "https://www.magicslides.app"
+ },
+ {
+  "name": "Mistral AI",
+  "status": "verified",
+  "id": "mistral-ai",
+  "segment": "AI & Content",
+  "description": "Manage your Mistral Studio workspace: agents' apps, prompts, knowledge, libraries, workflows and docs.",
+  "endpoint": "https://api.mistral.ai/mcp",
+  "auth": "bearer",
+  "notes": [
+   "Create an API key in Mistral Studio; it is workspace-scoped.",
+   "Some tools write or delete workspace resources."
+  ],
+  "docs": "https://docs.mistral.ai/resources/mcp",
+  "quote": "Streamable HTTP ... Authorization: Bearer <MISTRAL_API_KEY>",
+  "probe": "HTTP 401 (no www-authenticate header)",
+  "probe2": {
+   "status": 401,
+   "www": ""
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "PhotoRoom",
+  "status": "verified",
+  "id": "photoroom",
+  "segment": "AI & Content",
+  "description": "Remove backgrounds and edit product photos with the Photoroom API.",
+  "endpoint": "https://mcp.photoroom.com/mcp",
+  "auth": "oauth",
+  "notes": [
+   "Sign in with your Photoroom account; it creates an API key for you.",
+   "Usage is billed to your Photoroom API credits."
+  ],
+  "docs": "https://www.photoroom.com/api/claude",
+  "quote": "Sign in with your Photoroom account and Photoroom creates the API key for you.",
+  "probe": "HTTP 401 www-authenticate: Bearer resource_metadata=\"https://mcp.photoroom.com/.well-known/oauth-protected-resource/mcp\"",
+  "probe2": {
+   "status": 401,
+   "www": "Bearer resource_metadata=\"https://mcp.photoroom.com/.well-known/oauth-protected-resource/mcp\"",
+   "prm": true,
+   "as": true,
+   "dcr": true,
+   "cimd": true
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "Rumble",
+  "status": "no-remote",
+  "id": "rumble",
+  "segment": "Platforms",
+  "reason": "No official Rumble MCP server; 'rumble-mcp' is for an unrelated investment app, others are Apify actors or a third-party transcript service.",
+  "docs": "https://rumble.com"
+ },
+ {
+  "name": "Snapchat Ads",
+  "status": "excluded",
+  "id": "snapchat-ads",
+  "segment": "Platforms",
+  "description": "Read Snapchat Ads accounts, campaigns and reporting.",
+  "endpoint": "https://mcp.snapchat.com/ads",
+  "auth": "oauth",
+  "docs": "https://developers.snap.com/marketing-api/Ads-MCP/Introduction",
+  "quote": "The agent must use the client id shown above. Other client ids and dynamic registration are not supported.",
+  "probe": "HTTP 401 www-authenticate: Bearer resource_metadata=\"https://mcp.snapchat.com/.well-known/oauth-protected-resource/ads\" (auth server metadata has no registration_endpoint)",
+  "reason": "Official and live, but OAuth only accepts Snap-registered client IDs for named agents (Codex, ChatGPT, Gemini, etc.); no dynamic registration, so a gateway cannot connect."
+ },
+ {
+  "name": "Surf",
+  "status": "verified",
+  "id": "surf",
+  "segment": "Search & Data",
+  "description": "Query crypto market, on-chain and social data from the Surf API.",
+  "endpoint": "https://mcp.asksurf.ai/mcp",
+  "auth": "none",
+  "notes": [
+   "Works without a key under a per-IP beta allowance.",
+   "For higher limits, send a Surf API key in the Authorization header (Bearer)."
+  ],
+  "docs": "https://github.com/asksurf-ai/surf-mcp",
+  "quote": "POST /mcp: stateless MCP Streamable HTTP endpoint ... Authorization header is forwarded verbatim to the Surf data API ... then anonymous access under the per-IP allowance.",
+  "probe": "HTTP 200 content-type: application/json (keyless)",
+  "probe2": {
+   "status": 200,
+   "www": ""
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "TikTok Ads",
+  "status": "unverified",
+  "id": "tiktok-ads",
+  "segment": "Platforms",
+  "description": "Manage TikTok Ads campaigns, ad groups, creatives and reports.",
+  "endpoint": "https://business-api.tiktok.com/open_mcp/tt-ads-mcp-flat",
+  "auth": "oauth",
+  "notes": [
+   "Sign in with your TikTok for Business account; no developer app needed.",
+   "Authorization expires after 30 days and must be renewed. A lighter ~40-tool variant is at /open_mcp/tt-ads-mcp-layer."
+  ],
+  "docs": "https://ads.tiktok.com/resources/help/article/about-tiktok-for-business-mcp-server?lang=en",
+  "quote": "Full Disclosure: https://business-api.tiktok.com/open_mcp/tt-ads-mcp-flat - All around 400 tools load at connection time. Recommended for Claude.",
+  "probe": "HTTP 401 WWW-Authenticate: Bearer resource_metadata=\"https://business-api.tiktok.com/.well-known/oauth-protected-resource/open_mcp/tt-ads-mcp-flat\" (auth server has registration_endpoint)",
+  "probe2": {
+   "status": 401,
+   "www": "Bearer resource_metadata=\"https://business-api.tiktok.com/.well-known/oauth-protected-resource/open_mcp/tt-ads-mcp-flat\"",
+   "prm": true,
+   "as": false,
+   "dcr": false,
+   "cimd": false
+  },
+  "reason": "The sign-in server publishes no OAuth metadata the gateway can discover."
+ },
+ {
+  "name": "Vaquill",
+  "status": "verified",
+  "id": "vaquill",
+  "segment": "Search & Data",
+  "description": "Search US and Indian case law, statutes and citations.",
+  "endpoint": "https://mcp.vaquill.ai/mcp",
+  "auth": "oauth",
+  "notes": [
+   "Sign in with your Vaquill account.",
+   "An API key (vq_key_...) as a Bearer header also works; Indian corpus is on a separate mount."
+  ],
+  "docs": "https://vaquill.ai/docs/integrations/mcp",
+  "quote": "OAuth connector (default): https://mcp.vaquill.ai/mcp ... OAuth 2.1 authorization code flow with PKCE (S256).",
+  "probe": "HTTP 401 www-authenticate: Bearer resource_metadata=\"https://mcp.vaquill.ai/.well-known/oauth-protected-resource/mcp\"",
+  "probe2": {
+   "status": 401,
+   "www": "Bearer resource_metadata=\"https://mcp.vaquill.ai/.well-known/oauth-protected-resource/mcp\"",
+   "prm": true,
+   "as": true,
+   "dcr": true,
+   "cimd": true
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "You.com",
+  "status": "verified",
+  "id": "you-com",
+  "segment": "Search & Data",
+  "description": "Web and news search with AI-ready results from You.com.",
+  "endpoint": "https://api.you.com/mcp",
+  "auth": "bearer",
+  "notes": [
+   "Get an API key from the You.com platform and send it as a Bearer token.",
+   "Key is checked at tool-call time, not on connect; the server also advertises OAuth."
+  ],
+  "docs": "https://you.com/resources/mcp-server-web-search",
+  "quote": "The server speaks MCP over Streamable HTTP ... Authorization: Bearer YOUR_YDC_API_KEY",
+  "probe": "HTTP 401 www-authenticate: Bearer resource_metadata=\"https://api.you.com/mcp/.well-known/oauth-protected-resource\" scope=\"Tools offline_access\"",
+  "probe2": {
+   "status": 401,
+   "www": "Bearer resource_metadata=\"https://api.you.com/mcp/.well-known/oauth-protected-resource\" scope=\"Tools offline_access\""
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "API Ninjas",
+  "status": "verified",
+  "id": "api-ninjas",
+  "segment": "Search & Data",
+  "description": "Query API Ninjas' data APIs (nutrition, exercises, finance, geography and more).",
+  "endpoint": "https://mcp.api-ninjas.com/mcp",
+  "auth": "api-key",
+  "authHeader": "X-Api-Key",
+  "notes": [
+   "Get an API key from your API Ninjas account; every plan, including Free (3,000 calls/month), can connect.",
+   "Authorization: Bearer <key> also works; an OAuth connect URL exists at https://mcp.api-ninjas.com/connect."
+  ],
+  "docs": "https://api-ninjas.com/mcp",
+  "quote": "Every plan, including Free, can connect to the MCP server. ... --header \"X-Api-Key: YOUR_API_NINJAS_KEY\"",
+  "probe": "HTTP 200 content-type: text/event-stream (initialize answered without a key)",
+  "probe2": {
+   "status": 200,
+   "www": ""
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "Bluesky",
+  "status": "no-remote",
+  "id": "bluesky",
+  "segment": "Communication",
+  "reason": "No Bluesky-published MCP server; only community stdio projects (berlinbra, semioz) and Pipedream/Vinkius wrappers."
+ },
+ {
+  "name": "ContactOut",
+  "status": "verified",
+  "id": "contactout",
+  "segment": "Sales & Leads",
+  "description": "Search people and companies and reveal verified emails and phone numbers.",
+  "endpoint": "https://contactout.com/mcp",
+  "auth": "oauth",
+  "notes": [
+   "Sign up at ContactOut to get an API key; during the OAuth login you paste that key to authorise.",
+   "One credit is used per successful contact reveal; free signup includes 600+ MCP credits."
+  ],
+  "docs": "https://contactout.com/mcp-integration",
+  "quote": "Connect one URL over OAuth. ... Enter https://contactout.com/mcp ... Complete the OAuth login using your ContactOut API token.",
+  "probe": "HTTP 401 www-authenticate: Bearer realm=\"mcp\", error=\"invalid_token\" (no resource_metadata in header, but /.well-known/oauth-protected-resource/mcp and /.well-known/oauth-authorization-server exist, with dynamic client registration at /api-users/oauth/register)",
+  "probe2": {
+   "status": 401,
+   "www": "Bearer realm=\"mcp\", error=\"invalid_token\"",
+   "prm": true,
+   "as": true,
+   "dcr": true,
+   "cimd": false
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "EODHD APIs",
+  "status": "verified",
+  "id": "eodhd",
+  "segment": "Payments & Finance",
+  "description": "Stock prices, fundamentals, and financial market data from EODHD.",
+  "endpoint": "https://mcp.eodhd.com/v2/mcp",
+  "auth": "oauth",
+  "notes": [
+   "Sign in with your EODHD account during the OAuth consent step; the free plan only gets limited data.",
+   "The v1 endpoint (https://mcp.eodhd.com/v1/mcp) takes the key in the URL, so use v2."
+  ],
+  "docs": "https://eodhd.com/financial-apis/mcp-server-for-financial-data-by-eodhd",
+  "quote": "The v2 server includes a built-in lightweight OAuth server.",
+  "probe": "HTTP 401 www-authenticate: Bearer realm=\"eodhd-mcp\", resource_metadata=\"https://mcp.eodhd.com/.well-known/oauth-protected-resource/v2/mcp\", scope=\"full-access\"",
+  "probe2": {
+   "status": 401,
+   "www": "Bearer realm=\"eodhd-mcp\", resource_metadata=\"https://mcp.eodhd.com/.well-known/oauth-protected-resource/v2/mcp\", scope=\"full-access\"",
+   "prm": true,
+   "as": true,
+   "dcr": true,
+   "cimd": true
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "Google Ads",
+  "status": "unverified",
+  "id": "google-ads",
+  "segment": "Sales & Leads",
+  "docs": "https://developers.google.com/google-ads/api/docs/developer-toolkit/mcp-server",
+  "quote": "Allowlisted participants of the hosted endpoint pilot can also refer to the hosted MCP setup guide.",
+  "reason": "Google's official server (github.com/googleads/google-ads-mcp) is local pipx or self-hosted on Cloud Run; a Google-hosted endpoint is an allowlist-only pilot with no public URL."
+ },
+ {
+  "name": "GraphHopper",
+  "status": "no-remote",
+  "id": "graphhopper",
+  "segment": "Search & Data",
+  "reason": "No MCP server on graphhopper.com or its docs; only Composio and Vinkius wrappers."
+ },
+ {
+  "name": "Indeed",
+  "status": "excluded",
+  "id": "indeed",
+  "segment": "Search & Data",
+  "endpoint": "https://mcp.indeed.com/claude/mcp",
+  "auth": "oauth",
+  "docs": "https://docs.indeed.com/mcp",
+  "quote": "Indeed's MCP server is offered in beta and subject to Indeed's Terms of Service ... follows the MCP Standard Protocol, but is available only for Claude Connector.",
+  "probe": "HTTP 401 www-authenticate: Bearer error=\"invalid_token\", error_description=\"Authentication required\", resource_metadata=\"https://mcp.indeed.com/.well-known/oauth-protected-resource/claude/mcp\"",
+  "reason": "Vendor limits it to the Claude Connector only (not other clients/gateways); the endpoint URL is also not printed on Indeed's page (it comes from directories)."
+ },
+ {
+  "name": "Lemon8",
+  "status": "no-remote",
+  "id": "lemon8",
+  "segment": "Communication",
+  "reason": "Lemon8 (ByteDance) has no public API or MCP server; nothing found beyond unrelated 'Lemon' products."
+ },
+ {
+  "name": "Marketstack",
+  "status": "no-remote",
+  "id": "marketstack",
+  "segment": "Payments & Finance",
+  "reason": "No apilayer/Marketstack server; only community stdio servers (matteoantoci/mcp-marketstack, @shussey/marketstack) and an MCPBundles wrapper."
+ },
+ {
+  "name": "MrScraper",
+  "status": "verified",
+  "id": "mrscraper",
+  "segment": "Search & Data",
+  "description": "Scrape web pages and run web searches through MrScraper.",
+  "endpoint": "https://mcp.mrscraper.com/mcp",
+  "auth": "oauth",
+  "notes": [
+   "Sign in with your MrScraper account in the browser when connecting.",
+   "Clients without OAuth can send Authorization: Bearer <MrScraper API key> instead."
+  ],
+  "docs": "https://docs.mrscraper.com/docs/getting-started/mcp-server",
+  "quote": "OAuth 2.1 browser sign-in, or an API key fallback. ... Authentication stays at the transport layer; tools never accept credentials as arguments.",
+  "probe": "HTTP 401 www-authenticate: Bearer error=\"invalid_token\", error_description=\"Missing Authorization header\", resource_metadata=\"https://mcp.mrscraper.com/.well-known/oauth-protected-resource/mcp\"",
+  "probe2": {
+   "status": 401,
+   "www": "Bearer error=\"invalid_token\", error_description=\"Missing Authorization header\", resource_metadata=\"https://mcp.mrscraper.com/.well-known/oauth-protected-resource/mcp\"",
+   "prm": true,
+   "as": true,
+   "dcr": true,
+   "cimd": true
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "Pinterest",
+  "status": "unverified",
+  "id": "pinterest",
+  "segment": "Communication",
+  "endpoint": "https://api.pinterest.com/mcp",
+  "docs": "https://developers.pinterest.com/about-pinterest-mcp/",
+  "quote": "Be the first to know when it launches",
+  "probe": "HTTP 401 (no www-authenticate header)",
+  "reason": "Pinterest's own MCP (api.pinterest.com/mcp, OAuth 2.0 / Bearer) is announced but not yet publicly launched; no OAuth discovery on the probe."
+ },
+ {
+  "name": "ScrapeCreators",
+  "status": "verified",
+  "id": "scrapecreators",
+  "segment": "Search & Data",
+  "description": "Scrape public social media profiles, posts and videos across 20+ platforms.",
+  "endpoint": "https://api.scrapecreators.com/mcp",
+  "auth": "oauth",
+  "notes": [
+   "Sign up at scrapecreators.com for an API key; you enter it in the browser during the OAuth step.",
+   "Clients without OAuth can send the key in the x-api-key header."
+  ],
+  "docs": "https://docs.scrapecreators.com/integrations/mcp",
+  "quote": "MCP Server URL: https://api.scrapecreators.com/mcp ... You'll be redirected to enter your API key in the browser during setup.",
+  "probe": "HTTP 401 www-authenticate: Bearer resource_metadata=\"https://api.scrapecreators.com/.well-known/oauth-protected-resource/mcp\"",
+  "probe2": {
+   "status": 401,
+   "www": "Bearer resource_metadata=\"https://api.scrapecreators.com/.well-known/oauth-protected-resource/mcp\"",
+   "prm": true,
+   "as": true,
+   "dcr": true,
+   "cimd": false
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "SoundCloud",
+  "status": "no-remote",
+  "id": "soundcloud",
+  "segment": "AI & Content",
+  "reason": "No SoundCloud-published MCP server; only community servers (glama listings, scdl downloader) and Zapier/Vinkius wrappers."
+ },
+ {
+  "name": "Tavily",
+  "status": "verified",
+  "id": "tavily",
+  "segment": "Search & Data",
+  "description": "Real-time web search, extraction and crawling built for AI agents.",
+  "endpoint": "https://mcp.tavily.com/mcp/",
+  "auth": "oauth",
+  "notes": [
+   "Sign in with your Tavily account; OAuth uses the account's mcp_auth_default key and asks which personal or org account to use.",
+   "Clients without OAuth can send Authorization: Bearer <Tavily API key> (documented in the official README)."
+  ],
+  "docs": "https://docs.tavily.com/documentation/mcp",
+  "quote": "No API key needed in the URL — authentication is handled automatically via OAuth. ... You can also authenticate with your API key in the URL (?tavilyApiKey=...) or the Authorization header.",
+  "probe": "HTTP 401 www-authenticate: Bearer scope=\"openid offline_access\", resource_metadata=\"https://mcp.tavily.com/.well-known/oauth-protected-resource/mcp\"",
+  "probe2": {
+   "status": 401,
+   "www": "Bearer scope=\"openid offline_access\", resource_metadata=\"https://mcp.tavily.com/.well-known/oauth-protected-resource/mcp\"",
+   "prm": true,
+   "as": true,
+   "dcr": true,
+   "cimd": true
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "TikTok Shop",
+  "status": "no-remote",
+  "id": "tiktok-shop",
+  "segment": "Payments & Finance",
+  "reason": "No TikTok Shop MCP on TikTok's own docs; TikTok's official MCP covers TikTok Ads only. Shop servers are community (tiktok-shop-mcp on PyPI) or MintMCP/Apideck/Unified wrappers."
+ },
+ {
+  "name": "Walmart",
+  "status": "no-remote",
+  "id": "walmart",
+  "segment": "Payments & Finance",
+  "docs": "https://developer.walmart.com/us-marketplace/page/whats-new",
+  "reason": "Walmart only publishes a Developer Docs MCP (documentation lookup, Oct 2026), not an API server; Marketplace/Affiliate/Ads servers are all community or Vinkius wrappers."
+ },
+ {
+  "name": "YouTube",
+  "status": "no-remote",
+  "id": "youtube",
+  "segment": "AI & Content",
+  "reason": "No Google-hosted YouTube MCP endpoint found; only community wrappers (youtube-complete-mcp, maagpi-youtube-mcp) and Vinkius."
+ },
+ {
+  "name": "API-Sports",
+  "status": "no-remote",
+  "id": "api-sports",
+  "segment": "Search & Data",
+  "description": "Sports data API for football, basketball and other leagues.",
+  "docs": "https://api-sports.io",
+  "reason": "No vendor MCP server found. Only third-party ones exist: FlowHunt hosted listing and community stdio servers (danknight/api-football-mcp-server, yalmeidarj). api-sports.io and api-football.com return 403 to automated fetches, so their docs could not be read directly."
+ },
+ {
+  "name": "Booking.com",
+  "status": "unverified",
+  "id": "booking",
+  "segment": "Search & Data",
+  "description": "Search stays, rooms, attractions, cars and flights through Booking.com's partner API.",
+  "endpoint": "https://demandapi-mcp.booking.com/v1/sp/mcp/",
+  "auth": "api-key",
+  "authHeader": "x-booking-authorization",
+  "notes": [
+   "Approved Booking.com affiliate partners only: needs an active partnership agreement and a Demand API key from onboarding.",
+   "Also needs a second header, x-booking-affiliate-id, with your affiliate ID. Keep the trailing slash in the URL."
+  ],
+  "docs": "https://developers.booking.com/mcp-server/docs/implementation-guide",
+  "quote": "POST https://demandapi-mcp.booking.com/v1/sp/mcp/ ... x-booking-affiliate-id: <your-affiliate-id> / x-booking-authorization: <your-demand-api-key> ... Send your affiliate ID in a header; do not append it to the URL.",
+  "probe": "HTTP 401 (no www-authenticate header)",
+  "reason": "Partner-only, and every call needs a second header (x-booking-affiliate-id).",
+  "probe2": {
+   "status": 401,
+   "www": ""
+  }
+ },
+ {
+  "name": "Context.dev",
+  "status": "verified",
+  "id": "context-dev",
+  "segment": "Search & Data",
+  "description": "Web scraping, crawling, search and brand data tools for agents.",
+  "endpoint": "https://mcp.context.dev/mcp",
+  "auth": "oauth",
+  "notes": [
+   "Sign in with your Context.dev account. Sign-in creates an API key named 'Context.dev MCP' and tool calls use your organization's credits.",
+   "Clients that can't run OAuth can send an API key as Authorization: Bearer or X-API-Key."
+  ],
+  "docs": "https://docs.context.dev/install-mcp.md",
+  "quote": "Server URL: https://mcp.context.dev/mcp ... The client needs Streamable HTTP transport and OAuth discovery and dynamic client registration.",
+  "probe": "HTTP 401 www-authenticate: Bearer resource_metadata=\"https://mcp.context.dev/.well-known/oauth-protected-resource/mcp\", scope=\"api.read api.write\"",
+  "probe2": {
+   "status": 401,
+   "www": "Bearer resource_metadata=\"https://mcp.context.dev/.well-known/oauth-protected-resource/mcp\", scope=\"api.read api.write\"",
+   "prm": true,
+   "as": true,
+   "dcr": true,
+   "cimd": false
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "Etsy",
+  "status": "unverified",
+  "id": "etsy",
+  "segment": "Developer Tools",
+  "description": "Searchable Etsy Open API v3 docs, endpoints and schemas for building Etsy integrations.",
+  "endpoint": "https://mcp.api.etsycloud.com/mcp",
+  "auth": "none",
+  "notes": [
+   "Documentation only: it does not call the Etsy API or touch your shop.",
+   "No key needed."
+  ],
+  "docs": "https://developer.etsy.com/documentation/mcp_server/devmcpserver",
+  "quote": "It does not call the Etsy API directly.",
+  "probe": "HTTP 200 initialize OK, serverInfo etsy-openapi-mcp 1.0.0 (no auth)",
+  "probe2": {
+   "status": 200,
+   "www": ""
+  },
+  "reason": "Searches Etsy's API documentation only; it does not use your shop."
+ },
+ {
+  "name": "Google Analytics (GA4)",
+  "status": "unverified",
+  "id": "google-analytics",
+  "segment": "Search & Data",
+  "description": "Run GA4 reports on your Analytics properties through the Google Analytics Data API.",
+  "endpoint": "https://analyticsdata.googleapis.com/mcp/v1",
+  "auth": "oauth",
+  "notes": [
+   "Needs your own Google Cloud OAuth client (Google has no dynamic registration). Enable the Analytics Data API MCP server in that project. Scope: analytics.readonly.",
+   "The signed-in Google account needs Viewer access on the GA4 property."
+  ],
+  "docs": "https://developers.google.com/analytics/devguides/reporting/data/v1/mcp",
+  "quote": "The Google Analytics Data API MCP server has the following global MCP endpoint: https://analyticsdata.googleapis.com/mcp/v1 ... You must enable MCP servers and set up authentication before use.",
+  "probe": "initialize HTTP 200 without auth. Unauthenticated tools/call: HTTP 401 www-authenticate: Bearer resource_metadata=\"https://analyticsdata.googleapis.com/.well-known/oauth-protected-resource/mcp\". The PRM lists accounts.google.com and scopes analytics.readonly / analytics.",
+  "reason": "Google's documentation page for this server returned 404 when checked; needs your own Google OAuth client.",
+  "probe2": {
+   "status": 200,
+   "www": "",
+   "prm": true,
+   "as": true,
+   "dcr": false,
+   "cimd": false
+  }
+ },
+ {
+  "name": "Hacker News",
+  "status": "no-remote",
+  "id": "hacker-news",
+  "segment": "Search & Data",
+  "description": "Hacker News stories, comments and users.",
+  "docs": "https://github.com/HackerNews/API",
+  "reason": "Y Combinator publishes no MCP server. Only community stdio/npx servers (e.g. cyanheads/hn-mcp-server, devabdultech/hn-mcp) and Apify actors exist."
+ },
+ {
+  "name": "Instagram",
+  "status": "no-remote",
+  "id": "instagram",
+  "segment": "Communication",
+  "description": "Instagram content and account tools.",
+  "docs": "https://developers.facebook.com/documentation/mcp",
+  "quote": "Official remote MCP servers listed: Meta Ads MCP, Meta Social Technologies MCP (devtools), WhatsApp Business Tools MCP.",
+  "reason": "Meta's MCP hub has no Instagram-specific server. It lists Ads, devtools (mcp.facebook.com/devtools, beta, docs/app management) and WhatsApp Business. Meta also limits support to listed clients (Claude, ChatGPT, Codex, Cursor). Community servers (mikusnuz/meta-mcp, oliverames/meta-mcp-server) don't count."
+ },
+ {
+  "name": "LimaData",
+  "status": "unverified",
+  "id": "limadata",
+  "segment": "Sales & Leads",
+  "description": "B2B people and company enrichment, contact finding, email verification and web search.",
+  "docs": "https://www.limadata.com/mcp",
+  "quote": "Connect Claude, Cursor, or any MCP client straight to Limadata.",
+  "reason": "The vendor's MCP marketing page lists tools but gives no server URL or auth details. No endpoint was found in the API docs at api.limadata.com either. Other listings are Composio and a community npm package."
+ },
+ {
+  "name": "Mathpix",
+  "status": "no-remote",
+  "id": "mathpix",
+  "segment": "Documents & Files",
+  "description": "OCR images and PDFs into LaTeX and Markdown.",
+  "docs": "https://docs.mathpix.com",
+  "reason": "Mathpix docs have no MCP server. The only one is the community Ruby gem georgedouzas/mathpix-mcp, which you self-host."
+ },
+ {
+  "name": "OpenAI",
+  "status": "unverified",
+  "id": "openai-docs",
+  "segment": "Developer Tools",
+  "description": "Search and read OpenAI developer documentation.",
+  "endpoint": "https://developers.openai.com/mcp",
+  "auth": "none",
+  "notes": [
+   "Documentation only: it does not call the OpenAI API.",
+   "No key needed."
+  ],
+  "docs": "https://developers.openai.com/learn/docs-mcp",
+  "quote": "Server URL (streamable HTTP): https://developers.openai.com/mcp ... documentation-only",
+  "probe": "HTTP 200 initialize OK (SSE-framed response), serverInfo openai-docs-mcp 1.0.0",
+  "probe2": {
+   "status": 200,
+   "www": ""
+  },
+  "reason": "Searches OpenAI's developer documentation only; it does not call the OpenAI API."
+ },
+ {
+  "name": "Pinterest Ads",
+  "status": "unverified",
+  "id": "pinterest-ads",
+  "segment": "Platforms",
+  "description": "Query and act on Pinterest Ads data from AI assistants.",
+  "docs": "https://developers.pinterest.com/docs/mcp/",
+  "quote": "Be the first to know when it launches. ... OAuth 2.0 authorization and granular permissions",
+  "probe": "https://api.pinterest.com/mcp (shown on the page): HTTP 401 {\"code\":2,\"message\":\"Authentication failed.\"}, no www-authenticate/OAuth discovery",
+  "reason": "Announced but not launched: the vendor page is a waitlist ('Sign up for updates'). The endpoint shown gives no MCP OAuth discovery."
+ },
+ {
+  "name": "SEOptimer",
+  "status": "verified",
+  "id": "seoptimer",
+  "segment": "Search & Data",
+  "description": "Run SEO audits on websites and read audit reports.",
+  "endpoint": "https://mcp.seoptimer.com/mcp",
+  "auth": "bearer",
+  "notes": [
+   "Get your API key from the API section of your SEOptimer account (needs a plan with API access).",
+   "Send it as Authorization: Bearer <key>, not in the URL."
+  ],
+  "docs": "https://www.seoptimer.com/blog/seoptimer-mcp/",
+  "quote": "Server 401 body: \"Add your SEOptimer API key to your MCP client config: \\\"headers\\\": { \\\"Authorization\\\": \\\"Bearer YOUR_SEOPTIMER_API_KEY\\\" } Or append it to the URL: ?key=YOUR_SEOPTIMER_API_KEY\"",
+  "probe": "HTTP 401 (no www-authenticate). Body names the Authorization: Bearer header.",
+  "reason": "Caveat: the blog page (Cloudflare-blocked to fetch; seen via search) shows the key appended to the URL. The server's own 401 response documents the Bearer header as the primary method, so the URL key is not required.",
+  "probe2": {
+   "status": 401,
+   "www": ""
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "Spotify",
+  "status": "no-remote",
+  "id": "spotify",
+  "segment": "Platforms",
+  "description": "Spotify playback, playlists and library.",
+  "docs": "https://developer.spotify.com/documentation/web-api",
+  "reason": "Spotify publishes no MCP server. Only community servers (mcp-server-spotify, qchuchu, iceener) and Pipedream exist."
+ },
+ {
+  "name": "Telegram",
+  "status": "no-remote",
+  "id": "telegram",
+  "segment": "Communication",
+  "description": "Telegram messaging.",
+  "docs": "https://core.telegram.org",
+  "reason": "Telegram publishes no MCP server. Only community Telethon/user-client stdio servers exist (chigwell/telegram-mcp, kfastov, chaindead)."
+ },
+ {
+  "name": "TinyFish",
+  "status": "verified",
+  "id": "tinyfish",
+  "segment": "Search & Data",
+  "description": "Web search, page fetching and browser agents that browse sites and extract data.",
+  "endpoint": "https://agent.tinyfish.ai/mcp",
+  "auth": "oauth",
+  "notes": [
+   "Sign in with your TinyFish account. Search and fetch are free; agent runs and browser sessions use TinyFish credits.",
+   "An API key can also be sent as Authorization: Bearer <key> for clients without OAuth."
+  ],
+  "docs": "https://docs.tinyfish.ai/mcp-integration.md",
+  "quote": "TinyFish MCP uses OAuth 2.1 for secure authentication. ... codex mcp add tinyfish --url https://agent.tinyfish.ai/mcp",
+  "probe": "HTTP 401 www-authenticate: Bearer resource_metadata=\"https://agent.tinyfish.ai/.well-known/oauth-protected-resource/mcp\"",
+  "probe2": {
+   "status": 401,
+   "www": "Bearer resource_metadata=\"https://agent.tinyfish.ai/.well-known/oauth-protected-resource/mcp\"",
+   "prm": true,
+   "as": true,
+   "dcr": true,
+   "cimd": false
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "We Work Remotely",
+  "status": "no-remote",
+  "id": "we-work-remotely",
+  "segment": "Search & Data",
+  "description": "Remote job listings.",
+  "docs": "https://weworkremotely.com",
+  "reason": "We Work Remotely publishes no MCP server. Only a community stdio server (zc-weworkremotely-scout-mcp) and an Apify scraper actor exist."
+ },
+ {
+  "name": "ZeroBounce",
+  "status": "no-remote",
+  "id": "zerobounce",
+  "segment": "Sales & Leads",
+  "description": "Email validation, scoring and email finding.",
+  "docs": "https://www.zerobounce.net/docs/api-integrations/zerobounce-mcp-server",
+  "reason": "The official server is a local npm/stdio package only (@zerobounce/mcp, github.com/zerobounce/zerobounce-mcp, key via --api-key). There is no hosted endpoint."
+ },
+ {
+  "name": "Apple App Store",
+  "status": "no-remote",
+  "id": "apple-app-store",
+  "segment": "Developer Tools",
+  "reason": "Apple publishes no MCP server for the App Store or App Store Connect; only community stdio wrappers of the App Store Connect API exist (app-store-connect-mcp on PyPI, joshuarileydev, drunknbass)."
+ },
+ {
+  "name": "Bright Data",
+  "status": "excluded",
+  "id": "bright-data",
+  "segment": "Search & Data",
+  "reason": "key in URL (token only accepted in the URL; from earlier research, not re-checked)."
+ },
+ {
+  "name": "Crunchbase",
+  "status": "verified",
+  "id": "crunchbase",
+  "segment": "Sales & Leads",
+  "description": "Search Crunchbase company, funding, investor and people data.",
+  "endpoint": "https://mcp.crunchbase.com",
+  "auth": "oauth",
+  "notes": [
+   "Sign in with your Crunchbase account; queries use your plan's data-token allowance.",
+   "Crunchbase does not support automatic client registration: create an OAuth client in your Crunchbase settings, add the redirect URI shown below, and paste its client ID."
+  ],
+  "docs": "https://data.crunchbase.com/docs/building-a-crunchbase-mcp-integration",
+  "quote": "Use `https://mcp.crunchbase.com` with Streamable HTTP and OAuth 2.1 with PKCE. Clients supporting Client ID Metadata Documents (CIMD) can connect without manual client registration. Dynamic Client Registration (DCR) is not supported.",
+  "probe": "HTTP 401 www-authenticate: Bearer realm=\"mcp\", resource_metadata=\"https://mcp.crunchbase.com/.well-known/oauth-protected-resource\" (auth server has no registration_endpoint; client_id_metadata_document_supported=true)",
+  "probe2": {
+   "status": 401,
+   "www": "Bearer realm=\"mcp\", resource_metadata=\"https://mcp.crunchbase.com/.well-known/oauth-protected-resource\"",
+   "prm": true,
+   "as": true,
+   "dcr": false,
+   "cimd": true
+  },
+  "live": true,
+  "ownClient": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "Facebook",
+  "status": "no-remote",
+  "id": "facebook",
+  "segment": "Communication",
+  "docs": "https://developers.facebook.com/documentation/mcp",
+  "quote": "Each client needs explicit support, so clients not in this list aren't supported.",
+  "reason": "Meta lists remote MCP servers only for Meta Ads, Meta Social Technologies (developer platform) and WhatsApp Business Tools; none for Facebook Pages. Those servers are limited to named clients (Claude, ChatGPT, Codex, Cursor), so a gateway would be unsupported anyway."
+ },
+ {
+  "name": "Google Business Profile",
+  "status": "no-remote",
+  "id": "google-business-profile",
+  "segment": "Sales & Leads",
+  "docs": "https://docs.cloud.google.com/mcp/supported-products",
+  "reason": "Not in Google's list of remote MCP servers (Maps Grounding Lite, Workspace, etc.); only community stdio servers and Pipedream/Vinkius wrappers exist."
+ },
+ {
+  "name": "Higgsfield",
+  "status": "verified",
+  "id": "higgsfield",
+  "segment": "AI & Content",
+  "description": "Generate and edit images and videos with Higgsfield's models.",
+  "endpoint": "https://mcp.higgsfield.ai/mcp",
+  "auth": "oauth",
+  "notes": [
+   "Sign in with your Higgsfield account; generations spend your Higgsfield credits.",
+   "Transport is not stated on the page; the endpoint answers MCP POSTs with OAuth discovery (Dynamic Client Registration supported)."
+  ],
+  "docs": "https://higgsfield.ai/mcp",
+  "quote": "How to connect? https://mcp.higgsfield.ai/mcp",
+  "probe": "HTTP 401 www-authenticate: Bearer resource_metadata=\"https://mcp.higgsfield.ai/.well-known/oauth-protected-resource/mcp\", scope=\"openid email offline_access\" (auth server clerk.higgsfield.ai has registration_endpoint)",
+  "probe2": {
+   "status": 401,
+   "www": "Bearer resource_metadata=\"https://mcp.higgsfield.ai/.well-known/oauth-protected-resource/mcp\", scope=\"openid email offline_access\"",
+   "prm": true,
+   "as": true,
+   "dcr": true,
+   "cimd": true
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "IPinfo",
+  "status": "verified",
+  "id": "ipinfo",
+  "segment": "Search & Data",
+  "description": "Look up geolocation, ASN, company and privacy data for IP addresses.",
+  "endpoint": "https://mcp.ipinfo.io/",
+  "auth": "oauth",
+  "notes": [
+   "Sign in with your IPinfo account; calls count against your plan's quota (free Lite plan works).",
+   "Alternatively an IPinfo token can be sent as Authorization: Bearer."
+  ],
+  "docs": "https://ipinfo.io/developers/mcp-server",
+  "quote": "Point your MCP client to this URL and sign in with your IPinfo account when it asks. ... The hosted server signs you in with OAuth.",
+  "probe": "HTTP 401 www-authenticate: Bearer resource_metadata=\"https://mcp.ipinfo.io/.well-known/oauth-protected-resource\" (note: https://mcp.ipinfo.io/mcp returns 404; use the root URL)",
+  "probe2": {
+   "status": 401,
+   "www": "Bearer resource_metadata=\"https://mcp.ipinfo.io/.well-known/oauth-protected-resource\"",
+   "prm": true,
+   "as": true,
+   "dcr": true,
+   "cimd": true
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "LinkedIn",
+  "status": "no-remote",
+  "id": "linkedin",
+  "segment": "Sales & Leads",
+  "reason": "LinkedIn publishes no MCP server; only community servers (felipfr, souravdasbiswas) and Zapier/Apify wrappers. https://mcp.linkedin.com/mcp returns 404."
+ },
+ {
+  "name": "Medium",
+  "status": "no-remote",
+  "id": "medium",
+  "segment": "AI & Content",
+  "reason": "No official Medium MCP server; only community PyPI packages (medium-mcp-server, mcp-server-medium) and browser-automation projects. mcp.medium.com just serves a Medium HTML page (POST 405)."
+ },
+ {
+  "name": "OpenAlex",
+  "status": "verified",
+  "id": "openalex",
+  "segment": "Education",
+  "description": "Search scholarly works, authors, institutions and citations in OpenAlex.",
+  "endpoint": "https://mcp.openalex.org/mcp",
+  "auth": "oauth",
+  "notes": [
+   "Sign in with a free OpenAlex account; queries spend that account's (or its organization's) daily API budget.",
+   "Free budget resets at midnight UTC; buy prepaid usage or a plan for more."
+  ],
+  "docs": "https://help.openalex.org/access/connector/",
+  "quote": "any client that speaks MCP over Streamable HTTP with OAuth can use it. Point it at this address: https://mcp.openalex.org/mcp",
+  "probe": "HTTP 401 www-authenticate: Bearer realm=\"OAuth\", resource_metadata=\"https://mcp.openalex.org/.well-known/oauth-protected-resource/mcp\", scope=\"openalex:query\"",
+  "probe2": {
+   "status": 401,
+   "www": "Bearer realm=\"OAuth\", resource_metadata=\"https://mcp.openalex.org/.well-known/oauth-protected-resource/mcp\", scope=\"openalex:query\"",
+   "prm": true,
+   "as": true,
+   "dcr": true,
+   "cimd": true
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "PredictLeads",
+  "status": "verified",
+  "id": "predictleads",
+  "segment": "Sales & Leads",
+  "description": "Company signals: job openings, tech stack, funding, news and connections.",
+  "endpoint": "https://mcp.predictleads.com/",
+  "auth": "oauth",
+  "notes": [
+   "Sign in with your PredictLeads account; requests count against your plan's monthly limit.",
+   "Header auth needs two headers (X-Api-Key and X-Api-Token), so use OAuth."
+  ],
+  "docs": "https://docs.predictleads.com/mcp_integration",
+  "quote": "To use the PredictLeads MCP Server, authorize your application via OAuth2, or sign up for a public account and provide your API credentials as HTTP headers. MCP Server Base URL Generic https://mcp.predictleads.com/ ... Authorization Code For OAuth2 clients, supporting Dynamic Client Registration for automatic setup.",
+  "probe": "HTTP 401 www-authenticate: Bearer realm=\"mcp\", resource_metadata=\"https://mcp.predictleads.com/.well-known/oauth-protected-resource\", scope=\"api__read api__write\" (https://mcp.predictleads.com/mcp returns 404)",
+  "probe2": {
+   "status": 401,
+   "www": "Bearer realm=\"mcp\", resource_metadata=\"https://mcp.predictleads.com/.well-known/oauth-protected-resource\", scope=\"api__read api__write\"",
+   "prm": true,
+   "as": true,
+   "dcr": true,
+   "cimd": true
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "SerpApi",
+  "status": "verified",
+  "id": "serpapi",
+  "segment": "Search & Data",
+  "description": "Run Google and other search-engine queries and get structured results.",
+  "endpoint": "https://mcp.serpapi.com/mcp",
+  "auth": "bearer",
+  "notes": [
+   "Copy your API key from your SerpApi dashboard; searches use your plan's monthly search credits.",
+   "Use the header form; the key-in-path URL variant should not be used."
+  ],
+  "docs": "https://serpapi.com/mcp",
+  "quote": "Header-based: `Authorization: Bearer YOUR_API_KEY` (recommended: the key stays out of URLs and logs)",
+  "probe": "HTTP 200 (connecting and listing tools need no key; search requires the Bearer key)",
+  "probe2": {
+   "status": 200,
+   "www": ""
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "Stack Overflow",
+  "status": "unverified",
+  "id": "stack-overflow",
+  "segment": "Developer Tools",
+  "description": "Search Stack Overflow questions and fetch questions, answers and comments.",
+  "endpoint": "https://mcp.stackoverflow.com",
+  "auth": "oauth",
+  "notes": [
+   "Sign in with a Stack Overflow account and accept the terms; limited to 100 calls per day per user (beta)."
+  ],
+  "docs": "https://api.stackexchange.com/docs/mcp-server",
+  "quote": "\"args\": [ \"mcp-remote\", \"mcp.stackoverflow.com\" ] ... Access to the Stack Overflow MCP server is limited to 100 calls per day per Stack Exchange user.",
+  "probe": "HTTP 401 www-authenticate: Bearer (no resource_metadata; /.well-known/oauth-protected-resource and /.well-known/oauth-authorization-server both 404; legacy root endpoints /authorize, /token, /register exist and /register accepts DCR)",
+  "reason": "Official beta remote server, but no MCP OAuth discovery metadata: it relies on mcp-remote's legacy default /authorize, /token, /register paths. Would need manual OAuth config (authorizationUrl https://mcp.stackoverflow.com/authorize, tokenUrl https://mcp.stackoverflow.com/token) plus a registered client; docs only show the mcp-remote setup."
+ },
+ {
+  "name": "Temu",
+  "status": "no-remote",
+  "id": "temu",
+  "segment": "Platforms",
+  "reason": "No official Temu MCP server; only third-party wrappers (Vinkius 'Temu Seller Hub', a deprecated Apify actor)."
+ },
+ {
+  "name": "Tomba",
+  "status": "verified",
+  "id": "tomba",
+  "segment": "Sales & Leads",
+  "description": "Find, verify and enrich professional email addresses.",
+  "endpoint": "https://mcp.tomba.io/mcp",
+  "auth": "oauth",
+  "notes": [
+   "Sign in to Tomba and approve access; lookups use your Tomba plan's credits.",
+   "Key alternatives need two values (X-Tomba-Key and X-Tomba-Secret, or base64 key:secret as Bearer), so OAuth is simplest."
+  ],
+  "docs": "https://tomba.io/mcp",
+  "quote": "Clients that support MCP authorization open a browser window where you sign in to Tomba and approve access.",
+  "probe": "HTTP 401 www-authenticate: Bearer resource_metadata=\"https://mcp.tomba.io/.well-known/oauth-protected-resource\" (auth server api.tomba.io supports DCR)",
+  "probe2": {
+   "status": 401,
+   "www": "Bearer resource_metadata=\"https://mcp.tomba.io/.well-known/oauth-protected-resource\"",
+   "prm": true,
+   "as": true,
+   "dcr": true,
+   "cimd": true
+  },
+  "live": true,
+  "checked": "2026-11-06"
+ },
+ {
+  "name": "Web3 Career",
+  "status": "no-remote",
+  "id": "web3-career",
+  "segment": "Search & Data",
+  "reason": "No official MCP server; only community stdio servers (pcmarts/Web3-career-mcp, kukapay/web3-jobs-mcp) that wrap the web3.career jobs API with a token."
+ },
+ {
+  "name": "Zillow",
+  "status": "unverified",
+  "id": "zillow",
+  "segment": "Search & Data",
+  "endpoint": "https://mcp.zillow.com/mcp",
+  "probe": "HTTP 401 www-authenticate: Bearer error=\"invalid_token\", resource_metadata=\"https://agentcore-dev-beth-chatgpt-zillow-gateway-...bedrock-agentcore.us-west-2.amazonaws.com/.well-known/oauth-protected-resource\"",
+  "reason": "mcp.zillow.com answers MCP requests, but its OAuth metadata points to a dev AWS AgentCore 'chatgpt-zillow-gateway' (it backs Zillow's ChatGPT app). No Zillow page documents it for third-party clients; zillow.com blocks fetches. Search only found community servers and an Apify actor."
+ }
+]

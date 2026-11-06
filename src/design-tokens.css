@@ -68,7 +68,7 @@
   --sidebar-border: rgba(0, 0, 0, 0.06);
   --sidebar-active: #e4e4e6;
   --overlay: rgba(0, 0, 0, 0.4);
-  --font-sans: Inter, ui-sans-serif, system-ui, sans-serif;
+  --font-sans: Manrope, Inter, ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Roboto Mono", ui-monospace, "SF Mono", Menlo, monospace;
   --font-display: var(--font-sans);
   --text-display: 48px;

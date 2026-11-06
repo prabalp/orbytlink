@@ -130,6 +130,10 @@ it("shows only gateway screens, with no chat or agent features", async () => {
 it("saves a connection without revealing its credential", async () => {
   await login();
   await click(button("Add connection"));
+  // Add connection first asks what is being connected.
+  expect(document.querySelector(".add-choice")).not.toBeNull();
+  await click([...document.querySelectorAll(".add-choice button")].find((b) => b.textContent?.trim() === "MCP") || null);
+  expect(document.querySelector('[aria-label="Connection type"]')).toBeNull();
   await fill(document.querySelector("input[name=name]")!, "Private CRM");
   await fill(document.querySelector("input[name=endpoint]")!, "https://crm.example/mcp");
   const auth = document.querySelector(".modal select") as HTMLSelectElement;
@@ -170,4 +174,13 @@ it("creates a gateway token, shows it once, and revokes it", async () => {
   await click(button("Revoke token"));
   await settle();
   expect(document.body.textContent).toContain("No gateway tokens");
+});
+it("opens an app's connect form, filled in, from a connect link", async () => {
+  location.hash = "connect=mcp:github";
+  await login();
+  await settle();
+  const dialog = document.querySelector(".modal");
+  expect(dialog?.textContent).toContain("Connect GitHub");
+  expect((document.querySelector("input[name=endpoint]") as HTMLInputElement).value).toBe("https://api.githubcopilot.com/mcp/");
+  expect(location.hash).toBe("#connections");
 });

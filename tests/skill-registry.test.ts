@@ -100,14 +100,14 @@ it("lets an agent find a skill on skills.sh, add it pinned to a commit, and use 
   expect(text(added)).not.toContain("MIT\n");
 
   const skill = (await api("/api/state")).data.skills.find((s: any) => s.id === "changelog");
-  expect(skill).toMatchObject({ enabled: true, category: "Added", installs: "5.4K", repoStars: 900, description: "Write release notes people read." });
+  expect(skill).toMatchObject({ enabled: true, category: "Library", installs: "5.4K", repoStars: 900, description: "Write release notes people read." });
   expect(skill.source).toEqual({ repo: "acme/skills", path: "skills/changelog", commit: SHA, license: "MIT" });
   expect(skill.url).toBe(`https://github.com/acme/skills/tree/${SHA}/skills/changelog`);
-  expect((await api("/api/state")).data.audit.some((a: any) => a.action === "skill.added" && a.target.includes("acme/skills@aaaaaaa"))).toBe(true);
+  expect((await api("/api/state")).data.audit.some((a: any) => a.action === "skill.library-added" && a.target.includes("acme/skills@aaaaaaa"))).toBe(true);
 
   // It now behaves like any other enabled skill, and is no longer offered as new.
   const used = await client.callTool({ name: "orbytlink__use_skill", arguments: { name: "changelog" } });
-  expect(text(used)).toContain("community skill added from skills.sh");
+  expect(text(used)).toContain("community skill from skills.sh in OrbytLink's shared library");
   const again = JSON.parse(text(await client.callTool({ name: "orbytlink__find_skills", arguments: { query: "release notes" } })));
   expect(again.inWorkspace[0]).toMatchObject({ skill: "changelog", on: true });
   expect(again.skillsSh.map((s: any) => s.skill)).not.toContain("acme/skills@changelog");
@@ -123,24 +123,28 @@ it("refuses skills that ship scripts, are barely used, or aren't listed", async 
   expect(text(unpopular)).toContain("12 installs");
   expect(calls.some((c) => c.startsWith("api.github.com/repos/nobody"))).toBe(false);
   expect(text(await add("acme/skills@unlisted"))).toContain("not listed on skills.sh");
-  expect((await api("/api/state")).data.skills.some((s: any) => s.category === "Added")).toBe(false);
+  expect((await api("/api/state")).data.skills.some((s: any) => s.category === "Library")).toBe(false);
+  expect((await api("/api/library")).data.all).toBe(0);
 });
 
-it("turns on a bundled skill by name, and lets a person remove an added one", async () => {
+it("turns on a bundled skill by name, and takes a library skill off a workspace without deleting it", async () => {
   const client = await connect((await api("/api/tokens", { name: "Agent", expiresInDays: 7 })).data.token);
   const on = await client.callTool({ name: "orbytlink__add_skill", arguments: { skill: "tdd" } });
-  expect(text(on)).toContain('"Test-driven development" is on');
+  expect(text(on)).toContain("it is on for every agent in this workspace");
   expect(calls).toEqual([]);
 
   await client.callTool({ name: "orbytlink__add_skill", arguments: { skill: "acme/skills@changelog" } });
-  expect((await api("/api/skills/tdd", undefined, "DELETE")).status).toBe(404);
+  expect((await api("/api/skills/nope", undefined, "DELETE")).status).toBe(404);
   expect((await api("/api/skills/changelog", {}, "DELETE")).status).toBe(200);
   const skills = (await api("/api/state")).data.skills;
   expect(skills.some((s: any) => s.id === "changelog")).toBe(false);
   expect(skills.find((s: any) => s.id === "tdd").enabled).toBe(true);
+  // Still in the shared library, and still usable.
+  expect((await api("/api/library?q=changelog")).data.items.map((s: any) => s.id)).toEqual(["changelog"]);
+  expect(text(await client.callTool({ name: "orbytlink__use_skill", arguments: { name: "changelog" } }))).toContain("Group changes by impact.");
 });
 
-it("hides add_skill from the agents of members who cannot configure the workspace", async () => {
+it("lets members' agents add to the shared library and use it, but not turn skills on for everyone", async () => {
   expect((await api("/api/orgs", { name: "Acme" })).status).toBe(200);
   const invite = (await api("/api/org/invites", { role: "member" })).data.token;
   const r = await inject(app, { url: "/api/auth/register", method: "POST", body: { name: "Bobby", email: "bob@example.invalid", password: "Correct-horse-ship-2026" } });
@@ -150,8 +154,10 @@ it("hides add_skill from the agents of members who cannot configure the workspac
   const token = (await api("/api/tokens", { name: "Agent", expiresInDays: 7 })).data.token;
   const client = await connect(token);
   const names = (await client.listTools()).tools.map((t) => t.name);
-  expect(names).toContain("orbytlink__find_skills");
-  expect(names).not.toContain("orbytlink__add_skill");
-  const refused = await client.callTool({ name: "orbytlink__add_skill", arguments: { skill: "tdd" } });
-  expect(refused.isError).toBe(true);
+  expect(names).toEqual(expect.arrayContaining(["orbytlink__find_skills", "orbytlink__add_skill"]));
+  const added = await client.callTool({ name: "orbytlink__add_skill", arguments: { skill: "acme/skills@changelog" } });
+  expect(text(added)).toContain("an admin can turn it on for everyone");
+  expect(text(added)).toContain("Group changes by impact.");
+  expect((await api("/api/state")).data.skills.some((s: any) => s.id === "changelog")).toBe(false);
+  expect((await api("/api/skills/changelog", { enabled: true }, "PUT")).status).toBe(403);
 });

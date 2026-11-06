@@ -23,3 +23,7 @@ migration/
 
 # Old landing backup, local only
 landing/previous/
+
+# macOS folder metadata, and the design tool's local cache (session ids, local paths)
+.DS_Store
+.impeccable/hook.cache.json

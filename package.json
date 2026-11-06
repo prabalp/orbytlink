@@ -4,6 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "catalog": "node --import tsx scripts/build-connect-index.mjs",
+    "predev": "npm run -s catalog",
+    "prebuild": "npm run -s catalog",
     "dev": "node --env-file-if-exists=.env --import tsx server/index.ts",
     "build": "tsc --noEmit && vite build && tsc -p tsconfig.server.json",
     "start": "NODE_ENV=production node --env-file-if-exists=.env build/server/index.js",

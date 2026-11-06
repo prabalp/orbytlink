@@ -82,10 +82,9 @@ it("lists real bundled skills with their source, licence and dated public signal
   expect(text).toContain("## Reference: mocking.md");
 });
 
-it("serves enabled skills to agents as MCP prompts and a load tool, and nothing when disabled", async () => {
+it("serves enabled skills to agents as MCP prompts, and loads any skill on request", async () => {
   const client = await connect(await tokenFor());
   expect((await client.listPrompts()).prompts).toEqual([]);
-  expect((await client.listTools()).tools.map((t) => t.name)).not.toContain("orbytlink__use_skill");
 
   expect((await api("/api/skills/handoff", { enabled: true }, "PUT")).status).toBe(200);
   const prompts = (await client.listPrompts()).prompts;
@@ -94,11 +93,13 @@ it("serves enabled skills to agents as MCP prompts and a load tool, and nothing 
   expect(JSON.stringify(prompt.messages)).toContain("handoff document");
 
   const tool = (await client.listTools()).tools.find((t) => t.name === "orbytlink__use_skill")!;
-  expect(tool.inputSchema.properties!.name).toMatchObject({ enum: ["handoff"] });
+  expect(tool.description).toContain("- handoff:");
   const used = await client.callTool({ name: "orbytlink__use_skill", arguments: { name: "handoff" } });
   expect(JSON.stringify(used.content)).toContain("handoff document");
+  // Skills that are not turned on can still be loaded on purpose; unknown ones cannot.
   const other = await client.callTool({ name: "orbytlink__use_skill", arguments: { name: "tdd" } });
-  expect(other.isError).toBe(true);
+  expect(other.isError).toBeFalsy();
+  expect((await client.callTool({ name: "orbytlink__use_skill", arguments: { name: "no-such-skill" } })).isError).toBe(true);
 
   await api("/api/skills/handoff", { enabled: false }, "PUT");
   expect((await client.listPrompts()).prompts).toEqual([]);

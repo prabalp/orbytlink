@@ -8,6 +8,7 @@ import React, {
 import {
   Activity,
   ArrowUpRight,
+  ChevronDown,
   Check,
   CircleHelp,
   Code2,
@@ -36,18 +37,24 @@ import {
   UserRound,
   X,
   Zap,
+  Sparkles,
 } from "./icons";
 import { catalog, segments, type Preset } from "./catalog";
+import { logoFiles } from "./brand-logos";
+import { moreApps, type ListedApp } from "./catalog-more";
 import { brands, monograms } from "./brand-icons";
 import { agents } from "./agents";
 import { workflowTemplates, type WorkflowTemplate } from "./workflow-templates";
+import { describeSchedule, ResultView, RunFields, StepOptions, WorkflowSettings } from "./workflow-ui";
+import { AiCredit, callable, ModelDetail, type ModelRow } from "./ai-ui";
+import { LibraryView } from "./library-ui";
+import { SkillEditor } from "./skill-editor";
 import { apiCategories, apiPresets, type ApiPreset } from "./api-presets";
 import "./styles.css";
 type Data = Record<string, any>;
 const nav = [
   ["Connections", Link2],
   ["Catalog", LayoutGrid],
-  ["APIs", Code2],
   ["Skills", BookOpen],
   ["Workflows", Workflow],
   ["Connect agents", Zap],
@@ -332,6 +339,35 @@ export function App() {
     );
   }, [state]);
   // Back from an app's sign-in page: test the new connection, or explain what went wrong.
+  // First open with no page in the URL: send people with no agent connected to Connect agents,
+  // everyone else to Connections. Runs once, so later navigation is never overridden.
+  const landed = useRef(false);
+  useEffect(() => {
+    if (!state || landed.current) return;
+    landed.current = true;
+    if (location.hash.slice(1)) return;
+    if (!state.tokens.length) {
+      history.replaceState(null, "", "#connect-agents");
+      setPage("connect-agents");
+    }
+  }, [state]);
+  // Links from orbytlink__connect_app (#connect=mcp:<id> or #connect=api:<id>) open that app's
+  // connect form, filled in, on the Connections page.
+  const deepLinked = useRef(false);
+  useEffect(() => {
+    if (!state || deepLinked.current) return;
+    const m = location.hash.match(/^#connect=(mcp|api):([a-z0-9-]+)$/);
+    if (!m) return;
+    deepLinked.current = true;
+    history.replaceState(null, "", "#connections");
+    setPage("connections");
+    if (!state.identity.permissions.includes("configure")) return setError("Only an admin of this workspace can connect apps. Send them the link you were given.");
+    const preset = m[1] === "mcp" ? catalog.find((p) => p.id === m[2] && !p.hidden) : undefined;
+    const apiPreset = m[1] === "api" ? apiPresets.find((p) => p.id === m[2]) : undefined;
+    if (preset) setDialog({ type: "connection", data: presetDraft(preset) });
+    else if (apiPreset) setDialog({ type: "api", data: presetApiDraft(apiPreset) });
+    else setError("That connect link is out of date. Find the app in the Catalog instead.");
+  }, [state]);
   const oauthHandled = useRef(false);
   useEffect(() => {
     if (!state || oauthHandled.current) return;
@@ -414,12 +450,15 @@ export function App() {
   const s = state,
     settings = s.settings[0],
     // Old links to #connect-claude still land on the renamed page.
-    title = nav.find(([n]) => slug(n) === (page === "connect-claude" ? "connect-agents" : page))?.[0] || "Connections",
+    // Old links: #connect-claude is now Connect agents. #apis and #ai-models are Catalog views.
+    title = nav.find(([n]) => slug(n) === (page === "connect-claude" ? "connect-agents" : page === "apis" || page === "ai-models" ? "catalog" : page))?.[0] || "Connections",
     filtered = s.connections.filter((c: Data) =>
       `${c.name} ${c.description || ""} ${c.endpoint || ""}`
         .toLowerCase()
         .includes(search.toLowerCase()),
     ),
+    // Stored APIs are connections too, so they are listed alongside MCP servers.
+    filteredApis = s.apis.filter((a: Data) => `${a.name} ${a.description || ""} ${a.baseUrl}`.toLowerCase().includes(search.toLowerCase())),
     exposed = (c: Data) =>
       s.gatewayTools.filter((t: Data) => t.connectionId === c.id).length;
   const canConfigure = s.identity.permissions.includes("configure");
@@ -487,8 +526,7 @@ export function App() {
               <p>
                 {({
                   Connections: "Connect MCP servers and APIs once. Claude reaches all of them through one endpoint.",
-                  Catalog: "Ready-made connections for popular apps. Pick one, sign in, and its tools appear in Claude.",
-                  APIs: "Keys and docs for the APIs you build on, kept in the vault. OrbytLink calls them from its server, so agents never see a key.",
+                  Catalog: "Ready-made MCP servers and APIs, and the AI models available. Pick one, sign in or paste a key, and Claude can use it.",
                   Skills: "Proven instructions your agents load when a task calls for them. Turn one on and every connected agent can use it.",
                   Workflows: "Fixed sequences of tool calls across your apps. Run them here, or let agents call each one as a single tool.",
                   "Connect agents": "Connect Claude, Codex, Cursor and any other MCP client to every app in this gateway.",
@@ -499,9 +537,9 @@ export function App() {
               </p>
             </div>
             <div className="heading-actions">
-              {title === "Connections" && canConfigure && <button className="primary" onClick={() => setDialog({ type: "connection" })}><Plus size={16} /> Add connection</button>}
-              {title === "APIs" && canConfigure && <button className="primary" onClick={() => setDialog({ type: "api" })}><Plus size={16} /> Add API</button>}
-              {title === "Workflows" && canConfigure && <button className="primary" onClick={() => setDialog({ type: "workflow", data: { draft: blankWorkflow() } })}><Plus size={16} /> New workflow</button>}
+              {title === "Connections" && canConfigure && <button className="primary" onClick={() => setDialog({ type: "add-choice" })}><Plus size={16} /> Add connection</button>}
+              {title === "Skills" && s.identity.permissions.includes("call") && <button className="primary" onClick={() => setDialog({ type: "skill-editor", data: {} })}><Plus size={16} /> New skill</button>}
+              {title === "Workflows" && s.identity.permissions.includes("call") && <button className="primary" onClick={() => setDialog({ type: "workflow", data: { draft: blankWorkflow(canConfigure) } })}><Plus size={16} /> New workflow</button>}
               {title === "Team" && s.org && isAdmin && <button className="primary" onClick={() => setDialog({ type: "invite" })}><Plus size={16} /> Invite member</button>}
               
             </div>
@@ -515,9 +553,9 @@ export function App() {
           )}
           {title === "Connections" && (
             <>
-              <Toolbar search={search} setSearch={setSearch} placeholder="Search connections…" count={`${s.connections.length} connections`} />
+              <Toolbar search={search} setSearch={setSearch} placeholder="Search connections…" count={`${s.connections.length + s.apis.length} connections`} />
               <section className="panel">
-                {filtered.length > 0 && <div className="table-scroll">
+                {filtered.length + filteredApis.length > 0 && <div className="table-scroll">
                   <table className="conn-table">
                     <thead><tr><th>Connection</th><th>Endpoint</th><th>Status</th><th>Tools in Claude</th><th><span className="sr-only">Actions</span></th></tr></thead>
                     <tbody>
@@ -546,11 +584,32 @@ export function App() {
                           </td>
                         </tr>
                       ))}
+                      {filteredApis.map((a: Data) => (
+                        <tr key={`api-${a.id}`}>
+                          <td><div className="table-name"><ApiLogo a={a} /><div><strong>{a.name}</strong><small>API</small></div></div></td>
+                          <td>
+                            <span className="conn-url" title={a.baseUrl}>{a.baseUrl.replace(/^https?:\/\//, "")}</span>
+                            <small>{a.auth === "none" ? "No key needed" : a.hasKey ? "Key stored" : "Key missing"}</small>
+                          </td>
+                          <td><Status value={a.enabled ? "Enabled" : "Disabled"} /><small>{a.access === "write" ? "Read and write" : "Read only"}</small></td>
+                          <td>
+                            <span className="conn-tools">API requests</span>
+                            <small>{a.docsFormat ? (a.endpointCount ? `${a.endpointCount} endpoints in docs` : "Docs stored") : "No docs"}</small>
+                          </td>
+                          <td>
+                            {canConfigure ? <div className="row-actions">
+                              <button className="secondary compact" onClick={() => setDialog({ type: "api-detail", data: a })}>Open</button>
+                              <button className="secondary compact" onClick={() => setDialog({ type: "api", data: a })}>Configure</button>
+                              <button className="icon-button" aria-label={`Remove ${a.name}`} onClick={() => setDialog({ type: "delete-api", data: a })}><Trash2 size={15} /></button>
+                            </div> : <button className="secondary compact" onClick={() => setDialog({ type: "api-detail", data: a })}>Open</button>}
+                          </td>
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </div>}
-                {!filtered.length && (
-                  <Empty icon={Link2} title={search ? "No connections found" : canConfigure ? "Connect your first app" : "Nothing connected yet"} action={!search && canConfigure && <button className="primary" onClick={() => setDialog({ type: "connection" })}><Plus size={16} /> Add connection</button>}>
+                {!filtered.length && !filteredApis.length && (
+                  <Empty icon={Link2} title={search ? "No connections found" : canConfigure ? "Connect your first app" : "Nothing connected yet"} action={!search && canConfigure && <button className="primary" onClick={() => setDialog({ type: "add-choice" })}><Plus size={16} /> Add connection</button>}>
                     {canConfigure ? "Add any MCP server or HTTP API. Once it passes a live test, its tools appear in Claude." : "An admin of this organization has not connected any apps yet."}
                   </Empty>
                 )}
@@ -579,13 +638,10 @@ export function App() {
               onToolMode={(t: Data, toolMode: string) => act(() => api(`/tokens/${t.id}`, { toolMode }, "PUT"), toolModeSaved[toolMode] || "Saved", false)} />
           )}
           {title === "Catalog" && (
-            <CatalogPage state={s} canConfigure={canConfigure} search={search} setSearch={setSearch} onConnect={(p: Preset) => setDialog({ type: "connection", data: presetDraft(p) })} />
-          )}
-          {title === "APIs" && (
-            <ApisPage state={s} busy={busy} canConfigure={canConfigure} onOpen={(a: Data) => setDialog({ type: "api-detail", data: a })} onPreset={(p: ApiPreset) => setDialog({ type: "api", data: presetApiDraft(p) })} onToggle={(a: Data, enabled: boolean) => act(() => api(`/apis/${a.id}`, { ...apiPayload(a), enabled }, "PUT"), enabled ? `${a.name} is on` : `${a.name} is off`, false)} />
+            <CatalogPage key={page} initialView={page === "apis" ? "api" : page === "ai-models" ? "models" : "mcp"} state={s} canConfigure={canConfigure} search={search} setSearch={setSearch} onConnect={(p: Preset) => setDialog({ type: "connection", data: presetDraft(p) })} onApi={(p: ApiPreset) => setDialog({ type: "api", data: presetApiDraft(p) })} onModel={(m: ModelRow) => setDialog({ type: "model", data: m })} />
           )}
           {title === "Skills" && (
-            <SkillsPage state={s} busy={busy} canConfigure={canConfigure} search={search} setSearch={setSearch} onOpen={(skill: Data) => setDialog({ type: "skill", data: skill })} onToggle={(skill: Data, enabled: boolean) => act(() => api(`/skills/${skill.id}`, { enabled }, "PUT"), enabled ? `${skill.title} is on for your agents` : `${skill.title} is off`, false)} />
+            <SkillsPage state={s} busy={busy} canConfigure={canConfigure} search={search} setSearch={setSearch} onOpen={(skill: Data) => setDialog({ type: "skill", data: skill })} onToggle={(skill: Data, enabled: boolean) => act(() => api(`/skills/${skill.id}`, { enabled }, "PUT"), enabled ? `${skill.title} is on for your agents` : `${skill.title} is off`, false)} onChanged={() => void refresh()} notify={setToast} />
           )}
           {title === "Workflows" && (
             <WorkflowsPage
@@ -617,6 +673,27 @@ export function App() {
                   </table>
                 </div> : <Empty icon={Activity} title="No tool calls yet">Calls Claude makes through the gateway appear here. Arguments and responses are not stored.</Empty>}
               </section>
+              {s.apiCalls.length > 0 && (
+                <section className="panel">
+                  <div className="section-heading"><h2>API requests</h2><span className="count">{s.apiCalls.length}</span></div>
+                  <div className="table-scroll">
+                    <table>
+                      <thead><tr><th>API</th><th>Request</th><th>Status</th><th>Time</th><th>When</th></tr></thead>
+                      <tbody>
+                        {s.apiCalls.map((c: Data) => (
+                          <tr key={c.id}>
+                            <td><strong>{c.api}</strong></td>
+                            <td><code className="api-req"><b>{c.method}</b> {c.path}</code></td>
+                            <td><span className={`http ${c.status < 300 ? "ok" : c.status < 500 ? "warn" : "bad"}`}>{c.status}</span></td>
+                            <td className="muted">{c.ms} ms</td>
+                            <td className="muted">{when(c.createdAt)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+              )}
               <section className="panel">
                 <div className="section-heading"><h2>Audit trail</h2><span className="count">{s.audit.length}</span></div>
                 <div className="audit-list">
@@ -631,6 +708,7 @@ export function App() {
           {title === "Settings" && (
             <SettingsPage
               state={s}
+              onRefresh={() => void refresh()}
               busy={busy}
               canConfigure={canConfigure}
               appearance={appearance}
@@ -659,7 +737,11 @@ export function App() {
         <Modal
           key={`${dialog.type}:${dialog.data?.id || "new"}`}
           title={({
-            connection: dialog.data?.id ? "Configure connection" : dialog.data?._preset ? `Connect ${dialog.data.name}` : "Add connection",
+            connection: dialog.data?.id ? "Configure connection" : dialog.data?._preset ? `Connect ${dialog.data.name}` : dialog.data?.kind === "mcp" ? "Add MCP server" : "Add connection",
+            "add-choice": "Add connection",
+            "skill-editor": dialog.data?.id ? "Edit skill" : "New skill",
+            "delete-skill": "Delete skill",
+            model: dialog.data?.name,
             tools: `Tools from ${dialog.data?.name}`,
             delete: "Remove connection",
             "new-token": "Create gateway token",
@@ -685,9 +767,44 @@ export function App() {
           } as Data)[dialog.type]}
           subtitle={dialog.type === "tools" ? "Choose which tools Claude can see and call." : dialog.type === "skill" ? dialog.data?.description : undefined}
           onClose={close}
-          wide={["tools", "skill", "workflow", "run", "api-detail"].includes(dialog.type)}
+          wide={["tools", "skill", "workflow", "run", "api-detail", "model", "skill-editor"].includes(dialog.type)}
         >
           {error && <div className="error modal-error" role="alert">{error}</div>}
+          {dialog.type === "skill-editor" && (
+            <SkillEditor
+              id={dialog.data?.id}
+              orgs={(s.workspaces || []).filter((w: Data) => w.kind === "org").map((w: Data) => ({ id: w.id, name: w.name }))}
+              call={api}
+              onCancel={close}
+              onSaved={(k: Data) => {
+                setToast(dialog.data?.id ? `${k.name} saved` : `${k.name} created`);
+                close();
+                void refresh();
+              }}
+            />
+          )}
+          {dialog.type === "delete-skill" && (
+            <div className="form-body">
+              <p>Delete <strong>{dialog.data!.title}</strong>? Everyone it is shared with loses it, and agents can no longer load it. This can’t be undone.</p>
+              <div className="form-footer">
+                <button className="secondary" onClick={close}>Keep skill</button>
+                <button className="danger" disabled={busy} onClick={() => act(() => api(`/skills/authored/${dialog.data!.id}`, {}, "DELETE"), "Skill deleted")}>Delete skill</button>
+              </div>
+            </div>
+          )}
+          {dialog.type === "model" && <ModelDetail model={dialog.data as ModelRow} ai={s.ai} call={api} onSpent={() => void refresh()} />}
+          {dialog.type === "add-choice" && (
+            <div className="form-body add-choice" role="group" aria-label="What are you connecting?">
+              <button type="button" className="choice-card" onClick={() => setDialog({ type: "connection", data: { kind: "mcp" } })}>
+                <div className="app-icon"><Link2 size={18} /></div>
+                <strong>MCP</strong>
+              </button>
+              <button type="button" className="choice-card" onClick={() => setDialog({ type: "api" })}>
+                <div className="app-icon"><Code2 size={18} /></div>
+                <strong>API</strong>
+              </button>
+            </div>
+          )}
           {dialog.type === "connection" && (
             <ConnectionForm
               data={dialog.data}
@@ -963,11 +1080,12 @@ export function App() {
             </div>
           )}
           {dialog.type === "skill" && (
-            <SkillDetail skill={s.skills.find((k: Data) => k.id === dialog.data!.id) || dialog.data} busy={busy} canConfigure={canConfigure} onToggle={(enabled: boolean) => act(() => api(`/skills/${dialog.data!.id}`, { enabled }, "PUT"), enabled ? "On for your agents" : "Turned off", false)} onRemove={() => act(() => api(`/skills/${dialog.data!.id}`, {}, "DELETE"), "Skill removed")} />
+            <SkillDetail skill={s.skills.find((k: Data) => k.id === dialog.data!.id) || dialog.data} busy={busy} canConfigure={canConfigure} onToggle={(enabled: boolean) => act(() => api(`/skills/${dialog.data!.id}`, { enabled }, "PUT"), enabled ? "On for your agents" : "Turned off", false)} onRemove={s.skills.some((k: Data) => k.id === dialog.data!.id) ? () => act(() => api(`/skills/${dialog.data!.id}`, {}, "DELETE"), "Removed from this workspace") : undefined} onEdit={() => setDialog({ type: "skill-editor", data: { id: dialog.data!.id } })} onDelete={() => setDialog({ type: "delete-skill", data: dialog.data })} />
           )}
           {dialog.type === "workflow" && (
             <WorkflowEditor
               state={s}
+              canConfigure={canConfigure}
               data={dialog.data}
               busy={busy}
               copy={copy}
@@ -1222,6 +1340,12 @@ function OrbitLogo() {
 // An app's own mark on a white tile (readable in both themes), or a coloured monogram.
 function BrandTile({ id, name }: { id: string; name: string }) {
   const brand = brands[id];
+  if (!brand && logoFiles[id])
+    return (
+      <div className="app-icon logo" title={name}>
+        <img src={logoFiles[id]} width="22" height="22" alt={`${name} logo`} />
+      </div>
+    );
   if (brand)
     return (
       <div className="app-icon logo" title={name}>
@@ -1236,9 +1360,20 @@ function BrandTile({ id, name }: { id: string; name: string }) {
     </div>
   );
 }
+function ListedTile({ app }: { app: ListedApp }) {
+  if (app.logo)
+    return (
+      <div className="app-icon logo" title={app.name}>
+        <svg viewBox="0 0 24 24" width="22" height="22" role="img" aria-label={`${app.name} logo`}>
+          <path fill={`#${app.logo.hex}`} d={app.logo.path} />
+        </svg>
+      </div>
+    );
+  return <BrandTile id={app.id} name={app.name} />;
+}
 // Catalog apps get their brand tile; other connections keep the generic link/API glyph.
 function AppLogo({ preset, kind }: { preset?: Preset; kind?: string }) {
-  if (preset && (brands[preset.id] || monograms[preset.id])) return <BrandTile id={preset.id} name={preset.name} />;
+  if (preset && (brands[preset.id] || logoFiles[preset.id] || monograms[preset.id])) return <BrandTile id={preset.id} name={preset.name} />;
   return <div className="app-icon"><ConnectionIcon kind={kind} /></div>;
 }
 const presetFor = (c: Data) => catalog.find((p) => p.endpoint && p.endpoint === c.endpoint);
@@ -1258,22 +1393,27 @@ function Toolbar({
   setSearch,
   placeholder,
   count,
+  control,
 }: {
   search: string;
   setSearch: (v: string) => void;
   placeholder: string;
   count: string;
+  control?: ReactNode;
 }) {
   return (
     <div className="toolbar">
-      <div className="search-box">
-        <Search size={16} />
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder={placeholder}
-          aria-label={placeholder}
-        />
+      <div className="toolbar-search-controls">
+        <div className="search-box">
+          <Search size={16} />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={placeholder}
+            aria-label={placeholder}
+          />
+        </div>
+        {control}
       </div>
       <span>{count}</span>
     </div>
@@ -1326,25 +1466,118 @@ function presetDraft(p: Preset): Data {
     },
   };
 }
-function CatalogPage({ state: s, canConfigure, search, setSearch, onConnect }: any) {
+const SOON = "Coming soon";
+type CatalogView = "mcp" | "api" | "models";
+const viewHash: Record<CatalogView, string> = { mcp: "#catalog", api: "#apis", models: "#ai-models" };
+// Views of the catalog: MCP servers (with apps coming soon), APIs, and AI models with their prices.
+function CatalogPage({ state: s, canConfigure, search, setSearch, onConnect, onApi, onModel, initialView = "mcp" }: any) {
+  const [view, setView] = useState<CatalogView>(initialView);
   const [segment, setSegment] = useState("All");
   const q = search.toLowerCase();
+  const switchView = (v: CatalogView) => {
+    setView(v);
+    setSegment("All");
+    history.replaceState(null, "", viewHash[v]);
+  };
+  const viewSwitch = (
+    <div className="segmented catalog-view" role="radiogroup" aria-label="Catalog">
+      {([["mcp", "MCP servers"], ["api", "APIs"], ["models", "AI models"]] as const).map(([v, label]) => (
+        <button type="button" role="radio" aria-checked={view === v} className={view === v ? "active" : ""} key={v} onClick={() => switchView(v)}>{label}</button>
+      ))}
+    </div>
+  );
+  if (view === "models")
+    return (
+      <>
+        {viewSwitch}
+        <ModelsView search={search} setSearch={setSearch} segment={segment} setSegment={setSegment} onOpen={onModel} />
+      </>
+    );
+  if (view === "api") {
+    const apisShown = apiPresets.filter((p) => (segment === "All" || p.category === segment) && `${p.name} ${p.description} ${p.category}`.toLowerCase().includes(q));
+    const added = (p: ApiPreset) => s.apis.some((a: Data) => presetForApi(a)?.id === p.id);
+    return (
+      <>
+        {viewSwitch}
+        <Toolbar
+          search={search}
+          setSearch={setSearch}
+          placeholder="Search APIs…"
+          count={`${apisShown.length} APIs`}
+          control={(
+            <div className="catalog-select-wrap">
+              <label className="sr-only" htmlFor="api-category">Filter APIs by category</label>
+              <select id="api-category" value={segment} onChange={(event) => setSegment(event.target.value)}>
+                <option value="All">All APIs</option>
+                {apiCategories.map((c) => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <ChevronDown size={16} />
+            </div>
+          )}
+        />
+        {apiCategories.map((cat) => {
+          const items = apisShown.filter((p) => p.category === cat);
+          if (!items.length) return null;
+          return (
+            <section className="catalog-segment" key={cat} aria-label={cat}>
+              {segment === "All" && <h2>{cat}</h2>}
+              <div className="catalog-grid">
+                {items.map((p) => {
+                  const on = added(p);
+                  return (
+                    <button
+                      type="button"
+                      className="catalog-card"
+                      key={p.id}
+                      aria-label={on ? `Open ${p.name}` : `Connect ${p.name}`}
+                      title={!on && !canConfigure ? "Only admins can add APIs" : undefined}
+                      disabled={!on && !canConfigure}
+                      onClick={() => (on ? (location.hash = "#connections") : onApi(p))}
+                    >
+                      <BrandTile id={`api-${p.id}`} name={p.name} />
+                      <span className="catalog-body"><span className="catalog-name">{p.name}</span></span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          );
+        })}
+        {!apisShown.length && <section className="panel"><Empty icon={LayoutGrid} title="No APIs found">Try another search, or add any HTTPS API yourself from Connections.</Empty></section>}
+      </>
+    );
+  }
   const listed = catalog.filter((p) => !p.hidden);
   const shown = listed.filter(
     (p) => (segment === "All" || p.segment === segment) && `${p.name} ${p.description} ${p.segment}`.toLowerCase().includes(q),
   );
   const present = segments.filter((seg) => listed.some((p) => p.segment === seg));
+  // Apps we know about but cannot connect yet. Shown last, never as a connect action.
+  const soon = segment === "All" || segment === SOON ? moreApps.filter((a) => `${a.name} ${a.segment}`.toLowerCase().includes(q)) : [];
+  const soonGroups = [...new Set(soon.map((a) => a.segment))].sort();
   const existing = (p: Preset) => (p.endpoint ? s.connections.find((c: Data) => c.endpoint === p.endpoint) : undefined);
   return (
     <>
-      <Toolbar search={search} setSearch={setSearch} placeholder="Search apps…" count={`${shown.length} apps`} />
-      <div className="catalog-filters" role="radiogroup" aria-label="Segment">
-        {["All", ...present].map((seg) => (
-          <button type="button" role="radio" aria-checked={segment === seg} className={segment === seg ? "active" : ""} key={seg} onClick={() => setSegment(seg)}>{seg}</button>
-        ))}
-      </div>
+      {viewSwitch}
+      <Toolbar
+        search={search}
+        setSearch={setSearch}
+        placeholder="Search apps…"
+        count={`${(segment === SOON ? 0 : shown.length) + soon.length} apps`}
+        control={(
+          <div className="catalog-select-wrap">
+            <label className="sr-only" htmlFor="catalog-category">Filter apps by category</label>
+            <select id="catalog-category" value={segment} onChange={(event) => setSegment(event.target.value)}>
+              <option value="All">All apps</option>
+              {present.map((seg) => <option key={seg} value={seg}>{seg}</option>)}
+              <option value={SOON}>{SOON}</option>
+            </select>
+            <ChevronDown size={16} />
+          </div>
+        )}
+      />
       {present.map((seg) => {
-        const items = shown.filter((p) => p.segment === seg);
+        const items = segment === SOON ? [] : shown.filter((p) => p.segment === seg);
         if (!items.length) return null;
         return (
           <section className="catalog-segment" key={seg} aria-label={seg}>
@@ -1352,8 +1585,7 @@ function CatalogPage({ state: s, canConfigure, search, setSearch, onConnect }: a
             <div className="catalog-grid">
               {items.map((p) => {
                 const added = existing(p),
-                  on = !!added,
-                  live = added?.enabled && added.status === "Connected";
+                  on = !!added;
                 // The whole card is the action: connect it, or open it if it is already connected.
                 return (
                   <button
@@ -1369,11 +1601,8 @@ function CatalogPage({ state: s, canConfigure, search, setSearch, onConnect }: a
                     <span className="catalog-body">
                       <span className="catalog-name">
                         {p.name}
-                        {on && <span className={`catalog-status ${live ? "" : "idle"}`}><i />{live ? "Connected" : "Added"}</span>}
                       </span>
-                      <span className="catalog-desc">{p.description}</span>
                     </span>
-                    <ArrowUpRight className="catalog-arrow" size={16} />
                   </button>
                 );
               })}
@@ -1381,7 +1610,95 @@ function CatalogPage({ state: s, canConfigure, search, setSearch, onConnect }: a
           </section>
         );
       })}
-      {!shown.length && <section className="panel"><Empty icon={LayoutGrid} title="No apps found">Try another search, or add any MCP server or API yourself from Connections.</Empty></section>}
+      {soonGroups.length > 0 && (
+        <section className="catalog-segment" aria-label={SOON}>
+          <h2>{SOON} · not connectable yet</h2>
+          <p className="catalog-note">These apps are on our list but have no verified connection yet. You can still add any of them as a custom connection from Connections.</p>
+          <div className="catalog-grid">
+            {soon.map((a) => (
+              <div className="catalog-card soon" key={a.id} aria-label={`${a.name}, coming soon`}>
+                <ListedTile app={a} />
+                <span className="catalog-body">
+                  <span className="catalog-name">{a.name}</span>
+                </span>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+      {!shown.length && !soon.length && <section className="panel"><Empty icon={LayoutGrid} title="No apps found">Try another search, or add any MCP server or API yourself from Connections.</Empty></section>}
+    </>
+  );
+}
+// AI models and their prices, from the same dated snapshot as orbytlink.com. The list (about 9 KB
+// gzipped) is fetched only when this view opens.
+const modelPrice = (r: [string, string] | null, from?: boolean) =>
+  r ? <><span>{from ? "From " : ""}${Number(r[0]).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 6 })}</span><small>/ {r[1]}</small></> : <span className="muted">—</span>;
+function ModelsView({ search, setSearch, segment, setSegment, onOpen }: any) {
+  const [data, setData] = useState<{ updatedAt: string; models: ModelRow[] } | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    let live = true;
+    import("./model-catalog.json").then((m) => live && setData(m.default as any), () => live && setFailed(true));
+    return () => {
+      live = false;
+    };
+  }, []);
+  const q = search.toLowerCase();
+  const models = data?.models || [];
+  const categories = [...new Set(models.map((m) => m.category))];
+  const shown = models.filter((m) => (segment === "All" || m.category === segment) && `${m.name} ${m.provider} ${m.id} ${m.category}`.toLowerCase().includes(q));
+  return (
+    <>
+      <Toolbar
+        search={search}
+        setSearch={setSearch}
+        placeholder="Search models…"
+        count={data ? `${shown.length} models` : ""}
+        control={(
+          <div className="catalog-select-wrap">
+            <label className="sr-only" htmlFor="model-category">Filter models by type</label>
+            <select id="model-category" value={segment} onChange={(event) => setSegment(event.target.value)}>
+              <option value="All">All models</option>
+              {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <ChevronDown size={16} />
+          </div>
+        )}
+      />
+      <section className="panel">
+        <div className="section-heading">
+          <h2>AI models</h2>
+          {data && <span className="count">Prices in USD · as of {data.updatedAt}</span>}
+        </div>
+        {failed ? (
+          <Empty icon={LayoutGrid} title="Models could not be loaded">Reload the page to try again.</Empty>
+        ) : !data ? (
+          <p className="muted models-loading"><LoaderCircle size={15} className="spin" /> Loading models…</p>
+        ) : shown.length ? (
+          <div className="table-scroll">
+            <table className="models-table">
+              <thead><tr><th>Model</th><th>Type</th><th>Context</th><th>Input</th><th>Output</th></tr></thead>
+              <tbody>
+                {shown.map((m) => (
+                  <tr key={m.id}>
+                    <td>
+                      <button type="button" className="model-open" onClick={() => onOpen(m)} aria-label={`Open ${m.name}`}>{m.name}</button>
+                      <small><code>{m.id}</code>{callable(m) ? "" : " · price list only"}</small>
+                    </td>
+                    <td className="muted">{m.category}</td>
+                    <td className="muted">{m.context ? `${m.context.toLocaleString("en-US")} tokens` : "—"}</td>
+                    <td className="model-price">{modelPrice(m.input, m.from)}</td>
+                    <td className="model-price">{modelPrice(m.output, m.from)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <Empty icon={LayoutGrid} title="No models found">Try another search or type.</Empty>
+        )}
+      </section>
     </>
   );
 }
@@ -1456,6 +1773,12 @@ function ConnectionForm({ data: d, busy, onSave, onCancel, onOAuth, redirectUri,
         });
       }}
     >
+      {!preset && !d?.id && (
+        <div className="info-row">
+          <LayoutGrid size={17} />
+          <p>Adding a custom connection. You can also <a className="text-button" href="#catalog" onClick={onCancel}>explore the catalog</a> for ready-made apps.</p>
+        </div>
+      )}
       {preset && (
         <div className="preset-notes">
           <div className="info-row">
@@ -1486,7 +1809,8 @@ function ConnectionForm({ data: d, busy, onSave, onCancel, onOAuth, redirectUri,
           />
         </Field>
       </div>
-      <div className="field">
+      {/* Chosen as an MCP server from Add connection: the type is already decided. */}
+      {!(d?.kind === "mcp" && !d?.id && !preset) && <div className="field">
         <span>Connection type</span>
         <div className="segmented" role="radiogroup" aria-label="Connection type">
           {[
@@ -1513,7 +1837,7 @@ function ConnectionForm({ data: d, busy, onSave, onCancel, onOAuth, redirectUri,
               ? "Tools are discovered from the server when you test."
               : "Name the API calls you want to expose below; each becomes a tool in Claude."}
         </small>
-      </div>
+      </div>}
       <Field
         label="Endpoint"
         hint="Its HTTPS base URL. The host must be allowlisted on the server; credentials and query parameters are not permitted in URLs."
@@ -1942,12 +2266,13 @@ function SettingRow({ label, hint, children }: { label: string; hint?: ReactNode
     </div>
   );
 }
-function SettingsPage({ state: s, busy, canConfigure, appearance, copy, onDialog, onName, onTheme, onSignOut, onSignOutEverywhere }: any) {
+function SettingsPage({ state: s, busy, canConfigure, appearance, copy, onDialog, onName, onTheme, onSignOut, onSignOutEverywhere, onRefresh }: any) {
   const tabs = [
     ["general", "General", Settings2],
     ["account", "Account", UserRound],
     ...(s.org ? [["organization", "Organization", Users]] : []),
     ["gateway", "Gateway", Zap],
+    ["ai", "AI credit", Sparkles],
   ] as [string, string, any][];
   const [tab, setTab] = useState("general");
   const active = tabs.some(([id]) => id === tab) ? tab : "general";
@@ -1964,6 +2289,7 @@ function SettingsPage({ state: s, busy, canConfigure, appearance, copy, onDialog
         ))}
       </nav>
       <div className="settings-content" role="tabpanel">
+        {active === "ai" && <AiCredit call={api} canConfigure={canConfigure} onSaved={onRefresh} />}
         {active === "general" && (
           <>
             <SettingSection heading="Workspace">
@@ -2147,7 +2473,8 @@ function SkillSignal({ skill }: { skill: Data }) {
     <span className="signal"><span><strong>{compact(skill.repoStars)}</strong> stars</span><small>GitHub repo</small></span>
   );
 }
-function SkillsPage({ state: s, busy, canConfigure, search, setSearch, onOpen, onToggle }: any) {
+function SkillsPage({ state: s, busy, canConfigure, search, setSearch, onOpen, onToggle, onChanged, notify }: any) {
+  const [view, setView] = useState<"mine" | "library">("mine");
   const [category, setCategory] = useState("All");
   const skills: Data[] = s.skills;
   const categories = [...new Set(skills.map((k) => k.category))];
@@ -2156,8 +2483,23 @@ function SkillsPage({ state: s, busy, canConfigure, search, setSearch, onOpen, o
     .filter((k) => (category === "All" || (category === "On" ? k.enabled : k.category === category)) && `${k.title} ${k.id} ${k.description}`.toLowerCase().includes(q))
     .sort((a, b) => parseCount(b.installs) - parseCount(a.installs) || (b.repoStars || 0) - (a.repoStars || 0) || a.title.localeCompare(b.title));
   const on = skills.filter((k) => k.enabled).length;
+  const viewSwitch = (
+    <div className="segmented skills-view" role="radiogroup" aria-label="Skills">
+      {([["mine", "Your skills"], ["library", "Library"]] as const).map(([v, label]) => (
+        <button type="button" role="radio" aria-checked={view === v} className={view === v ? "active" : ""} key={v} onClick={() => setView(v)}>{label}</button>
+      ))}
+    </div>
+  );
+  if (view === "library")
+    return (
+      <>
+        {viewSwitch}
+        <LibraryView call={api} canConfigure={canConfigure} onOpen={onOpen} onChanged={onChanged} notify={notify} />
+      </>
+    );
   return (
     <>
+      {viewSwitch}
       <Toolbar search={search} setSearch={setSearch} placeholder="Search skills…" count={`${on} of ${skills.length} on`} />
       <div className="catalog-filters" role="radiogroup" aria-label="Category">
         {["All", ...categories, ...(on ? ["On"] : [])].map((c) => (
@@ -2189,7 +2531,7 @@ function SkillsPage({ state: s, busy, canConfigure, search, setSearch, onOpen, o
     </>
   );
 }
-function SkillDetail({ skill, busy, canConfigure, onToggle, onRemove }: any) {
+function SkillDetail({ skill, busy, canConfigure, onToggle, onRemove, onEdit, onDelete }: any) {
   const [text, setText] = useState("");
   const [error, setError] = useState("");
   useEffect(() => {
@@ -2198,9 +2540,18 @@ function SkillDetail({ skill, busy, canConfigure, onToggle, onRemove }: any) {
   return (
     <div className="form-body skill-detail">
       <div className="skill-facts">
-        <div><small>Source</small><a href={skill.url} target="_blank" rel="noopener noreferrer">{skill.source.repo} <ArrowUpRight size={12} /></a></div>
-        <div><small>Licence</small><span>{skill.source.license}</span></div>
-        <div><small>Version</small><code>{skill.source.commit.slice(0, 7)}</code></div>
+        {skill.origin === "authored" ? (
+          <>
+            <div><small>Written by</small><span>{skill.mine ? "You" : skill.owner}</span></div>
+            <div><small>Who can use it</small><span>{({ private: "Only the author", shared: "People and organizations chosen by the author", public: "Everyone on OrbytLink" } as Data)[skill.visibility]}</span></div>
+          </>
+        ) : (
+          <>
+            <div><small>Source</small>{skill.url ? <a href={skill.url} target="_blank" rel="noopener noreferrer">{skill.source.repo} <ArrowUpRight size={12} /></a> : <span>{skill.source.repo}</span>}</div>
+            <div><small>Licence</small><span>{skill.source.license}</span></div>
+            <div><small>Version</small><code>{skill.source.commit.slice(0, 7)}</code></div>
+          </>
+        )}
         <div><small>Popularity</small><SkillSignal skill={skill} /></div>
         <div className="skill-toggle">
           <small>{skill.enabled ? "On for your agents" : "Off"}</small>
@@ -2209,11 +2560,17 @@ function SkillDetail({ skill, busy, canConfigure, onToggle, onRemove }: any) {
       </div>
       <p className="muted">
         Agents load it as the <code>{skill.id}</code> prompt, or through the <code>orbytlink__use_skill</code> tool.
-        {skill.added && <> Added from skills.sh{skill.added.via === "agent" ? " by an agent" : ""} on {new Date(skill.added.at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}.</>}
+        {skill.library && <> From OrbytLink’s shared library, added on {new Date(skill.library.addedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}. Any agent can load it on request.</>}
       </p>
-      {skill.added && canConfigure && (
+      {skill.mine && (
         <div className="skill-remove">
-          <button type="button" className="secondary compact" disabled={busy} onClick={onRemove}><Trash2 size={14} /> Remove skill</button>
+          <button type="button" className="secondary compact" onClick={onEdit}>Edit skill</button>
+          <button type="button" className="secondary compact" onClick={onDelete}><Trash2 size={14} /> Delete skill</button>
+        </div>
+      )}
+      {skill.library && canConfigure && onRemove && (
+        <div className="skill-remove">
+          <button type="button" className="secondary compact" disabled={busy} onClick={onRemove}><Trash2 size={14} /> Remove from this workspace</button>
         </div>
       )}
       <div className="skill-doc">{error ? <p className="error">{error}</p> : text ? <Markdown text={text} /> : <LoaderCircle className="spin" size={18} />}</div>
@@ -2277,12 +2634,19 @@ function Markdown({ text }: { text: string }) {
 // ── Workflows ─────────────────────────────────────────────────────────────────
 type ToolInfo = { name: string; app: string; connection?: Data; def: Data };
 function toolIndex(s: Data): ToolInfo[] {
-  return s.gatewayTools.map((t: Data) => {
+  const apps = s.gatewayTools.map((t: Data) => {
     const connection = s.connections.find((c: Data) => c.id === t.connectionId);
     return { name: t.name, app: connection?.name || "", connection, def: connection?.tools?.find((x: Data) => x.name === t.tool) || { name: t.tool } };
   });
+  // Stored APIs and other workflows can be steps too.
+  const own = (s.workflowStepTools || []).map((t: Data) => ({
+    name: t.name,
+    app: t.app,
+    def: { name: t.name, title: t.title, inputSchema: { properties: Object.fromEntries(t.args.map((a: string) => [a, { type: "string", description: a === "api" ? `One of: ${t.apis.join(", ")}` : a === "body" ? "JSON, e.g. {\"text\": \"{{steps.a.text}}\"}" : undefined }])), required: t.name === "orbytlink__api_request" ? ["api", "method", "path"] : [] } },
+  }));
+  return [...apps, ...own];
 }
-const blankWorkflow = () => ({ name: "", description: "", inputs: [], steps: [{ id: "step_1", tool: "", args: {} }], enabled: false });
+const blankWorkflow = (shared = true) => ({ name: "", description: "", inputs: [], steps: [{ id: "step_1", tool: "", args: {} }], enabled: false, visibility: shared ? "workspace" : "private", keepLastResult: false, schedule: null });
 const cleanWorkflow = (wf: Data) => ({
   name: wf.name,
   description: wf.description || "",
@@ -2291,8 +2655,24 @@ const cleanWorkflow = (wf: Data) => ({
     id: st.id,
     tool: st.tool,
     args: Object.fromEntries(Object.entries(st.args || {}).filter(([, v]) => String(v).trim() !== "")),
+    ...(st.forEach?.trim() ? { forEach: st.forEach.trim() } : {}),
+    ...(st.when?.value?.trim() ? { when: { value: st.when.value, op: st.when.op || "truthy", to: st.when.to || "" } } : {}),
+    retries: st.retries || 0,
+    onError: st.onError || "stop",
   })),
   enabled: !!wf.enabled,
+  visibility: wf.visibility || "workspace",
+  keepLastResult: !!wf.keepLastResult,
+  schedule: wf.schedule || null,
+  // Drop run-screen settings for inputs that no longer exist, and a "from" step that was removed.
+  ...(wf.ui
+    ? {
+        ui: {
+          inputs: Object.fromEntries(Object.entries(wf.ui.inputs || {}).filter(([k]) => (wf.inputs || []).some((i: Data) => i.name === k))),
+          output: { ...wf.ui.output, from: (wf.steps || []).some((st: Data) => st.id === wf.ui.output?.from) ? wf.ui.output.from : undefined },
+        },
+      }
+    : {}),
 });
 // Bind a template to the tools actually connected; unmatched steps keep a hint for the person.
 function bindTemplate(t: WorkflowTemplate, tools: ToolInfo[]) {
@@ -2328,6 +2708,9 @@ function AppMarks({ tools, steps }: { tools: ToolInfo[]; steps: Data[] }) {
 }
 function WorkflowsPage({ state: s, busy, canConfigure, onEdit, onTemplate, onRun, onToggle, onDelete }: any) {
   const tools = toolIndex(s);
+  const me = s.identity.user;
+  const mine = (wf: Data) => canConfigure || (wf.visibility === "private" && wf.createdBy === me);
+  const canCreate = s.identity.permissions.includes("call");
   const workflows: Data[] = s.workflows;
   const drafts = workflows.filter((w) => !w.enabled && w.source === "agent").length;
   const runs: Data[] = s.workflowRuns;
@@ -2346,18 +2729,22 @@ function WorkflowsPage({ state: s, busy, canConfigure, onEdit, onTemplate, onRun
                 {workflows.map((wf) => (
                   <tr key={wf.id}>
                     <td>
-                      <div className="wf-name"><strong>{wf.name}</strong>{wf.source === "agent" && <span className="tag">by agent</span>}</div>
-                      <small>{wf.description || `${wf.steps.length} ${wf.steps.length === 1 ? "step" : "steps"}`}</small>
+                      <div className="wf-name">
+                        <strong>{wf.name}</strong>
+                        {wf.source === "agent" && <span className="tag">by agent</span>}
+                        {wf.visibility === "private" && <span className="tag">{wf.createdBy === me ? "Only you" : `Private · ${wf.createdBy}`}</span>}
+                      </div>
+                      <small>{[wf.description || `${wf.steps.length} ${wf.steps.length === 1 ? "step" : "steps"}`, describeSchedule(wf.schedule)].filter(Boolean).join(" · ")}</small>
                     </td>
                     <td><div className="wf-apps"><AppMarks tools={tools} steps={wf.steps} /><small>{wf.steps.length} {wf.steps.length === 1 ? "step" : "steps"}</small></div></td>
                     <td><Status value={wf.enabled ? "Enabled" : "Draft"} /></td>
                     <td>{wf.lastRunAt ? <div className="wf-last"><Status value={wf.lastStatus} /><small>{when(wf.lastRunAt)}</small></div> : <small>Never</small>}</td>
                     <td>
                       <div className="row-actions">
-                        <button className="secondary compact" disabled={busy || (!wf.enabled && !canConfigure)} onClick={() => onRun(wf)}><Play size={12} /> Run</button>
-                        {canConfigure && <button className="text-button" onClick={() => onEdit(wf)}>{wf.source === "agent" && !wf.enabled ? "Review" : "Edit"}</button>}
-                        {canConfigure && <button className="text-button" disabled={busy} onClick={() => onToggle(wf)}>{wf.enabled ? "Disable" : "Enable"}</button>}
-                        {canConfigure && <button className="icon-button" aria-label={`Delete ${wf.name}`} onClick={() => onDelete(wf)}><Trash2 size={15} /></button>}
+                        <button className="secondary compact" disabled={busy || (!wf.enabled && !mine(wf)) || (wf.visibility === "private" && wf.createdBy !== me)} onClick={() => onRun(wf)}><Play size={12} /> Run</button>
+                        {mine(wf) && <button className="text-button" onClick={() => onEdit(wf)}>{wf.source === "agent" && !wf.enabled ? "Review" : "Edit"}</button>}
+                        {mine(wf) && <button className="text-button" disabled={busy} onClick={() => onToggle(wf)}>{wf.enabled ? "Disable" : "Enable"}</button>}
+                        {mine(wf) && <button className="icon-button" aria-label={`Delete ${wf.name}`} onClick={() => onDelete(wf)}><Trash2 size={15} /></button>}
                       </div>
                     </td>
                   </tr>
@@ -2375,7 +2762,7 @@ function WorkflowsPage({ state: s, busy, canConfigure, onEdit, onTemplate, onRun
           {workflowTemplates.map((t) => {
             const missing = t.steps.filter((st) => !tools.some((x) => st.tool.test(x.name))).map((st) => st.app);
             return (
-              <button type="button" className="catalog-card" key={t.id} disabled={!canConfigure} onClick={() => onTemplate(t)} aria-label={`Use template: ${t.name}`}>
+              <button type="button" className="catalog-card" key={t.id} disabled={!canCreate} onClick={() => onTemplate(t)} aria-label={`Use template: ${t.name}`}>
                 <span className="template-marks">{[...new Set(t.steps.map((st) => st.logo))].map((l) => <BrandTile key={l} id={l} name={l} />)}</span>
                 <span className="catalog-body">
                   <span className="catalog-name">{t.name}</span>
@@ -2404,7 +2791,7 @@ function WorkflowsPage({ state: s, busy, canConfigure, onEdit, onTemplate, onRun
                     <td><strong>{r.workflow}</strong></td>
                     <td><Status value={r.status} /></td>
                     <td className="muted">{r.steps.filter((x: Data) => x.status === "ok").length}/{r.steps.length} · {r.steps.reduce((n: number, x: Data) => n + x.ms, 0)} ms</td>
-                    <td className="muted">{r.trigger === "agent" ? "Agent" : "Console"} · {r.user}</td>
+                    <td className="muted">{({ agent: "Agent", schedule: "Schedule", workflow: "Workflow" } as Data)[r.trigger] || "Console"} · {r.user}</td>
                     <td className="muted">{when(r.createdAt)}</td>
                   </tr>
                 ))}
@@ -2412,15 +2799,16 @@ function WorkflowsPage({ state: s, busy, canConfigure, onEdit, onTemplate, onRun
             </table>
           </div>
         ) : (
-          <Empty icon={Activity} title="No runs yet">Runs record each step’s result and timing. Inputs and outputs are not stored.</Empty>
+          <Empty icon={Activity} title="No runs yet">Runs record each step’s result and timing. Inputs and outputs are not stored, unless a workflow is set to keep its latest result.</Empty>
         )}
       </section>
     </>
   );
 }
-function WorkflowEditor({ state: s, data, busy, copy, onSave, onCancel }: any) {
+function WorkflowEditor({ state: s, data, busy, copy, onSave, onCancel, canConfigure }: any) {
   const tools = toolIndex(s);
-  const [wf, setWf] = useState<Data>(() => JSON.parse(JSON.stringify(data.draft)));
+  // Members keep private workflows only; sharing with the workspace takes an admin.
+  const [wf, setWf] = useState<Data>(() => ({ ...JSON.parse(JSON.stringify(data.draft)), ...(canConfigure ? {} : { visibility: "private" }) }));
   const [error, setError] = useState("");
   const set = (patch: Data) => setWf((w) => ({ ...w, ...patch }));
   const setStep = (i: number, patch: Data) => set({ steps: wf.steps.map((st: Data, n: number) => (n === i ? { ...st, ...patch } : st)) });
@@ -2463,7 +2851,7 @@ function WorkflowEditor({ state: s, data, busy, copy, onSave, onCancel }: any) {
             const props: Record<string, Data> = tool?.def.inputSchema?.properties || {};
             const required: string[] = tool?.def.inputSchema?.required || [];
             const keys = [...new Set([...Object.keys(props), ...Object.keys(st.args || {})])];
-            const refs = [...wf.inputs.map((x: Data) => `{{input.${x.name}}}`), ...wf.steps.slice(0, i).map((p: Data) => `{{steps.${p.id}.text}}`)];
+            const refs = [...wf.inputs.map((x: Data) => `{{input.${x.name}}}`), ...wf.steps.slice(0, i).map((p: Data) => `{{steps.${p.id}.text}}`), ...(st.forEach ? ["{{item}}"] : [])];
             return (
               <li className="wf-step" key={i}>
                 <div className="wf-step-head">
@@ -2497,6 +2885,7 @@ function WorkflowEditor({ state: s, data, busy, copy, onSave, onCancel }: any) {
                     )}
                   </div>
                 )}
+                {st.tool && <StepOptions step={st} onChange={(patch) => setStep(i, patch)} />}
               </li>
             );
           })}
@@ -2504,7 +2893,9 @@ function WorkflowEditor({ state: s, data, busy, copy, onSave, onCancel }: any) {
         <button type="button" className="text-button add-row" disabled={wf.steps.length >= 20} onClick={() => set({ steps: [...wf.steps, { id: `step_${wf.steps.length + 1}`, tool: "", args: {} }] })}><Plus size={14} /> Add step</button>
       </div>
 
-      <label className="check-row"><input type="checkbox" checked={!!wf.enabled} onChange={(e) => set({ enabled: e.target.checked })} /> Enable: agents can call it as <code>workflow__…</code> and members can run it</label>
+      <WorkflowSettings wf={wf} set={set} canConfigure={canConfigure} />
+
+      <label className="check-row"><input type="checkbox" checked={!!wf.enabled} onChange={(e) => set({ enabled: e.target.checked })} /> Enable: agents can call it as <code>workflow__…</code>{wf.visibility === "private" ? " (only yours)" : " and members can run it"}{wf.schedule ? ", and the schedule starts" : ""}</label>
       {error && <div className="error">{error}</div>}
       <FormActions busy={busy} onCancel={onCancel} label="Save workflow" />
     </form>
@@ -2514,7 +2905,18 @@ function RunWorkflow({ workflow, onDone }: { workflow: Data; onDone: () => void 
   const [values, setValues] = useState<Record<string, string>>({});
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<Data | null>(null);
+  const [kept, setKept] = useState<Data | null>(null);
   const [error, setError] = useState("");
+  // The latest kept result (for example from a scheduled run), loaded only when asked to keep one.
+  useEffect(() => {
+    if (!workflow.keepLastResult) return;
+    let live = true;
+    api(`/workflows/${workflow.id}/result`).then((r) => live && setKept(r), () => undefined);
+    return () => {
+      live = false;
+    };
+  }, [workflow.id, workflow.keepLastResult]);
+  const shown = result || kept;
   return (
     <form
       className="form-body"
@@ -2534,12 +2936,8 @@ function RunWorkflow({ workflow, onDone }: { workflow: Data; onDone: () => void 
       }}
     >
       {!workflow.enabled && <div className="info-row"><LockKeyhole size={17} /><p>This is a draft. Running it here is how you test it before enabling.</p></div>}
-      {(workflow.inputs || []).map((i: Data) => (
-        <Field key={i.name} label={i.description || i.name} hint={`{{input.${i.name}}}`}>
-          <input value={values[i.name] || ""} onChange={(e) => setValues({ ...values, [i.name]: e.target.value })} required={i.required !== false} />
-        </Field>
-      ))}
-      {!(workflow.inputs || []).length && <p className="muted">This workflow takes no inputs.</p>}
+      {workflow.description && <p className="muted">{workflow.description}</p>}
+      <RunFields workflow={workflow} values={values} setValues={setValues} />
       {error && <div className="error">{error}</div>}
       {result && (
         <div className="run-result">
@@ -2548,13 +2946,18 @@ function RunWorkflow({ workflow, onDone }: { workflow: Data; onDone: () => void 
               <li key={st.id} className={`run-${st.status}`}>
                 <span className="run-dot" />
                 <code>{st.id}</code>
-                <span className="muted">{st.tool}</span>
-                <span className="run-ms">{st.status === "skipped" ? "skipped" : `${st.ms} ms`}</span>
+                <span className="muted">{st.tool}{st.items !== undefined ? ` · ${st.items} items` : ""}</span>
+                <span className="run-ms">{st.status === "skipped" ? st.note || "skipped" : `${st.ms} ms`}</span>
                 {st.error && <p>{st.error}</p>}
               </li>
             ))}
           </ol>
-          {result.output && <><small className="muted">Output of the last step</small><pre className="code-block">{result.output.slice(0, 4000)}</pre></>}
+        </div>
+      )}
+      {shown && (shown.data != null || shown.output) && (
+        <div className="wf-section">
+          <div className="wf-section-head"><h3>Result</h3>{!result && kept && <small>Kept from {when(kept.createdAt)}</small>}</div>
+          <ResultView workflow={workflow} data={shown.data ?? undefined} text={shown.output} />
         </div>
       )}
       <div className="form-footer">
@@ -2566,8 +2969,6 @@ function RunWorkflow({ workflow, onDone }: { workflow: Data; onDone: () => void 
 
 // ── APIs ──────────────────────────────────────────────────────────────────────
 const authLabels: Record<string, string> = { bearer: "Bearer token", header: "Header", query: "Query parameter", basic: "Basic auth", none: "No key" };
-// What the server needs to save an API again without touching its key or docs.
-const apiPayload = (a: Data) => ({ name: a.name, description: a.description || "", baseUrl: a.baseUrl, docsUrl: a.docsUrl || "", auth: a.auth, authName: a.authName || "X-API-Key", headers: a.headers || {}, bodyFormat: a.bodyFormat || "json", access: a.access, enabled: a.enabled });
 const presetApiDraft = (p: ApiPreset): Data => ({
   _preset: p,
   name: p.name,
@@ -2608,108 +3009,9 @@ function ApiLogo({ a }: { a: Data }) {
     );
   return <BrandTile id={`api-${preset?.id || a.id}`} name={a.name} />;
 }
-function ApiPresets({ apis, canConfigure, onPreset, compact }: { apis: Data[]; canConfigure: boolean; onPreset: (p: ApiPreset) => void; compact: boolean }) {
-  const [query, setQuery] = useState("");
-  const [category, setCategory] = useState("All");
-  const q = query.toLowerCase();
-  const shown = apiPresets.filter((p) => (category === "All" || p.category === category) && `${p.name} ${p.description} ${p.category}`.toLowerCase().includes(q));
-  const added = (p: ApiPreset) => apis.some((a) => presetForApi(a)?.id === p.id);
-  return (
-    <section className="api-presets" aria-label="Popular APIs">
-      <div className="api-presets-head">
-        <div>
-          <h2>{compact ? "Add another API" : "Popular APIs"}</h2>
-          <p>Pick one, paste your key, and its docs and endpoints are set up for you.</p>
-        </div>
-        <div className="search-box"><Search size={16} /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={`Search ${apiPresets.length} APIs…`} aria-label="Search APIs" /></div>
-      </div>
-      <div className="catalog-filters" role="radiogroup" aria-label="API category">
-        {["All", ...apiCategories].map((c) => (
-          <button type="button" role="radio" aria-checked={category === c} className={category === c ? "active" : ""} key={c} onClick={() => setCategory(c)}>{c}</button>
-        ))}
-      </div>
-      {shown.length ? (
-        <div className="catalog-grid">
-          {shown.map((p) => {
-            const on = added(p);
-            return (
-              <button type="button" className="catalog-card" key={p.id} disabled={!canConfigure} title={canConfigure ? undefined : "Only admins can add APIs"} aria-label={`Connect ${p.name}`} onClick={() => onPreset(p)}>
-                <BrandTile id={`api-${p.id}`} name={p.name} />
-                <span className="catalog-body">
-                  <span className="catalog-name">{p.name}{on && <span className="catalog-status idle"><i />Added</span>}</span>
-                  <span className="catalog-desc">{p.description}</span>
-                </span>
-                <ArrowUpRight className="catalog-arrow" size={16} />
-              </button>
-            );
-          })}
-        </div>
-      ) : (
-        <p className="muted">No preset matches. Use Add API for any other HTTPS API.</p>
-      )}
-    </section>
-  );
-}
 function KeyState({ a }: { a: Data }) {
   if (a.auth === "none") return <span className="api-chip">No key needed</span>;
   return a.hasKey ? <span className="api-chip"><KeyRound size={12} />{a.keyHint ? `••••${a.keyHint}` : "Key saved"}</span> : <span className="api-chip warn">No key</span>;
-}
-function ApisPage({ state: s, busy, canConfigure, onOpen, onPreset, onToggle }: any) {
-  const apis: Data[] = s.apis;
-  const calls: Data[] = s.apiCalls;
-  return (
-    <>
-      {apis.length > 0 && (
-        <section className="panel">
-          <div className="api-list">
-            {apis.map((a) => (
-              <div className="api-row" key={a.id}>
-                <button type="button" className="api-open" onClick={() => onOpen(a)} aria-label={`Open ${a.name}`}>
-                  <ApiLogo a={a} />
-                  <span className="api-text">
-                    <strong>{a.name}</strong>
-                    <code>{a.baseUrl}</code>
-                  </span>
-                </button>
-                <span className="api-chips">
-                  <span className="api-chip">{a.docsFormat ? (a.endpointCount ? `${a.docsFormat} · ${a.endpointCount} endpoints` : `Docs · ${a.docsFormat.toLowerCase()}`) : a.docsError ? "Docs unavailable" : "No docs"}</span>
-                  <KeyState a={a} />
-                  <span className="api-chip">{a.access === "write" ? "Read & write" : "Read only"}</span>
-                </span>
-                <Switch checked={!!a.enabled} label={`Use ${a.name}`} disabled={busy || !canConfigure} onChange={(v) => onToggle(a, v)} />
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-      <ApiPresets apis={apis} canConfigure={canConfigure} onPreset={onPreset} compact={apis.length > 0} />
-      <div className="info-row">
-        <LockKeyhole size={17} />
-        <p>Keys are encrypted with AES-256-GCM, never shown again, and only ever sent to the host they were saved for. Moving an API to another host discards its key. Agents use <code>orbytlink__api_docs</code> and <code>orbytlink__api_request</code>; writes are off unless you allow them.</p>
-      </div>
-      {calls.length > 0 && (
-        <section className="panel">
-          <div className="section-heading"><h2>Recent requests</h2><span className="count">{calls.length}</span></div>
-          <div className="table-scroll">
-            <table>
-              <thead><tr><th>API</th><th>Request</th><th>Status</th><th>Time</th><th>When</th></tr></thead>
-              <tbody>
-                {calls.map((c) => (
-                  <tr key={c.id}>
-                    <td><strong>{c.api}</strong></td>
-                    <td><code className="api-req"><b>{c.method}</b> {c.path}</code></td>
-                    <td><span className={`http ${c.status < 300 ? "ok" : c.status < 500 ? "warn" : "bad"}`}>{c.status}</span></td>
-                    <td className="muted">{c.ms} ms</td>
-                    <td className="muted">{when(c.createdAt)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-      )}
-    </>
-  );
 }
 function ApiForm({ data: d, busy, onSave, onCancel }: any) {
   const preset: ApiPreset | undefined = d?._preset;

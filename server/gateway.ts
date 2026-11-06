@@ -11,7 +11,10 @@ import type { Identity } from "./schema.js";
 import { credentialFor } from "./oauth.js";
 import { addSkill, enabledSkills, skillCatalog, skillText } from "./skills.js";
 import { MIN_INSTALLS, searchRegistry } from "./skill-registry.js";
-import { runWorkflow, saveWorkflow, workflowInputSchema, workflowToolName } from "./workflows.js";
+import { runWorkflow, saveWorkflow, visibleTo, workflowInputSchema, workflowToolName } from "./workflows.js";
+import { AI_TOOL, aiConfigured, aiInputSchema, aiSummary, generate, usd } from "./ai.js";
+import { CONNECT_TOOL, connectApp, connectTool } from "./connect.js";
+import { libraryCount, librarySearch, viewerFor } from "./library.js";
 import { allowedMethods, apiCall } from "./apis.js";
 import { ToolIndex, sameApp } from "./tool-search.js";
 
@@ -90,7 +93,7 @@ const listed = ({ name, connection, tool }: GatewayTool) => ({
   ...(tool.annotations ? { annotations: tool.annotations } : {}),
 });
 const BASE_INSTRUCTIONS =
-  "Credentials stay on the gateway and are never returned. Skills (orbytlink__use_skill) are instructions to load when a task matches them; orbytlink__find_skills finds more, including community skills on skills.sh, and orbytlink__add_skill turns one on when the user asks. workflow__* tools run a fixed sequence of tool calls. APIs stored in OrbytLink are read with orbytlink__api_docs and called with orbytlink__api_request; the gateway adds their keys. To automate a repeated task, draft a workflow with orbytlink__create_workflow; a person reviews and enables it.";
+  "Credentials stay on the gateway and are never returned. Skills (orbytlink__use_skill) are instructions to load when a task matches them; orbytlink__find_skills finds more, including community skills on skills.sh, and orbytlink__add_skill turns one on when the user asks. workflow__* tools run a fixed sequence of tool calls. APIs stored in OrbytLink are read with orbytlink__api_docs and called with orbytlink__api_request; the gateway adds their keys. To automate a repeated task, draft a workflow with orbytlink__create_workflow; a person reviews and enables it. If the user needs an app that is not connected, call orbytlink__connect_app: it returns a link to connect it and the steps to show the user.";
 const SEARCH_INSTRUCTIONS =
   "OrbytLink is a gateway to the apps this workspace has connected. Their tools are not all listed: find them first. Call orbytlink__find_tools with a short description of the action (e.g. \"enroll leads in campaign\"), pick a result, then run it with orbytlink__call_tool using its exact name and arguments that match its input schema. orbytlink__list_apps shows which apps are connected. Tools listed directly are the ones used most and can be called as usual. " +
   BASE_INSTRUCTIONS;
@@ -121,15 +124,16 @@ export function gatewayServer(
   });
   server.setRequestHandler(ListPromptsRequestSchema, async () => ({
     prompts: allowed
-      ? enabledSkills(store, w).map((s) => ({ name: s.id, title: s.title, description: s.description.slice(0, 1024) }))
+      ? enabledSkills(store, w, viewerFor(store, identity)).map((s) => ({ name: s.id, title: s.title, description: s.description.slice(0, 1024) }))
       : [],
   }));
   server.setRequestHandler(GetPromptRequestSchema, async (request) => {
-    const skill = allowed && enabledSkills(store, w).find((s) => s.id === request.params.name);
+    const viewer = viewerFor(store, identity);
+    const skill = allowed && enabledSkills(store, w, viewer).find((s) => s.id === request.params.name);
     if (!skill) throw new Error("Unknown or disabled skill");
     return {
       description: skill.description.slice(0, 1024),
-      messages: [{ role: "user" as const, content: { type: "text" as const, text: skillText(store, w, skill.id)! } }],
+      messages: [{ role: "user" as const, content: { type: "text" as const, text: skillText(store, viewer, skill.id)! } }],
     };
   });
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
@@ -252,7 +256,7 @@ function findTools(store: Store, w: string, args: Record<string, unknown>) {
   const limit = Math.min(20, Math.max(1, Number.isInteger(args.limit) ? (args.limit as number) : 8));
   if (!query && !app) return toolText("Give a query (the action, in a few words) or an app name.", true);
   if (app && !tools.some((t) => sameApp(t.connection.name, t.name, app)))
-    return toolText(`No connected app is named "${app}". Connected: ${appSummaries(tools).map((a) => a.app).join(", ") || "none"}.`, true);
+    return toolText(`No connected app is named "${app}". Connected: ${appSummaries(tools).map((a) => a.app).join(", ") || "none"}. To connect it, call orbytlink__connect_app with {"app": "${app.replace(/"/g, "")}"}.`, true);
   const byName = new Map(tools.map((t) => [t.name, t]));
   // An app with no query is a directory: every name, no schemas, to keep it short.
   if (!query) {
@@ -313,11 +317,12 @@ function log(
 
 // The gateway's own tools: skills, workflow drafting, and one tool per enabled workflow.
 const toolText = (text: string, isError = false) => ({ content: [{ type: "text" as const, text }], ...(isError ? { isError: true } : {}) });
-function enabledWorkflows(store: Store, w: string) {
+// Enabled workflows this person's agents may call: the workspace's, plus their own private ones.
+export function visibleWorkflowTools(store: Store, identity: Identity) {
   const used = new Set<string>();
   return store
-    .list(w, "workflows")
-    .filter((wf) => wf.enabled)
+    .list(identity.workspace, "workflows")
+    .filter((wf) => wf.enabled && visibleTo(wf, identity))
     .map((wf) => {
       let name = workflowToolName(wf);
       for (let n = 2; used.has(name); n++) name = `${workflowToolName(wf).slice(0, 60)}_${n}`;
@@ -325,8 +330,24 @@ function enabledWorkflows(store: Store, w: string) {
       return { name, workflow: wf };
     });
 }
+export const API_REQUEST_TOOL = "orbytlink__api_request";
+// A call to a stored API, from an agent or a workflow step; the gateway adds the key.
+export async function callStoredApi(store: Store, identity: Identity, args: Record<string, unknown>) {
+  const w = identity.workspace;
+  const match = enabledApis(store, w).find((a) => a.slug === args.api);
+  if (!match) return toolText("Unknown or disabled API.", true);
+  try {
+    const out = await apiCall(store, w, match.api, { method: args.method, path: args.path, query: args.query, body: args.body });
+    store.audit(w, identity.user, "api.request", `${match.api.name} · ${args.method} ${args.path} · ${out.status}`);
+    const body = typeof out.body === "string" ? out.body : JSON.stringify(out.body, null, 2);
+    return toolText(`HTTP ${out.status}${out.truncated ? " (response truncated)" : ""}\n\n${body.slice(0, 100_000)}`, !out.ok);
+  } catch (error) {
+    const issues = (error as any)?.issues as { path: (string | number)[]; message: string }[] | undefined;
+    return toolText(issues ? issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ") : (error as Error).message, true);
+  }
+}
 const apiSlug = (a: Row) => a.name.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 40) || "api";
-function enabledApis(store: Store, w: string) {
+export function enabledApis(store: Store, w: string) {
   const used = new Set<string>();
   return store
     .list(w, "apis")
@@ -359,16 +380,25 @@ function apiDocs(api: Row, search?: string) {
 const canConfigure = (identity: Identity) => identity.permissions.includes("configure") || !!identity.ownerCanConfigure;
 // Skills from the open skills.sh registry, found and added the way the find-skills skill does
 // with `npx skills`, but into the workspace, since an agent behind the gateway has no shell.
-async function findSkills(store: Store, w: string, args: Record<string, unknown>) {
+async function findSkills(store: Store, identity: Identity, args: Record<string, unknown>) {
+  const w = identity.workspace;
+  const viewer = viewerFor(store, identity);
   const query = typeof args.query === "string" ? args.query.trim().slice(0, 200) : "";
   if (!query) return toolText("Describe the task in a few words, e.g. \"write changelogs\".", true);
-  const catalog = skillCatalog(store, w);
+  const catalog = skillCatalog(store, w, viewer);
   const index = new ToolIndex(catalog.map((s) => ({ name: s.id, app: s.category, title: s.title, description: s.description })));
   const workspace = index.search(query, 5).map((d) => {
     const s = catalog.find((c) => c.id === d.name)!;
     return { skill: s.id, title: s.title, description: s.description.slice(0, 300), on: s.enabled };
   });
-  const have = new Set(catalog.filter((s) => s.added).map((s) => `${s.source.repo}/${s.source.path.split("/").pop()}`.toLowerCase()));
+  // The shared library: every skill anyone on this server added, ready to use at once.
+  const mine = new Set(catalog.map((s) => s.id));
+  const found = librarySearch(store, query, viewer, { limit: 8 });
+  const library = found.items
+    .filter((l) => !mine.has(l.id))
+    .slice(0, 5)
+    .map((l) => ({ skill: l.id, title: l.name, description: l.description.slice(0, 300), source: l.origin === "authored" ? `written by ${l.owner}${l.visibility === "public" ? "" : ` (${l.visibility})`}` : `${l.repo} (${l.license})`, installs: l.installs, uses: l.uses }));
+  const have = new Set(found.items.map((l) => `${l.repo}/${l.skill}`.toLowerCase()));
   let registry: Record<string, unknown>[] = [],
     note: string | undefined;
   try {
@@ -383,9 +413,10 @@ async function findSkills(store: Store, w: string, args: Record<string, unknown>
       {
         query,
         inWorkspace: workspace,
+        inLibrary: library,
         skillsSh: registry,
         ...(note ? { note } : {}),
-        next: `Tell the user what fits, with install counts and sources. Prefer well-known sources and more installs; canAdd is false below ${MIN_INSTALLS.toLocaleString("en")} installs. When the user wants one, add or turn it on with orbytlink__add_skill {skill}.`,
+        next: `Tell the user what fits, with install counts and sources. Skills inWorkspace or inLibrary can be loaded right away with orbytlink__use_skill {name}. A skills.sh skill is added to the shared library with orbytlink__add_skill {skill} (canAdd is false below ${MIN_INSTALLS.toLocaleString("en")} installs).`,
       },
       null,
       2,
@@ -393,25 +424,26 @@ async function findSkills(store: Store, w: string, args: Record<string, unknown>
   );
 }
 function ownTools(store: Store, w: string, identity: Identity) {
-  const skills = enabledSkills(store, w);
+  const viewer = viewerFor(store, identity);
+  const skills = enabledSkills(store, w, viewer);
   const tools: any[] = [
     {
       name: "orbytlink__find_skills",
       title: "Find skills",
       description:
-        "Find skills (reusable expert instructions) for a task: this workspace's skills, and community skills on skills.sh with their install counts. Use it when the user asks for a skill, or asks how to do something specialised that a skill might cover.",
+        "Find skills (reusable expert instructions) for a task: this workspace's skills, OrbytLink's shared library of skills anyone has added, and community skills on skills.sh with their install counts. Use it when the user asks for a skill, or asks how to do something specialised that a skill might cover.",
       inputSchema: { type: "object", properties: { query: { type: "string", description: "The task in a few words, e.g. \"react performance\" or \"pr review\"" } }, required: ["query"] },
       annotations: { readOnlyHint: true, openWorldHint: true },
     },
   ];
-  if (canConfigure(identity))
-    tools.push({
+  tools.push({
       name: "orbytlink__add_skill",
       title: "Add a skill",
-      description: `Turn on a skill for every agent in this workspace, when the user asks for it. Give a workspace skill's name, or owner/repo@skill from orbytlink__find_skills to add a community skill from skills.sh: it is fetched from GitHub, pinned to that commit, and refused if it ships scripts or has under ${MIN_INSTALLS.toLocaleString("en")} installs. Returns the skill's instructions to follow right away.`,
+      description: `Add a skill when the user asks for it. Give owner/repo@skill from orbytlink__find_skills to add a community skill from skills.sh to OrbytLink's shared library, so every workspace can use it: it is fetched from GitHub, pinned to that commit, and refused if it ships scripts, has under ${MIN_INSTALLS.toLocaleString("en")} installs or lacks an open licence. ${canConfigure(identity) ? "It is also turned on for every agent in this workspace." : "Only an admin can turn it on for everyone in this workspace."} Returns the skill's instructions to follow right away.`,
       inputSchema: { type: "object", properties: { skill: { type: "string", description: "e.g. tdd, or vercel-labs/agent-skills@react-best-practices" } }, required: ["skill"] },
       annotations: { openWorldHint: true },
     });
+  tools.push(connectTool);
   const apis = enabledApis(store, w);
   if (apis.length) {
     const list = apis.map(({ slug, api }) => `- ${slug}: ${api.name}${api.description ? ` (${api.description})` : ""}, ${api.access === "write" ? "read and write" : "read only"}`).join("\n");
@@ -441,21 +473,28 @@ function ownTools(store: Store, w: string, identity: Identity) {
       },
     );
   }
-  if (skills.length)
+  // AI models, billed to the workspace's credit; listed only when they can actually be used.
+  if (aiConfigured() && aiSummary(store, w).enabled)
     tools.push({
-      name: "orbytlink__use_skill",
-      title: "Load a skill",
-      description: `Load the full instructions of a skill when the task matches it, then follow them. Available skills:\n${skills
-        .map((s) => `- ${s.id}: ${s.description.slice(0, 160)}`)
-        .join("\n")}`.slice(0, 4000),
-      inputSchema: { type: "object", properties: { name: { type: "string", enum: skills.map((s) => s.id) } }, required: ["name"] },
-      annotations: { readOnlyHint: true },
+      name: AI_TOOL,
+      title: "Ask an AI model",
+      description:
+        "Run a prompt on an AI model (text models from OrbytLink → Catalog → AI models, e.g. anthropic/claude-haiku-4.5 or openai/gpt-5-mini) and get its reply. Each call is charged to this workspace's AI credit at the listed price; credit for maxTokens is held until the call ends.",
+      inputSchema: aiInputSchema,
+      annotations: { openWorldHint: true },
     });
+  tools.push({
+    name: "orbytlink__use_skill",
+    title: "Load a skill",
+    description: `Load the full instructions of a skill when the task matches it, then follow them. Any skill id from orbytlink__find_skills works, including the ${libraryCount(store, viewer).toLocaleString("en")} skills in OrbytLink's shared library.${skills.length ? ` Turned on in this workspace:\n${skills.map((s) => `- ${s.id}: ${s.description.slice(0, 160)}`).join("\n")}` : ""}`.slice(0, 4000),
+    inputSchema: { type: "object", properties: { name: { type: "string", description: "Skill id, e.g. tdd" } }, required: ["name"] },
+    annotations: { readOnlyHint: true },
+  });
   tools.push({
     name: "orbytlink__create_workflow",
     title: "Draft a workflow",
     description:
-      "Draft a reusable workflow: a fixed, ordered list of calls to app tools (use their exact app__tool names, as listed or found with orbytlink__find_tools). Step arguments are strings that may contain {{input.<name>}} for a run input, {{steps.<id>.text}} for an earlier step's text result, or {{steps.<id>.json.<path>}} for a field of its JSON result. The draft is saved disabled; a person reviews and enables it in OrbytLink. Use this when the user asks to automate a repeated task.",
+      "Draft a reusable workflow: a fixed, ordered list of tool calls that later runs the same way every time, with no model involved. A step's tool is an app tool (its exact app__tool name, as listed or found with orbytlink__find_tools), orbytlink__api_request (a stored API, e.g. an AI model API the user added; args api, method, path, query, body as JSON text) or another enabled workflow__*. Step arguments are strings that may contain {{input.<name>}} for a run input, {{steps.<id>.text}} for an earlier step's text result, or {{steps.<id>.json.<path>}} for a field of its JSON result. forEach (a placeholder that resolves to a JSON list) runs the step once per item, with {{item}} / {{item.<path>}}; when skips the step unless a condition holds; retries (0-3) and onError (stop|continue) handle failures. Also write ui, the run screen people will use: a field type per input, and how to show the result (output.view: table, list, cards, stats, text or json; output.from a step id, output.path into its JSON, columns for a table, title/subtitle/link keys for list or cards). The draft is saved disabled and private to the user; they review and enable it in OrbytLink. Use this when the user asks to automate a repeated task.",
     inputSchema: {
       type: "object",
       properties: {
@@ -466,15 +505,53 @@ function ownTools(store: Store, w: string, identity: Identity) {
           type: "array",
           items: {
             type: "object",
-            properties: { id: { type: "string", description: "lowercase id, e.g. create_issue" }, tool: { type: "string" }, args: { type: "object", additionalProperties: { type: "string" } } },
+            properties: {
+              id: { type: "string", description: "lowercase id, e.g. create_issue" },
+              tool: { type: "string" },
+              args: { type: "object", additionalProperties: { type: "string" } },
+              forEach: { type: "string", description: "e.g. {{steps.find.json.items}}" },
+              when: {
+                type: "object",
+                properties: { value: { type: "string" }, op: { type: "string", enum: ["truthy", "falsy", "equals", "not_equals", "contains", "not_contains"] }, to: { type: "string" } },
+                required: ["value"],
+              },
+              retries: { type: "integer", minimum: 0, maximum: 3 },
+              onError: { type: "string", enum: ["stop", "continue"] },
+            },
             required: ["id", "tool"],
           },
         },
+        ui: {
+          type: "object",
+          properties: {
+            inputs: {
+              type: "object",
+              additionalProperties: {
+                type: "object",
+                properties: { label: { type: "string" }, type: { type: "string", enum: ["text", "textarea", "number", "date", "email", "url", "select", "checkbox"] }, options: { type: "array", items: { type: "string" } }, placeholder: { type: "string" } },
+              },
+            },
+            output: {
+              type: "object",
+              properties: {
+                from: { type: "string" },
+                path: { type: "string" },
+                view: { type: "string", enum: ["auto", "text", "table", "list", "cards", "stats", "json"] },
+                columns: { type: "array", items: { type: "object", properties: { key: { type: "string" }, label: { type: "string" } }, required: ["key", "label"] } },
+                title: { type: "string" },
+                subtitle: { type: "string" },
+                link: { type: "string" },
+              },
+            },
+          },
+        },
+        visibility: { type: "string", enum: ["private", "workspace"], description: "private (default): only this user's agents get it. workspace needs an admin." },
+        keepLastResult: { type: "boolean", description: "Keep the latest result so the run screen can show it again" },
       },
       required: ["name", "steps"],
     },
   });
-  for (const { name, workflow } of enabledWorkflows(store, w))
+  for (const { name, workflow } of visibleWorkflowTools(store, identity))
     tools.push({
       name,
       title: `Workflow · ${workflow.name}`,
@@ -485,51 +562,59 @@ function ownTools(store: Store, w: string, identity: Identity) {
 }
 async function callOwnTool(store: Store, services: ServiceAdapters, identity: Identity, name: string, args: Record<string, unknown>) {
   const w = identity.workspace;
-  if (name === "orbytlink__find_skills") return findSkills(store, w, args);
+  if (name === "orbytlink__find_skills") return findSkills(store, identity, args);
   if (name === "orbytlink__add_skill") {
-    if (!canConfigure(identity)) return toolText("Only a workspace admin's agent can add skills. Ask an admin, or turn skills on in OrbytLink → Skills.", true);
-    if (typeof args.skill !== "string" || !args.skill.trim()) return toolText("Give the skill as owner/repo@skill from orbytlink__find_skills, or a workspace skill's name.", true);
+    if (typeof args.skill !== "string" || !args.skill.trim()) return toolText("Give the skill as owner/repo@skill from orbytlink__find_skills, or a skill's id.", true);
     try {
-      const added = await addSkill(store, w, identity.user, args.skill, "agent");
-      const what = added.enabledOnly ? `"${added.title}" is on` : added.updated ? `"${added.title}" was updated to the latest version and is on` : `Added "${added.title}" from skills.sh; it is on`;
-      return toolText(`${what} for every agent in this workspace as ${added.id}. A person can turn it off in OrbytLink → Skills. Its instructions follow; use them for this task.\n\n${added.text}`);
+      const admin = canConfigure(identity);
+      const added = await addSkill(store, w, viewerFor(store, identity), args.skill, admin);
+      const where = added.created ? `Added "${added.title}" to OrbytLink's shared library as ${added.id}` : `"${added.title}" (${added.id}) is in the library`;
+      const on = admin ? "and it is on for every agent in this workspace" : "and you can use it now; an admin can turn it on for everyone in this workspace in OrbytLink → Skills";
+      return toolText(`${where}, ${on}. Its instructions follow; use them for this task.\n\n${added.text}`);
     } catch (error) {
       return toolText((error as Error).message, true);
     }
   }
   if (name === "orbytlink__use_skill") {
-    const skill = enabledSkills(store, w).find((s) => s.id === args.name);
-    if (!skill) return toolText("Unknown or disabled skill.", true);
-    store.audit(w, identity.user, "skill.used", skill.id);
-    return toolText(skillText(store, w, skill.id)!);
+    const id = typeof args.name === "string" ? args.name.trim().slice(0, 80) : "";
+    const text = id && skillText(store, viewerFor(store, identity), id);
+    if (!text) return toolText("Unknown skill. Find one with orbytlink__find_skills.", true);
+    store.audit(w, identity.user, "skill.used", id);
+    return toolText(text);
   }
-  if (name === "orbytlink__api_docs" || name === "orbytlink__api_request") {
-    const match = enabledApis(store, w).find((a) => a.slug === args.api);
-    if (!match) return toolText("Unknown or disabled API.", true);
-    if (name === "orbytlink__api_docs") return toolText(apiDocs(match.api, typeof args.search === "string" ? args.search : undefined));
+  if (name === API_REQUEST_TOOL) return callStoredApi(store, identity, args);
+  if (name === CONNECT_TOOL) {
+    const out = connectApp(store, w, canConfigure(identity), args);
+    return toolText("error" in out ? (out.error as string) : JSON.stringify(out, null, 1), "error" in out);
+  }
+  if (name === AI_TOOL) {
     try {
-      const out = await apiCall(store, w, match.api, { method: args.method, path: args.path, query: args.query, body: args.body });
-      store.audit(w, identity.user, "api.request", `${match.api.name} · ${args.method} ${args.path} · ${out.status}`);
-      const body = typeof out.body === "string" ? out.body : JSON.stringify(out.body, null, 2);
-      return toolText(`HTTP ${out.status}${out.truncated ? " (response truncated)" : ""}\n\n${body.slice(0, 100_000)}`, !out.ok);
+      const r = await generate(store, identity, args, "agent");
+      store.audit(w, identity.user, "ai.generate", `${r.model} · $${usd(r.costMicro).toFixed(6)}`);
+      return toolText(r.text);
     } catch (error) {
       const issues = (error as any)?.issues as { path: (string | number)[]; message: string }[] | undefined;
       return toolText(issues ? issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ") : (error as Error).message, true);
     }
   }
+  if (name === "orbytlink__api_docs") {
+    const match = enabledApis(store, w).find((a) => a.slug === args.api);
+    if (!match) return toolText("Unknown or disabled API.", true);
+    return toolText(apiDocs(match.api, typeof args.search === "string" ? args.search : undefined));
+  }
   if (name === "orbytlink__create_workflow") {
     try {
-      const known = new Set(gatewayTools(store, w).map((t) => t.name));
+      const known = new Set([...gatewayTools(store, w).map((t) => t.name), ...visibleWorkflowTools(store, identity).map((t) => t.name), ...(enabledApis(store, w).length ? [API_REQUEST_TOOL] : []), ...(aiConfigured() ? [AI_TOOL] : [])]);
       const unknown = ((args.steps as any[]) || []).map((s) => s?.tool).filter((t) => !known.has(t));
       if (unknown.length) return toolText(`Unknown tools: ${unknown.join(", ")}. Use names exactly as listed by this server.`, true);
-      const row = saveWorkflow(store, identity, { ...args, enabled: false }, undefined, "agent");
-      return toolText(`Drafted workflow "${row.name}" with ${row.steps.length} steps. It is disabled until someone reviews and enables it in OrbytLink → Workflows.`);
+      const row = saveWorkflow(store, identity, { visibility: "private", ...args, enabled: false, schedule: null }, undefined, "agent");
+      return toolText(`Drafted workflow "${row.name}" with ${row.steps.length} steps${row.visibility === "private" ? ", private to you" : ""}. It is disabled until someone reviews and enables it in OrbytLink → Workflows.`);
     } catch (error) {
       const issues = (error as any)?.issues as { path: (string | number)[]; message: string }[] | undefined;
       return toolText(issues ? `The workflow is not valid: ${issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")}` : (error as Error).message, true);
     }
   }
-  const match = enabledWorkflows(store, w).find((t) => t.name === name);
+  const match = visibleWorkflowTools(store, identity).find((t) => t.name === name);
   if (!match) return;
   try {
     const outcome = await runWorkflow(store, services, identity, match.workflow, args, "agent");

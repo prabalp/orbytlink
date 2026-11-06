@@ -1,12 +1,15 @@
 // Ready-made connections. Every entry here was checked against the vendor's own
 // documentation (see docs/CATALOG-RESEARCH.md); add new ones the same way, never from memory.
+// More vendor-hosted servers, researched and probed in bulk, come from catalog-researched.ts.
+import { researchedPresets } from "./catalog-researched";
+
 export type Preset = {
   id: string;
   name: string;
   segment: string;
   description: string;
   endpoint: string;
-  auth: "oauth" | "bearer" | "api-key";
+  auth: "oauth" | "bearer" | "api-key" | "none";
   authHeader?: string;
   oauth?: {
     mode: "discover" | "manual";
@@ -26,13 +29,17 @@ export type Preset = {
   docs: string;
 };
 
+// Catalog sections appear in this order; Search & Data and Sales & Leads lead.
 export const segments = [
+  "Search & Data",
+  "Sales & Leads",
   "Documents & Files",
   "Communication",
   "Calendar & Contacts",
   "Project Management",
   "Developer Tools",
   "Payments & Finance",
+  "AI & Content",
   "Education",
   "Platforms",
 ] as const;
@@ -206,6 +213,182 @@ export const catalog: Preset[] = [
       "classroom.topics.readonly",
     ),
   ),
+  {
+    id: "firecrawl",
+    name: "Firecrawl",
+    segment: "Search & Data",
+    description: "Scrape, crawl, search and extract web pages into clean data.",
+    endpoint: "https://mcp.firecrawl.dev/v2/mcp",
+    auth: "bearer",
+    notes: [
+      "Paste your Firecrawl API key as the bearer token. Firecrawl also offers a browser sign-in endpoint (/v2/mcp-oauth), not used here.",
+    ],
+    docs: "https://docs.firecrawl.dev/mcp-server",
+  },
+  {
+    id: "exa",
+    name: "Exa",
+    segment: "Search & Data",
+    description: "Web search, page fetching and a research agent.",
+    endpoint: "https://mcp.exa.ai/mcp",
+    auth: "api-key",
+    authHeader: "x-api-key",
+    notes: [
+      "Create an API key at dashboard.exa.ai/api-keys. New accounts start with free credits.",
+      "Without a key the server runs keyless with a free rate limit, and the research agent is unavailable.",
+    ],
+    docs: "https://docs.exa.ai/reference/exa-mcp",
+  },
+  {
+    id: "parallel",
+    name: "Parallel",
+    segment: "Search & Data",
+    description: "Web search, page fetch and deep research for agents.",
+    endpoint: "https://mcp.parallel.ai/mcp",
+    auth: "bearer",
+    notes: [
+      "Create an API key at platform.parallel.ai and paste it as the bearer token. Use the URL exactly as shown: a trailing slash returns 404.",
+    ],
+    docs: "https://docs.parallel.ai/integrations/mcp/quickstart",
+  },
+  {
+    id: "apify",
+    name: "Apify",
+    segment: "Search & Data",
+    description: "Run Apify Actors (scrapers and automations) and search the Actor store.",
+    endpoint: "https://mcp.apify.com",
+    auth: "oauth",
+    oauth: { mode: "discover" },
+    notes: [
+      "Sign in with Apify and approve access.",
+      "Prefer a token? Create one in Apify Console under API & integrations and use it as a bearer token.",
+    ],
+    docs: "https://docs.apify.com/platform/integrations/mcp",
+  },
+  {
+    id: "semrush",
+    name: "Semrush",
+    segment: "Search & Data",
+    description: "SEO and market data from Semrush’s APIs.",
+    endpoint: "https://mcp.semrush.com/v2/mcp",
+    auth: "oauth",
+    oauth: { mode: "discover" },
+    notes: [
+      "Sign in with Semrush. Needs a plan that includes API units.",
+    ],
+    docs: "https://developer.semrush.com/api/basics/semrush-mcp/",
+  },
+  {
+    id: "dataforseo",
+    name: "DataForSEO",
+    segment: "Search & Data",
+    description: "SERP, keyword and backlink data.",
+    endpoint: "https://mcp.dataforseo.com/mcp",
+    auth: "oauth",
+    oauth: { mode: "discover" },
+    notes: [
+      "Sign in with DataForSEO and click Approve. Data calls are billed to your DataForSEO account.",
+    ],
+    docs: "https://dataforseo.com/help-center/connecting-the-remote-dataforseo-mcp-server-using-oauth",
+  },
+  {
+    id: "cloudflare",
+    name: "Cloudflare",
+    segment: "Developer Tools",
+    description: "Manage accounts, zones, Workers and DNS through the Cloudflare API.",
+    endpoint: "https://mcp.cloudflare.com/mcp",
+    auth: "oauth",
+    oauth: { mode: "discover" },
+    notes: [
+      "Sign in with Cloudflare and choose the permissions to grant.",
+      "Prefer a token? Create a Cloudflare API token (user or account) and use it as a bearer token.",
+    ],
+    docs: "https://developers.cloudflare.com/agents/model-context-protocol/mcp-servers-for-cloudflare/",
+  },
+  {
+    id: "alpha-vantage",
+    name: "Alpha Vantage",
+    segment: "Payments & Finance",
+    description: "Stock, forex, crypto and economic data.",
+    endpoint: "https://mcp.alphavantage.co/mcp",
+    auth: "oauth",
+    oauth: { mode: "discover" },
+    notes: [
+      "Sign in, or enter a free Alpha Vantage API key in the browser step.",
+    ],
+    docs: "https://mcp.alphavantage.co/",
+  },
+  {
+    id: "coingecko",
+    name: "CoinGecko",
+    segment: "Payments & Finance",
+    description: "Crypto prices, market data and on-chain data.",
+    endpoint: "https://mcp.pro-api.coingecko.com/mcp",
+    auth: "oauth",
+    oauth: { mode: "discover" },
+    notes: [
+      "Needs a CoinGecko Demo or Pro API key, which you paste on CoinGecko’s page during sign-in.",
+      "The keyless server at mcp.api.coingecko.com/mcp is not offered here because the gateway needs a sign-in or key.",
+    ],
+    docs: "https://docs.coingecko.com/docs/mcp-server",
+  },
+  {
+    id: "twelve-data",
+    name: "Twelve Data",
+    segment: "Payments & Finance",
+    description: "Stock, forex, crypto and ETF data, fundamentals and indicators.",
+    endpoint: "https://mcp.twelvedata.com/mcp",
+    auth: "oauth",
+    oauth: { mode: "discover" },
+    notes: [
+      "Sign in with a Twelve Data account. No API key needed.",
+      "Twelve Data marks dynamic client registration as deprecated; if sign-in fails, this is the first thing to check.",
+    ],
+    docs: "https://twelvedata.com/docs/ai/mcp-server",
+  },
+  {
+    id: "apollo",
+    name: "Apollo.io",
+    segment: "Sales & Leads",
+    description: "Search prospects, enrich contacts and companies, manage sequences.",
+    endpoint: "https://mcp.apollo.io/mcp",
+    auth: "oauth",
+    oauth: { mode: "discover" },
+    notes: [
+      "Sign in with Apollo. Needs an active account with credits; free accounts on a personal email cannot use people or company search.",
+      "This server can read and change records. Apollo prohibits AI model training on its MCP data, so turn training off in your AI client.",
+    ],
+    docs: "https://docs.apollo.io/docs/apollo-mcp",
+  },
+  {
+    id: "hunter",
+    name: "Hunter",
+    segment: "Sales & Leads",
+    description: "Find and verify professional emails and enrich companies.",
+    endpoint: "https://mcp.hunter.io/mcp",
+    auth: "api-key",
+    authHeader: "X-API-KEY",
+    notes: [
+      "Create an API key at hunter.io/api-keys. Email verification uses credits.",
+      "Hunter also offers one-click OAuth, not used here because its discovery details are undocumented.",
+    ],
+    docs: "https://hunter.io/mcp",
+  },
+  {
+    id: "elevenlabs",
+    name: "ElevenLabs",
+    segment: "AI & Content",
+    description: "Manage voice agents and generate text to speech.",
+    endpoint: "https://api.elevenlabs.io/v1/mcp",
+    auth: "oauth",
+    oauth: { mode: "discover" },
+    notes: [
+      "Sign in with ElevenLabs, choose a workspace and authorize.",
+      "Changes made through MCP publish directly to the target branch, not as a draft. Accounts with EU, India or Singapore data residency need the regional endpoint from the docs.",
+    ],
+    docs: "https://elevenlabs.io/docs/eleven-agents/operate/hosted-mcp",
+  },
+  ...researchedPresets,
   {
     id: "composio",
     name: "Composio",

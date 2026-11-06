@@ -1,0 +1,242 @@
+source,category,tool,price_usd,unit,notes
+treg.to,Catalog entry,Douyin (TikTok China),0.001,per success,2 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,TikTok,0.00035,per success,7 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Instagram,0.0007,per success,8 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,YouTube,0.0009,per success,9 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,X (Twitter),0.0001,per success,7 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,LinkedIn,0.00045,per success,18 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Facebook,0.0012,per success,7 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Weibo,0.001,per success,3 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Zhihu,0.001,per success,2 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Reddit,0.0002,per success,6 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Bilibili,0.001,per success,2 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Kuaishou,0.001,per success,3 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Xiaohongshu (RED),0.0015,per result,3 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,WeChat Official Accounts,0.01,per success,2 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,WeChat Channels,0.01,per success,2 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Threads,0.0015,per result,4 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Pipixia,0.001,per success,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Lemon8,0.001,per success,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Toutiao,0.001,per success,2 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Xigua Video,0.001,per success,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Spotify,0.00188,per call,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Link-in-bio pages,0.00188,per call,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Pinterest,0.00012,per call,2 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Rumble,0.00188,per call,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Apple Music,0.00188,per call,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Twitch,0.00188,per call,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,WeChat Search,0.01,per success,2 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Bluesky,0.00188,per call,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Snapchat,0.00188,per call,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,SoundCloud,0.00188,per call,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Truth Social,0.00188,per call,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Youku,0.0148,per success,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Kick,0.00188,per call,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,People & contact data,0.00025,per success,50 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Company data,<0.0001,per result,47 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Creators & influencers,0.007,per call,3 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Crunchbase,0.00015,per success,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Open web & SEO data,<0.0001,per result,34 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Google Keyword Data,0.00012,per call,16 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Google Business Profile,,,1 provider(s); price is the 'from' minimum; no price listed
+treg.to,Catalog entry,Google Analytics (GA4),,,1 provider(s); price is the 'from' minimum; no price listed
+treg.to,Catalog entry,AI Visibility / AEO,0.0024,per call,5 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Bing Keyword Data,0.00015,per success,3 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,DuckDuckGo SERP,0.00015,per success,2 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Google Search Console,,,1 provider(s); price is the 'from' minimum; no price listed
+treg.to,Catalog entry,Yahoo SERP,0.002,per call,2 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Baidu SERP,0.0012,per call,2 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Naver SERP,0.0006,per call,2 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Yandex SERP,0.015,per success,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Seznam SERP,0.0006,per call,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Google Tag Manager,,,1 provider(s); price is the 'from' minimum; no price listed
+treg.to,Catalog entry,Google Ads,0.00188,per call,3 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Xingtu (Douyin creator marketplace),0.001,per success,2 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Meta Ads,0.0012,per success,8 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Pugongying (Xiaohongshu creator marketplace),0.02,per success,2 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,TikTok Ads,0.001,per success,5 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Pinterest Ads,,,1 provider(s); price is the 'from' minimum; no price listed
+treg.to,Catalog entry,QQ Huxuan,0.0443,per success,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Snapchat Ads,,,1 provider(s); price is the 'from' minimum; no price listed
+treg.to,Catalog entry,Microsoft Advertising,,,1 provider(s); price is the 'from' minimum; no price listed
+treg.to,Catalog entry,Video generation,0.28,per success (up to 0.56),5 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Image generation,0.003,per success (up to 0.012),5 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Voice generation,15,per 1M UTF-8 bytes,3 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Music generation,0.04,per success,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,AI judgment,0.0005,per call,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Stock Market Data,0.00015,per success,10 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Crypto Market Data,0.00025,per success,4 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Other market data,0.005,per call (up to 0.05),1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,TikTok Shop,0.0009,per success,7 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Amazon,0.00015,per success,6 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Taobao / Tmall,0.0221,per success,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,JD.com,0.0177,per success,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Walmart,0.00015,per success,3 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Douyin e-commerce,0.0148,per success,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,eBay,0.00135,per success,3 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Beike / Lianjia,,,1 provider(s); price is the 'from' minimum; no price listed
+treg.to,Catalog entry,1688,0.0148,per success,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Xianyu / Goofish,0.0295,per success,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Dewu / Poizon,,,1 provider(s); price is the 'from' minimum; no price listed
+treg.to,Catalog entry,Etsy,0.00015,per success,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Home Depot,0.015,per success,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Lazada,0.005,per result,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Shopify stores,0.00015,per success,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Steam,0.00015,per success,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Zillow,0.00015,per success,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,IMDb,0.0015,per result,2 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Apple App Store,0.00015,per success,5 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Google Play,0.00015,per success,5 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Tripadvisor,0.00015,per success,4 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Yelp,0.00015,per success,4 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Douban,0.0148,per success,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Trustpilot,0.00135,per success,3 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Apple Maps,0.00015,per success,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Glassdoor,0.00015,per success,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Places (local search),,,1 provider(s); price is the 'from' minimum; no price listed
+treg.to,Catalog entry,Airbnb,0.00015,per success,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Booking.com,0.00015,per success,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,GitHub,0.00015,per success,2 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Package registries,0.00015,per success,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Stack Overflow,0.00015,per success,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Telegram,0.0009,per success,3 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Slack,,,1 provider(s); price is the 'from' minimum; no price listed
+treg.to,Catalog entry,Hacker News,0.00015,per success,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Product Hunt,0.00015,per success,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Indeed,0.00015,per success,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Remote OK,0.00015,per success,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,We Work Remotely,0.00015,per success,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Academic literature,0.00015,per success,2 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Health & biomedical,0.003,per call (up to 0.03),1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Wikipedia,0.00015,per success,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Economic indicators,0.005,per call (up to 0.05),1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Medium,0.00015,per success,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Substack,0.00015,per success,1 provider(s); price is the 'from' minimum
+treg.to,Catalog entry,Weather,0.00015,per success,1 provider(s); price is the 'from' minimum
+Composio Instant Tools,Toolkit,AccuWeather,0.001,per 10 API calls,0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,API Ninjas,0.059,per 100 API requests,0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,Ahrefs,0.006,per 10 API units,0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,Exa Search,0.007,per search,0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,Firecrawl Scrape URL,0.003,per basic page scraped,0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,Google Maps Geocoding,0.005,per request,0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,Douyin Creator Marketplace (Xingtu),0.022,per successful request,15 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,Douyin E-commerce,0.014-0.044,per successful request,5 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,Facebook,0.029,per successful request,5 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,IMDb,0.007,per successful request,22 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,Instagram,0.014,per successful request,7 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,JD.com,0.022-0.037,per successful request,5 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,Kuaishou,0.014,per successful request,7 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,LinkedIn,0.029,per successful request,3 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,QQ Huxuan Creator Marketplace,0.044-0.074,per successful request,7 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,Reddit,0.014,per successful request,3 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,Shopee,0.029,per successful request,9 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,Social Media Cross-Platform Search,0.029,per successful request,1 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,Taobao and Tmall,0.022-0.044,per successful request,8 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,Temu,0.022,per successful request,1 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,TikTok,0.014,per successful request,8 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,Toutiao,0.014-0.074,per successful request,5 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,Twitter,0.014,per successful request,3 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,WeChat Channels,0.022-0.223,per successful request,12 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,WeChat Official Accounts,0.014-0.223,per successful request,22 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,Weibo,0.014,per successful request,10 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,Xianyu (GooFish),0.029,per successful request,2 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,Xiaohongshu (RedNote),0.022-0.029,per successful request,15 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,Xiaohongshu Creator Marketplace (Pugongying),0.022-0.074,per successful request,15 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,Xiaohongshu E-commerce,0.029,per successful request,1 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,YOUKU,0.014,per successful request,3 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,YouTube,0.014,per successful request,7 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,Zhihu,0.014-0.029,per successful request,13 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,LeadMagic,0.020,per company enriched,1 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,LimaData,0.002-0.30,per record/match/lookup,16 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,Listen Notes,0.04,per successful API request,24 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,Logo.dev,0,per request,2 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,Luma Labs,0.04-0.10 image; from 0.06 video,per image or video,3 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,Lusha,0.125,per credit,4 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,MagicSlides,0.16,per completed presentation,3 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,Marketstack,0.009,per 10 stock requests,22 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,Mathpix,0.002,per request,2 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,Memelord,0-0.10,per item,20 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,MiniMax,0.350 image; 0.006-0.010 speech,per 100 images; per 100 characters,2 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,Mistral AI,0.004,per OCR page,1 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,MrScraper,0.995,"per 1,000 tokens",3 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,OpenAI,0.10 (max 2),per 1M input tokens,1 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,OpenAlex,0-0.01,per request or 10 calls,5 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,OpenRouter,from 0.02 in / 0.04 out (max 2),per 1M tokens,1 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,OpenWeb Ninja,0.003-0.007,per request,40 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,Parallel,0.001,per request,2 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,PDF.co,0.006,per 10 API credits,40 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,People Data Labs,0-0.55,per record or request,26 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,PhotoRoom,0.02-0.10,per successful operation,3 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,PredictLeads,0.04-0.12,per record returned,7 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,Prospeo,0.024-0.245,per match or billed page,8 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,ScrapeCreators,0.001,per request or credit,60+ tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,Semrush,0.325,"per 1,000 API units",12 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,SEOptimer,0.20,per report,2 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,SerpApi,0.025,per successful search,50+ tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,Serper,0.001,per credit/request,10 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,Strale,0.011,per EUR cent of max price,2 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,Supadata,0.01,per request or results page,10 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,Surf,0.006,per credit (1-7 credits per request),100+ tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,Tavily,0.008,per 5 extractions or per search,2 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,The Companies API,0.002,per search or lookup credit,6 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,TikHub,0.001 (most),per request,~282 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,TinyFish,0,per request,2 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,Tomba,0.008-0.089,per successful lookup/find/verify,15 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,Twelve Data,0.001,per 100 requests or credits,71 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,Vaquill,0-0.01,per credit/page/request,22 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,Web3 Career,0,per request,1 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,Yelp,0.021,per successful API call,10 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,You.com,0.005,per web search,1 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,ZeroBounce,0-0.39,per email validated/scored; domain search 0.39 per format found,6 tools; 0% markup on provider cost; each call also uses one Composio tool call
+Composio Instant Tools,Toolkit,Akta,,,"Supported by Instant; price not captured, see composio.dev/pricing"
+Composio Instant Tools,Toolkit,Alpha Vantage,,,"Supported by Instant; price not captured, see composio.dev/pricing"
+Composio Instant Tools,Toolkit,API-Sports,,,"Supported by Instant; price not captured, see composio.dev/pricing"
+Composio Instant Tools,Toolkit,Apify,,,"Supported by Instant; price not captured, see composio.dev/pricing"
+Composio Instant Tools,Toolkit,Apollo,,,"Supported by Instant; price not captured, see composio.dev/pricing"
+Composio Instant Tools,Toolkit,Artificial Analysis,,,"Supported by Instant; price not captured, see composio.dev/pricing"
+Composio Instant Tools,Toolkit,Black Forest Labs,,,"Supported by Instant; price not captured, see composio.dev/pricing"
+Composio Instant Tools,Toolkit,Bright Data,,,"Supported by Instant; price not captured, see composio.dev/pricing"
+Composio Instant Tools,Toolkit,Browser Use,,,"Supported by Instant; price not captured, see composio.dev/pricing"
+Composio Instant Tools,Toolkit,CarsXE,,,"Supported by Instant; price not captured, see composio.dev/pricing"
+Composio Instant Tools,Toolkit,Clay,,,"Supported by Instant; price not captured, see composio.dev/pricing"
+Composio Instant Tools,Toolkit,Cloro,,,"Supported by Instant; price not captured, see composio.dev/pricing"
+Composio Instant Tools,Toolkit,Cloudflare Api Key,,,"Supported by Instant; price not captured, see composio.dev/pricing"
+Composio Instant Tools,Toolkit,CoinGecko,,,"Supported by Instant; price not captured, see composio.dev/pricing"
+Composio Instant Tools,Toolkit,CompanyEnrich,,,"Supported by Instant; price not captured, see composio.dev/pricing"
+Composio Instant Tools,Toolkit,ContactOut,,,"Supported by Instant; price not captured, see composio.dev/pricing"
+Composio Instant Tools,Toolkit,Context.dev,,,"Supported by Instant; price not captured, see composio.dev/pricing"
+Composio Instant Tools,Toolkit,Crustdata,,,"Supported by Instant; price not captured, see composio.dev/pricing"
+Composio Instant Tools,Toolkit,DataForSEO,,,"Supported by Instant; price not captured, see composio.dev/pricing"
+Composio Instant Tools,Toolkit,Deepgram,,,"Supported by Instant; price not captured, see composio.dev/pricing"
+Composio Instant Tools,Toolkit,DeepSeek,,,"Supported by Instant; price not captured, see composio.dev/pricing"
+Composio Instant Tools,Toolkit,ElevenLabs,,,"Supported by Instant; price not captured, see composio.dev/pricing"
+Composio Instant Tools,Toolkit,EODHD APIs,,,"Supported by Instant; price not captured, see composio.dev/pricing"
+Composio Instant Tools,Toolkit,Exa,,,"Supported by Instant; price not captured, see composio.dev/pricing"
+Composio Instant Tools,Toolkit,Fal.ai,,,"Supported by Instant; price not captured, see composio.dev/pricing"
+Composio Instant Tools,Toolkit,Finnhub,,,"Supported by Instant; price not captured, see composio.dev/pricing"
+Composio Instant Tools,Toolkit,Firecrawl,,,"Supported by Instant; price not captured, see composio.dev/pricing"
+Composio Instant Tools,Toolkit,Fish Audio,,,"Supported by Instant; price not captured, see composio.dev/pricing"
+Composio Instant Tools,Toolkit,Gemini,,,"Supported by Instant; price not captured, see composio.dev/pricing"
+Composio Instant Tools,Toolkit,Google Maps,,,"Supported by Instant; price not captured, see composio.dev/pricing"
+Composio Instant Tools,Toolkit,GraphHopper,,,"Supported by Instant; price not captured, see composio.dev/pricing"
+Composio Instant Tools,Toolkit,Higgsfield,,,"Supported by Instant; price not captured, see composio.dev/pricing"
+Composio Instant Tools,Toolkit,HTML/CSS to Image,,,"Supported by Instant; price not captured, see composio.dev/pricing"
+Composio Instant Tools,Toolkit,Hunter,,,"Supported by Instant; price not captured, see composio.dev/pricing"
+Composio Instant Tools,Toolkit,Icypeas,,,"Supported by Instant; price not captured, see composio.dev/pricing"
+Composio Instant Tools,Toolkit,Ignav Flights,,,"Supported by Instant; price not captured, see composio.dev/pricing"
+Composio Instant Tools,Toolkit,IPinfo,,,"Supported by Instant; price not captured, see composio.dev/pricing"
+Composio Instant Tools,Toolkit,Jev,,,"Supported by Instant; price not captured, see composio.dev/pricing"
+Composio Instant Tools,Toolkit,Job Search,,,"Supported by Instant; price not captured, see composio.dev/pricing"
+Composio Instant Tools,Toolkit,Just One API,,,"Supported by Instant; price not captured, see composio.dev/pricing"
+Composio Instant Tools,Toolkit,(A-Z gaps),,,Some toolkits between 'Just One API' and 'Kuaishou' were not read; full list at composio.dev/pricing
+Alternative,Platform,Arcade,,"per tool call, plus per auth event on paid plans",Pay per call: Yes. Action runtime that runs agent actions as the signed-in user. https://www.arcade.dev/pricing
+Alternative,Platform,Smithery,,"usage above included monthly calls, $0.10 per 1,000",Pay per call: Yes. MCP server directory and hosting with managed OAuth. https://smithery.ai
+Alternative,Platform,DataForSEO (direct),,"per request from prepaid balance, $50 minimum top-up","Pay per call: Yes. SEO data direct from upstream, own MCP server. https://dataforseo.com/pricing"
+Alternative,Platform,Composio (standard tools),,per tool call after free tier; overage reported as $4/1k (trackers conflict),"Pay per call: Yes. Hosted auth and action layer, 1,500+ apps. https://composio.dev/pricing"
+Alternative,Platform,Zapier MCP,,task-based subscription; each successful call uses 2 tasks,"Pay per call: Partly. 9,000+ apps as an MCP server. https://zapier.com/mcp"
+Alternative,Platform,Apify,,subscription plus compute units or per-result Actor pricing,Pay per call: Partly. Marketplace of scraping Actors. https://apify.com/pricing
+Alternative,Platform,RapidAPI (Nokia API Hub),,each API sets own subscription or pay-per-use plan,Pay per call: Per API. One key for thousands of REST APIs. https://rapidapi.com
+Alternative,Platform,Pipedream Connect,,monthly plans plus per-user fee,Pay per call: No. Managed auth and tools for SaaS products. https://pipedream.com/connect
+Alternative,Platform,Cloudflare Agents paidTool (x402),,you set price per tool; USDC via x402,Pay per call: Yes. Build-your-own: charge per call on your own MCP server. https://developers.cloudflare.com/agents/agentic-payments/x402/charge-for-mcp-tools
+Alternative,Platform,x402 Call,,"per call, USDC; marketplace commission","Pay per call: Yes. Agent-native tool marketplace (small project, unverified). https://www.hackquest.io/projects/x402-Call"
+Alternative,Platform,AiPayGen,,"per call, card or USDC","Pay per call: Yes. 250 AI tools in one MCP server (small project, unverified). https://mcpservers.org/vi/servers/damien829/aipaygen"

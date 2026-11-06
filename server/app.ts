@@ -12,10 +12,13 @@ import { Store, type Row } from "./store.js";
 import { configureEmailAuth, derive } from "./auth.js";
 import { configureOAuthCallback, configureOAuthRoutes, credentialFor, dropOAuth, redirectUri } from "./oauth.js";
 import { adapters, type ServiceAdapters } from "./adapters.js";
-import { gatewayServer, gatewayTools } from "./gateway.js";
+import { API_REQUEST_TOOL, enabledApis, gatewayServer, gatewayTools, visibleWorkflowTools } from "./gateway.js";
 import { configureOrgs, describe, syncOrgName } from "./orgs.js";
-import { ADDED, removeSkill, skillCatalog, skillText } from "./skills.js";
-import { runWorkflow, saveWorkflow } from "./workflows.js";
+import { addSkill, libraryEntry, removeSkill, skillCatalog, skillText } from "./skills.js";
+import { authoredDetail, createAuthored, deleteAuthored, initializeLibrary, libraryCount, librarySearch, updateAuthored, viewerFor, type Scope } from "./library.js";
+import { MIN_INSTALLS, searchRegistry } from "./skill-registry.js";
+import { AI_TOOL, aiConfigured, aiSummary, generate, saveAiSettings } from "./ai.js";
+import { forgetResults, lastResult, listedFor, manageable, runWorkflow, saveWorkflow, visibleTo } from "./workflows.js";
 import { apiCall, apiSchema, fetchDocs, fetchLogo, ingestDocs, publicApi } from "./apis.js";
 import {
   connectionSchema,
@@ -84,6 +87,7 @@ export function createApp(
     next();
   });
   const emailAuth = configureEmailAuth(app, store);
+  initializeLibrary(store);
   const oauthKey = derive(store, "orbytlink:oauth:v1");
   configureOAuthCallback(
     app,
@@ -185,9 +189,21 @@ export function createApp(
         calls: store.list(i.workspace, "calls").slice(0, 100),
         oauthRedirectUri: redirectUri(),
         tokens: emailAuth.listTokens(req),
-        skills: skillCatalog(store, i.workspace),
-        workflows: store.list(i.workspace, "workflows"),
-        workflowRuns: store.list(i.workspace, "workflow_runs").slice(0, 50),
+        skills: skillCatalog(store, i.workspace, viewerFor(store, i)),
+        workflows: listedFor(store, i),
+        workflowRuns: store
+          .list(i.workspace, "workflow_runs")
+          .filter((r) => r.user === i.user || listedFor(store, i).some((wf) => wf.id === r.workflowId && visibleTo(wf, i)))
+          .slice(0, 50),
+        ai: aiSummary(store, i.workspace),
+        // Steps can also call stored APIs, AI models and other workflows, besides app tools.
+        workflowStepTools: [
+          ...(aiConfigured() ? [{ name: AI_TOOL, title: "Ask an AI model", app: "AI models", args: ["model", "prompt", "system", "maxTokens", "temperature", "json"] }] : []),
+          ...(enabledApis(store, i.workspace).length
+            ? [{ name: API_REQUEST_TOOL, title: "Call a stored API", app: "APIs", args: ["api", "method", "path", "query", "body"], apis: enabledApis(store, i.workspace).map((a) => a.slug) }]
+            : []),
+          ...visibleWorkflowTools(store, i).map((t) => ({ name: t.name, title: t.workflow.name, app: "Workflows", args: (t.workflow.inputs || []).map((x: { name: string }) => x.name) })),
+        ],
         apis: store.list(i.workspace, "apis").map(publicApi),
         apiCalls: store.list(i.workspace, "api_calls").slice(0, 50),
         ...describe(store, (req.user as any)?.id, i),
@@ -328,7 +344,7 @@ export function createApp(
     },
   );
   app.get("/api/skills/:id", permit("read"), (req, res) => {
-    const text = skillText(store, identity(res).workspace, String(req.params.id));
+    const text = skillText(store, viewerFor(store, identity(res)), String(req.params.id));
     if (!text) throw Object.assign(new Error("Record not found"), { status: 404 });
     res.json({ id: req.params.id, text });
   });
@@ -336,7 +352,8 @@ export function createApp(
   app.put("/api/skills/:id", permit("configure"), (req, res) => {
     const i = identity(res),
       id = String(req.params.id);
-    if (!skillText(store, i.workspace, id)) throw Object.assign(new Error("Record not found"), { status: 404 });
+    // Only skills this admin can see may be turned on for their workspace.
+    if (!skillText(store, viewerFor(store, i), id)) throw Object.assign(new Error("Record not found"), { status: 404 });
     const { enabled } = z.object({ enabled: z.boolean() }).parse(req.body);
     store.put(i.workspace, "skills", { id, enabled });
     store.audit(i.workspace, i.user, enabled ? "skill.enabled" : "skill.disabled", id);
@@ -346,22 +363,25 @@ export function createApp(
   app.delete("/api/skills/:id", permit("configure"), (req, res) => {
     const i = identity(res),
       id = String(req.params.id);
-    if (!store.list(i.workspace, ADDED).some((r) => r.id === id)) throw Object.assign(new Error("Record not found"), { status: 404 });
+    if (!store.list(i.workspace, "skills").some((r) => r.id === id)) throw Object.assign(new Error("Record not found"), { status: 404 });
     removeSkill(store, i.workspace, i.user, id);
     res.json({ ok: true });
   });
-  app.post("/api/workflows", permit("configure"), (req, res) => {
+  // Members may keep private workflows of their own; saveWorkflow enforces who may change what.
+  app.post("/api/workflows", permit("call"), (req, res) => {
     const source = req.body?.source === "template" ? "template" : "console";
     res.json(saveWorkflow(store, identity(res), req.body, undefined, source));
   });
-  app.put("/api/workflows/:id", permit("configure"), (req, res) => {
+  app.put("/api/workflows/:id", permit("call"), (req, res) => {
     const i = identity(res);
     res.json(saveWorkflow(store, i, req.body, store.get(i.workspace, "workflows", String(req.params.id))));
   });
-  app.delete("/api/workflows/:id", permit("configure"), (req, res) => {
+  app.delete("/api/workflows/:id", permit("call"), (req, res) => {
     const i = identity(res),
       wf = store.get(i.workspace, "workflows", String(req.params.id));
+    if (!manageable(wf, i)) throw Object.assign(new Error("Only an admin or the workflow's owner can delete it."), { status: 403 });
     store.remove(i.workspace, "workflows", wf.id);
+    forgetResults(store, i.workspace, wf.id);
     store.audit(i.workspace, i.user, "workflow.deleted", wf.name);
     res.json({ ok: true });
   });
@@ -369,11 +389,91 @@ export function createApp(
   app.post("/api/workflows/:id/run", permit("call"), async (req, res) => {
     const i = identity(res),
       wf = store.get(i.workspace, "workflows", String(req.params.id));
+    if (!visibleTo(wf, i)) throw Object.assign(new Error("Record not found"), { status: 404 });
     // Drafts (including agent-written ones) run only for people who can review them.
-    if (!wf.enabled && !i.permissions.includes("configure"))
+    if (!wf.enabled && !manageable(wf, i))
       throw Object.assign(new Error("This workflow is a draft. An admin must enable it first."), { status: 403 });
     const inputs = z.record(z.string(), z.string().max(4000)).default({}).parse(req.body?.inputs);
     res.json(await runWorkflow(store, services, i, wf, inputs, "console"));
+  });
+  // The shared skill library: searched a page at a time, never sent whole.
+  app.get("/api/library", permit("read"), (req, res) => {
+    const i = identity(res);
+    const q = typeof req.query.q === "string" ? req.query.q.slice(0, 200) : "";
+    const page = Math.max(0, Math.min(1000, Number(req.query.page) || 0));
+    const scope = (["all", "mine", "shared", "public"].includes(String(req.query.scope)) ? req.query.scope : "all") as Scope;
+    const viewer = viewerFor(store, i);
+    const on = new Map(store.list(i.workspace, "skills").map((r) => [r.id, !!r.enabled]));
+    const found = librarySearch(store, q, viewer, { limit: 30, offset: page * 30, scope });
+    res.json({ total: found.total, all: libraryCount(store, viewer), page, items: found.items.map((l) => libraryEntry(l, on.get(l.id) ?? false, viewer)) });
+  });
+  // skills.sh results for the same words, minus what the library already has.
+  app.get("/api/library/registry", permit("read"), async (req, res) => {
+    const q = typeof req.query.q === "string" ? req.query.q.trim().slice(0, 200) : "";
+    if (!q) return void res.json({ items: [] });
+    const have = new Set(librarySearch(store, q, viewerFor(store, identity(res)), { limit: 50, scope: "public" }).items.map((l) => `${l.repo}/${l.skill}`.toLowerCase()));
+    try {
+      const items = (await searchRegistry(q, 12))
+        .filter((r) => !have.has(`${r.repo}/${r.skill}`.toLowerCase()))
+        .map((r) => ({ skill: `${r.repo}@${r.skill}`, name: r.name, repo: r.repo, installs: r.installs, canAdd: r.installs >= MIN_INSTALLS, page: `https://skills.sh/${r.repo}/${r.skill}` }));
+      res.json({ items, minInstalls: MIN_INSTALLS });
+    } catch {
+      res.json({ items: [], error: "skills.sh could not be searched right now." });
+    }
+  });
+  // Anyone who can call tools may add a public skills.sh skill to the library; turning it on for
+  // the whole workspace stays with admins.
+  app.post("/api/library", permit("call"), async (req, res) => {
+    const i = identity(res);
+    const { skill, enable } = z.object({ skill: z.string().min(3).max(300), enable: z.boolean().default(false) }).parse(req.body);
+    const admin = i.permissions.includes("configure");
+    const added = await addSkill(store, i.workspace, viewerFor(store, i), skill, enable && admin);
+    res.json({ id: added.id, title: added.title, created: added.created, enabled: added.enabled });
+  });
+  // Skills people write or upload: private, shared with chosen people and organizations, or public.
+  // Anyone who can call tools may write one; only its author may change or delete it.
+  app.post("/api/skills/authored", permit("call"), (req, res) => {
+    const i = identity(res);
+    const s = createAuthored(store, viewerFor(store, i), req.body);
+    store.audit(i.workspace, i.user, "skill.written", `${s.id} · ${s.visibility}`);
+    res.json(s);
+  });
+  app.get("/api/skills/authored/:id", permit("call"), (req, res) => {
+    res.json(authoredDetail(store, viewerFor(store, identity(res)), String(req.params.id)));
+  });
+  app.put("/api/skills/authored/:id", permit("call"), (req, res) => {
+    const i = identity(res);
+    const s = updateAuthored(store, viewerFor(store, i), String(req.params.id), req.body);
+    store.audit(i.workspace, i.user, "skill.edited", `${s.id} · ${s.visibility}`);
+    res.json(s);
+  });
+  app.delete("/api/skills/authored/:id", permit("call"), (req, res) => {
+    const i = identity(res);
+    deleteAuthored(store, viewerFor(store, i), String(req.params.id));
+    store.audit(i.workspace, i.user, "skill.deleted", String(req.params.id));
+    res.json({ ok: true });
+  });
+  // AI models: credit, this month's spend, limits and recent usage.
+  app.get("/api/ai", permit("read"), (_req, res) => {
+    const w = identity(res).workspace;
+    res.json({ ...aiSummary(store, w), usage: store.list(w, "ai_usage").slice(0, 100), ledger: store.list(w, "ai_ledger").slice(0, 50) });
+  });
+  app.put("/api/ai/settings", permit("configure"), (req, res) => {
+    res.json(saveAiSettings(store, identity(res), req.body));
+  });
+  // Trying a model from the catalog is a real, charged call.
+  app.post("/api/ai/try", permit("call"), async (req, res) => {
+    const i = identity(res);
+    const r = await generate(store, i, req.body, "console");
+    store.audit(i.workspace, i.user, "ai.generate", `${r.model} · console`);
+    res.json(r);
+  });
+  // The latest kept result of a workflow, for the person asking.
+  app.get("/api/workflows/:id/result", permit("call"), (req, res) => {
+    const i = identity(res),
+      wf = store.get(i.workspace, "workflows", String(req.params.id));
+    if (!visibleTo(wf, i)) throw Object.assign(new Error("Record not found"), { status: 404 });
+    res.json(lastResult(store, i, wf.id));
   });
   async function saveApi(req: Request, res: Response) {
     const i = identity(res),
@@ -483,7 +583,8 @@ export function errorHandler(error: any, req: Request, res: Response, _next: Nex
   const bug = [TypeError, ReferenceError, RangeError].some((t) => error instanceof t);
   const status = error instanceof z.ZodError ? 400 : error.status || (bug ? 500 : 400);
   // Anything without a deliberate status is unexpected: log it. Never the body, which may hold secrets.
-  if (!(error instanceof z.ZodError) && (!error.status || status >= 500))
+  // Errors marked safe (credit, limits, provider refusals) carry a message written for people.
+  if (!(error instanceof z.ZodError) && !error?.safe && (!error.status || status >= 500))
     console.error(`[${new Date().toISOString()}] ${req.method} ${req.path} → ${status}`, error?.stack || error);
   if (res.headersSent) return;
   const message =
@@ -491,7 +592,9 @@ export function errorHandler(error: any, req: Request, res: Response, _next: Nex
       ? error.issues
           .map((i) => `${i.path.join(".")}: ${i.message}`)
           .join("; ")
-      : status === 401
+      : error?.safe
+        ? error.message
+        : status === 401
         ? "Authentication required"
         : status === 404
           ? "Record not found"
