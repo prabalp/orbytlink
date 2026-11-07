@@ -4,6 +4,19 @@
 
 Contact: hello@orbytlink.com
 Product: https://app.orbytlink.com/
+Last updated: 2026-11-07
+
+## What OrbytLink is
+
+OrbytLink is a gateway for AI agents. A team connects each app once (an MCP server, or any API with a key or OAuth sign-in), and every agent they use, such as Claude, Cursor or any MCP client, reaches all of those apps through a single endpoint. The agent sees only the tools it needs, and credentials stay in OrbytLink instead of in each agent.
+
+## What it does
+
+- **One connection point.** Add apps from a catalog of ready-made MCP servers and APIs, or add your own. Agents use one MCP endpoint and one token per agent.
+- **Teams and access.** Workspaces can be shared with an organization, with admin and member roles and invite links, so people share connections without sharing secrets.
+- **Skills.** A shared library of agent skills (written instructions for a task) that agents can find and load when they are relevant. Skills can be private, shared with a team, or public.
+- **Workflows.** When an agent finishes a task well, OrbytLink can capture it as a workflow: a fixed, ordered list of tool calls that runs the same way every time, on a schedule or on demand, without a model in the loop. A workflow can include decision steps, retries, saved state, cached results and a step-by-step run log. Workflows export to and import from a plain Markdown file.
+- **AI models.** Teams can call text models through OrbytLink and pay for what they use from prepaid credit.
 
 ## Key pages
 
@@ -11,3 +24,8 @@ Product: https://app.orbytlink.com/
 - [Skills and workflows](https://orbytlink.com/skills.html): bundled agent skills, workflow templates, and tool references
 - [Privacy policy](https://orbytlink.com/privacy): how OrbytLink handles website and account data
 - [Terms of service](https://orbytlink.com/terms): terms for using OrbytLink
+
+## Optional
+
+- [Open the app](https://app.orbytlink.com/): sign up and connect an agent
+- [Sitemap](https://orbytlink.com/sitemap.xml)
