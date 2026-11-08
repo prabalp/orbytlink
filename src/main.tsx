@@ -1540,7 +1540,7 @@ function CatalogPage({ state: s, canConfigure, search, setSearch, onConnect, onA
     return (
       <>
         {viewSwitch}
-        <ModelsView search={search} setSearch={setSearch} segment={segment} setSegment={setSegment} onOpen={onModel} />
+        <ModelsView search={search} setSearch={setSearch} segment={segment} setSegment={setSegment} onOpen={onModel} scale={s.ai?.priceScale || 1} />
       </>
     );
   if (view === "api") {
@@ -1682,9 +1682,9 @@ function CatalogPage({ state: s, canConfigure, search, setSearch, onConnect, onA
 }
 // AI models and their prices, from the same dated snapshot as orbytlink.com. The list (about 9 KB
 // gzipped) is fetched only when this view opens.
-const modelPrice = (r: [string, string] | null, from?: boolean) =>
-  r ? <><span>{from ? "From " : ""}${Number(r[0]).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 6 })}</span><small>/ {r[1]}</small></> : <span className="muted">—</span>;
-function ModelsView({ search, setSearch, segment, setSegment, onOpen }: any) {
+const modelPrice = (r: [string, string] | null, from?: boolean, scale = 1) =>
+  r ? <><span>{from ? "From " : ""}${(Number(r[0]) * scale).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 6 })}</span><small>/ {r[1]}</small></> : <span className="muted">—</span>;
+function ModelsView({ search, setSearch, segment, setSegment, onOpen, scale = 1 }: any) {
   const [data, setData] = useState<{ updatedAt: string; models: ModelRow[] } | null>(null);
   const [failed, setFailed] = useState(false);
   useEffect(() => {
@@ -1738,8 +1738,8 @@ function ModelsView({ search, setSearch, segment, setSegment, onOpen }: any) {
                     </td>
                     <td className="muted">{m.category}</td>
                     <td className="muted">{m.context ? `${m.context.toLocaleString("en-US")} tokens` : "—"}</td>
-                    <td className="model-price">{modelPrice(m.input, m.from)}</td>
-                    <td className="model-price">{modelPrice(m.output, m.from)}</td>
+                    <td className="model-price">{modelPrice(m.input, m.from, scale)}</td>
+                    <td className="model-price">{modelPrice(m.output, m.from, scale)}</td>
                   </tr>
                 ))}
               </tbody>

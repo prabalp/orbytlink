@@ -57,6 +57,20 @@ afterEach(() => {
   delete process.env.AI_GATEWAY_API_KEY;
 });
 
+it("follows AI_MARKUP_PERCENT for both the price shown and the amount charged", async () => {
+  grantCredits(store, workspace, 10_000_000, "operator");
+  const [inPrice, outPrice] = modelPrices[MODEL]; // stored with the 5% the catalog was built with
+  const cost = (percent: number) => Math.ceil((1000 * inPrice + 500 * outPrice) * ((1 + percent / 100) / 1.05));
+  for (const [setting, percent] of [["0", 0], ["20", 20], ["nonsense", 5], ["-3", 5]] as const) {
+    process.env.AI_MARKUP_PERCENT = setting;
+    const r = (await api("/api/ai/try", { model: MODEL, prompt: "hi", maxTokens: 600 })).data;
+    expect(r.costMicro, `AI_MARKUP_PERCENT=${setting}`).toBe(cost(percent));
+    expect((await api("/api/ai")).data.priceScale).toBeCloseTo((1 + percent / 100) / 1.05, 10);
+  }
+  delete process.env.AI_MARKUP_PERCENT;
+  expect((await api("/api/ai/try", { model: MODEL, prompt: "hi", maxTokens: 600 })).data.costMicro).toBe(cost(5));
+});
+
 it("charges the listed price for the tokens used, with the operator's key, and refuses calls it cannot pay for", async () => {
   expect((await api("/api/ai/try", { model: MODEL, prompt: "hi" })).status).toBe(402);
   expect(gateway).toHaveLength(0);

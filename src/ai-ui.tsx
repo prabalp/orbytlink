@@ -8,7 +8,7 @@ type Data = Record<string, any>;
 type Call = (path: string, body?: unknown, method?: string) => Promise<any>;
 export type ModelRow = { id: string; name: string; provider: string; category: string; context: number | null; input: [string, string] | null; output: [string, string] | null; from?: boolean };
 export const dollars = (micro: number, digits = 2) => `$${(micro / 1_000_000).toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: Math.max(digits, 6) })}`;
-const price = (r: [string, string] | null, from?: boolean) => (r ? `${from ? "From " : ""}$${Number(r[0]).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 6 })} / ${r[1]}` : "—");
+const price = (r: [string, string] | null, from?: boolean, scale = 1) => (r ? `${from ? "From " : ""}$${(Number(r[0]) * scale).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 6 })} / ${r[1]}` : "—");
 // Only text models priced per token can be called for now; the server checks the same rule.
 export const callable = (m: ModelRow) => m.category === "Text & reasoning" && m.input?.[1] === "1M tokens" && m.output?.[1] === "1M tokens";
 
@@ -32,8 +32,8 @@ export function ModelDetail({ model: m, ai, call, onSpent }: { model: ModelRow; 
         <div><dt>Model ID</dt><dd><code>{m.id}</code></dd></div>
         <div><dt>Type</dt><dd>{m.category}</dd></div>
         <div><dt>Context</dt><dd>{m.context ? `${m.context.toLocaleString("en-US")} tokens` : "—"}</dd></div>
-        <div><dt>Input</dt><dd>{price(m.input, m.from)}</dd></div>
-        <div><dt>Output</dt><dd>{price(m.output, m.from)}</dd></div>
+        <div><dt>Input</dt><dd>{price(m.input, m.from, ai.priceScale || 1)}</dd></div>
+        <div><dt>Output</dt><dd>{price(m.output, m.from, ai.priceScale || 1)}</dd></div>
         <div><dt>Your AI credit</dt><dd>{dollars(ai.balance)}</dd></div>
       </dl>
       {why ? (

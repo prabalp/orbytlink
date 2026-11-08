@@ -17,6 +17,18 @@ const month = (d = new Date()) => d.toISOString().slice(0, 7);
 const row = (store: Store, w: string, kind: string, id: string) => store.list(w, kind).find((r) => r.id === id);
 export const usd = (micro: number) => micro / 1_000_000;
 
+// The stored prices (model-prices.ts, the catalog) already include a 5% markup over the provider's
+// list price. AI_MARKUP_PERCENT sets the markup you actually want: 0 sells at cost, 10 adds 10%.
+// It scales the stored price, so the amount charged and the amount shown always agree.
+// Unset or invalid keeps the 5% the catalog was built with.
+export const BAKED_MARKUP_PERCENT = 5;
+export function markupPercent() {
+  const raw = process.env.AI_MARKUP_PERCENT?.trim();
+  const n = raw ? Number(raw) : NaN;
+  return Number.isFinite(n) && n >= 0 && n <= 1000 ? n : BAKED_MARKUP_PERCENT;
+}
+export const priceScale = () => (1 + markupPercent() / 100) / (1 + BAKED_MARKUP_PERCENT / 100);
+
 export function aiSummary(store: Store, w: string) {
   const settings: Record<string, any> = row(store, w, "ai_settings", "settings") || {};
   return {
@@ -26,6 +38,7 @@ export function aiSummary(store: Store, w: string) {
     monthSpent: row(store, w, "ai_months", month())?.micro || 0,
     monthlyLimit: settings.monthlyLimit ?? null,
     pricesAsOf: PRICES_AS_OF,
+    priceScale: priceScale(),
   };
 }
 export const addBalance = (store: Store, w: string, micro: number) =>
@@ -91,7 +104,8 @@ export async function generate(store: Store, identity: Identity, input: unknown,
   const req = generateSchema.parse(input);
   const price = modelPrices[req.model];
   if (!price) throw fail(`"${req.model.slice(0, 120)}" is not a text model with a listed price. Pick one from Catalog → AI models.`, 400);
-  const [inPrice, outPrice] = price;
+  const scale = priceScale();
+  const [inPrice, outPrice] = [price[0] * scale, price[1] * scale];
   const messages = [...(req.system ? [{ role: "system", content: req.system }] : []), ...(req.messages || []), ...(req.prompt?.trim() ? [{ role: "user", content: req.prompt }] : [])];
   // A deliberately high estimate: about 3 characters per token, plus a little per message.
   const estimatedInput = Math.ceil(messages.reduce((n, m) => n + m.content.length, 0) / 3) + 16 * messages.length;
