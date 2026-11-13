@@ -92,6 +92,158 @@ export function ModelDetail({ model: m, ai, call, onSpent }: { model: ModelRow; 
   );
 }
 
+
+// Buying credit. The person pays on the provider's own page (Cashfree for rupees, Dodo Payments for
+// dollars when it is set up; no card details here); coming back, we ask
+// the server to check the order until the credit lands, so the balance is never stale.
+const money = (n: number, currency: string) => new Intl.NumberFormat(currency === "INR" ? "en-IN" : "en-US", { style: "currency", currency, maximumFractionDigits: 2 }).format(n);
+const statusText: Record<string, string> = { created: "Waiting for payment", paid: "Paid", failed: "Failed", expired: "Expired", mismatch: "Needs review" };
+declare global {
+  interface Window {
+    Cashfree?: (o: { mode: string }) => { checkout: (o: { paymentSessionId: string; redirectTarget: string }) => Promise<unknown> };
+  }
+}
+const loadCashfree = () =>
+  new Promise<void>((resolve, reject) => {
+    if (window.Cashfree) return resolve();
+    const el = document.createElement("script");
+    el.src = "https://sdk.cashfree.com/js/v3/cashfree.js";
+    el.onload = () => resolve();
+    el.onerror = () => reject(new Error("Cashfree's payment page could not be loaded. Check your connection and try again."));
+    document.head.appendChild(el);
+  });
+function BuyCredit({ call, canConfigure, onPaid }: { call: Call; canConfigure: boolean; onPaid: () => void }) {
+  const [data, setData] = useState<Data | null>(null);
+  const [currency, setCurrency] = useState<"USD" | "INR">(typeof navigator !== "undefined" && /-IN$/i.test(navigator.language) ? "INR" : "USD");
+  const [busy, setBusy] = useState("");
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const load = () =>
+    call("/payments").then((d: Data) => {
+      setData(d);
+      // On the first load, start on the currency the server suggests by country; always keep to one on offer.
+      const offered: ("USD" | "INR")[] = d.currencies || [];
+      const first = !data;
+      setCurrency((c) => (first && offered.includes(d.suggested) ? d.suggested : offered.includes(c) ? c : offered[0] || c));
+    }, (e) => setError(e.message));
+  useEffect(() => {
+    void load();
+    // Back from the payment page: ?pay_order=<id> (older Cashfree orders used ?cf_order=). Check it now
+    // and every few seconds until it settles.
+    const params = new URLSearchParams(window.location.search);
+    const order = params.get("pay_order") || params.get("cf_order");
+    if (!order) return;
+    params.delete("pay_order");
+    params.delete("cf_order");
+    history.replaceState(null, "", `${window.location.pathname}${params.toString() ? `?${params}` : ""}${window.location.hash}`);
+    let live = true;
+    setNotice("Checking your payment…");
+    (async () => {
+      for (let i = 0; i < 20 && live; i++) {
+        try {
+          const r = await call(`/payments/orders/${encodeURIComponent(order)}/check`, {});
+          if (r.payment.status === "paid") {
+            setNotice(`Payment received. $${r.payment.creditUsd} of credit was added.`);
+            await load();
+            onPaid();
+            return;
+          }
+          if (r.payment.status !== "created") {
+            setNotice(`This payment is ${statusText[r.payment.status]?.toLowerCase() || r.payment.status}. No credit was added.`);
+            await load();
+            return;
+          }
+        } catch (e) {
+          setNotice((e as Error).message);
+          return;
+        }
+        await new Promise((r) => setTimeout(r, 3000));
+      }
+      if (live) setNotice("Still waiting for the bank to confirm. Credit is added as soon as it does; this page will show it when you reload.");
+    })();
+    return () => {
+      live = false;
+    };
+  }, []);
+  if (!data) return null;
+  const start = async (bundle: number) => {
+    setBusy(String(bundle));
+    setError("");
+    try {
+      const order = await call("/payments/orders", { bundle, currency });
+      if (order.provider === "dodo") {
+        window.location.assign(order.checkoutUrl);
+        return;
+      }
+      await loadCashfree();
+      await window.Cashfree!({ mode: order.mode }).checkout({ paymentSessionId: order.paymentSessionId, redirectTarget: "_self" });
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy("");
+    }
+  };
+  return (
+    <section className="setting-section">
+      <h3>Add credit</h3>
+      {!data.enabled ? (
+        <p className="muted ai-note">Online payments are not switched on for this OrbytLink server yet.</p>
+      ) : (
+        <>
+          <div className="buy-head">
+            <p className="muted ai-note">
+              {data.providers?.[currency] === "dodo"
+                ? "Pay by card or wallet on Dodo Payments' secure page. Dodo is the merchant of record and adds sales tax where it applies."
+                : "Pay with a card, UPI or net banking on Cashfree's secure page."}{" "}
+              Credit is added as soon as the payment clears.
+              {(data.providers?.[currency] === "dodo" ? data.testMode?.dodo : data.testMode?.cashfree) ? " Test mode: no real money moves." : ""}
+            </p>
+            <div className="segmented" role="radiogroup" aria-label="Currency">
+              {([["INR", "₹ INR"], ["USD", "$ USD"]] as const).filter(([c]) => (data.currencies || ["INR", "USD"]).includes(c)).map(([c, label]) => (
+                <button type="button" role="radio" aria-checked={currency === c} className={currency === c ? "active" : ""} key={c} onClick={() => setCurrency(c)}>{label}</button>
+              ))}
+            </div>
+          </div>
+          <div className="bundle-grid">
+            {data.bundles.map((b: Data) => {
+              const q = b[currency];
+              return (
+                <button type="button" className="bundle" key={b.credit} disabled={!canConfigure || !!busy} onClick={() => void start(b.credit)} aria-label={`Add $${b.credit} of credit for ${money(q.total, currency)}`}>
+                  <strong>${b.credit} credit</strong>
+                  <span>{busy === String(b.credit) ? "Opening…" : money(q.total, currency)}</span>
+                  <small>
+                    {money(currency === "USD" ? q.credit : q.total - q.tax - q.fee, currency)} credit + {money(q.fee, currency)} processing{q.tax ? ` + ${money(q.tax, currency)} GST` : ""}{q.taxAtCheckout ? " + tax at checkout" : ""}
+                  </small>
+                </button>
+              );
+            })}
+          </div>
+          {!canConfigure && <p className="muted ai-note">Only workspace admins can add credit.</p>}
+        </>
+      )}
+      {notice && <p className="ai-note" role="status">{notice}</p>}
+      {error && <div className="error">{error}</div>}
+      {data.history.length > 0 && (
+        <div className="table-scroll">
+          <table className="models-table">
+            <thead><tr><th>Credit</th><th>Paid</th><th>Status</th><th>When</th></tr></thead>
+            <tbody>
+              {data.history.map((p: Data) => (
+                <tr key={p.orderId}>
+                  <td>${p.creditUsd}</td>
+                  <td>{money(Number(p.amount), p.currency)}</td>
+                  <td className="muted">{statusText[p.status] || p.status}</td>
+                  <td className="muted">{new Date(p.paidAt || p.createdAt).toLocaleString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
 export function AiCredit({ call, canConfigure, onSaved }: { call: Call; canConfigure: boolean; onSaved: () => void }) {
   const [data, setData] = useState<Data | null>(null);
   const [limit, setLimit] = useState("");
@@ -118,9 +270,10 @@ export function AiCredit({ call, canConfigure, onSaved }: { call: Call; canConfi
           <div className="wf-stat"><small>Monthly limit</small><strong>{data.monthlyLimit === null ? "None" : dollars(data.monthlyLimit)}</strong></div>
         </div>
         <p className="muted ai-note">
-          {data.configured ? "Text models from Catalog → AI models are billed to this credit at the listed prices." : "AI models are not switched on for this OrbytLink server yet."} Credit is added by OrbytLink for now; online top-ups are coming.
+          {data.configured ? "Text models from Catalog → AI models are billed to this credit at the listed prices." : "AI models are not switched on for this OrbytLink server yet."}
         </p>
       </section>
+      <BuyCredit call={call} canConfigure={canConfigure} onPaid={() => { void load(); onSaved(); }} />
       {canConfigure && (
         <form
           className="setting-section"

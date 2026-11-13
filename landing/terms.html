@@ -67,7 +67,7 @@ h1 { margin: 20px 0 0; font-size: 48px; line-height: 56px; letter-spacing: -1.08
 .note { margin-top: 32px; padding: 16px 20px; border-radius: 12px; background: var(--raised); box-shadow: inset 0 0 0 1px var(--border); font-size: 14px; line-height: 22px; color: var(--text-2); }
 .site-footer { border-top: 1px solid var(--border); padding: 32px 0; }
 .site-footer .wrap { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; font-size: 14px; color: var(--muted); }
-.site-footer nav { display: flex; gap: 20px; }
+.site-footer nav { display: flex; flex-wrap: wrap; gap: 8px 20px; }
 .site-footer a:hover, .site-footer a[aria-current] { color: var(--text); }
 @media (max-width: 900px) {
   .layout { grid-template-columns: 1fr; gap: 32px; margin-top: 40px; }
@@ -95,11 +95,11 @@ h1 { margin: 20px 0 0; font-size: 48px; line-height: 56px; letter-spacing: -1.08
   <div class="wrap">
     <div class="crumbs"><a href="/">Home</a> / Terms of service</div>
     <h1>Terms of service</h1>
-    <div class="meta">Last updated 31 October 2026</div>
+    <div class="meta">Last updated 13 November 2026</div>
     <div class="layout">
-      <nav class="toc" aria-label="On this page"><a href="#service">The service</a><a href="#account">Your account</a><a href="#agents">Your agent and your connections</a><a href="#use">Acceptable use</a><a href="#ownership">Your content and ownership</a><a href="#third-party">Third-party services</a><a href="#fees">Fees</a><a href="#availability">Availability and changes</a><a href="#disclaimer">Disclaimer</a><a href="#liability">Limitation of liability</a><a href="#ending">Ending your use</a><a href="#changes">Changes to these terms</a><a href="#contact">Contact</a></nav>
+      <nav class="toc" aria-label="On this page"><a href="#service">The service</a><a href="#account">Your account</a><a href="#agents">Your agent and your connections</a><a href="#use">Acceptable use</a><a href="#ownership">Your content and ownership</a><a href="#third-party">Third-party services</a><a href="#fees">Fees and AI credit</a><a href="#availability">Availability and changes</a><a href="#disclaimer">Disclaimer</a><a href="#liability">Limitation of liability</a><a href="#ending">Ending your use</a><a href="#changes">Changes to these terms</a><a href="#contact">Contact</a></nav>
       <article class="body">
-        <p class="intro">These terms govern your use of orbytlink.com and the OrbytLink service at app.orbytlink.com. By creating an account or using the service, you agree to them. If you use OrbytLink for an organization, you agree on its behalf and confirm you are allowed to.</p>
+        <p class="intro">OrbytLink is operated by Orbyt Labs, a sole proprietorship of Prabal Panda registered in Bengaluru, India (Udyam registration UDYAM-KR-03-0737483) (“we”, “us”). These terms govern your use of orbytlink.com and the OrbytLink service at app.orbytlink.com. By creating an account or using the service, you agree to them. If you use OrbytLink for an organization, you agree on its behalf and confirm you are allowed to.</p>
 
         <h2 id="service">The service</h2>
         <p>OrbytLink is a workhub for AI agents. It gives your agent one endpoint through which it can use the apps, APIs, skills and workflows you connect, and lets your team manage who and what can use them.</p>
@@ -139,8 +139,16 @@ h1 { margin: 20px 0 0; font-size: 48px; line-height: 56px; letter-spacing: -1.08
         <h2 id="third-party">Third-party services</h2>
         <p>Connected apps and AI agents are provided by their own vendors under their own terms. We are not responsible for their availability, their behaviour or changes to their APIs. When a connected app changes, a skill or workflow that uses it may stop working until it is updated.</p>
 
-        <h2 id="fees">Fees</h2>
-        <p>Early access is currently free. If we introduce paid plans, we will tell you the price in advance, and you can choose whether to continue. We won't charge you for anything you haven't agreed to.</p>
+        <h2 id="fees">Fees and AI credit</h2>
+        <p>The gateway is free during early access. If we introduce paid plans, we will tell you the price in advance, and you can choose whether to continue. We won't charge you for anything you haven't agreed to.</p>
+        <p>AI models offered through OrbytLink are paid for from prepaid credit, as described on our <a href="/pricing.html">pricing page</a>:</p>
+        <ul>
+          <li><strong>Price.</strong> The price of a credit purchase, including any processing fee and tax, is shown before you pay. Model usage is charged per token at the price listed for each model.</li>
+          <li><strong>Credit.</strong> Credit is held in US dollars, can be used only for OrbytLink services in the workspace that bought it, can't be transferred or exchanged for cash, and doesn't expire while your account is open.</li>
+          <li><strong>Refunds.</strong> Unused credit can be refunded within 14 days of purchase, as set out in our <a href="/refund.html">refund policy</a>.</li>
+          <li><strong>Payment partners.</strong> Payments in rupees are processed by Cashfree Payments. Payments in US dollars are processed by Dodo Payments, which acts as the reseller and merchant of record for those orders; its own terms of sale also apply to them.</li>
+          <li><strong>AI output.</strong> Model responses are generated by third-party AI providers and may be inaccurate. Your use of a model must also follow that provider's usage policies.</li>
+        </ul>
 
         <h2 id="availability">Availability and changes</h2>
         <p>We work to keep OrbytLink available and secure, but during early access we don't promise any particular uptime. We may need to interrupt the service for maintenance, security or reasons outside our control.</p>
@@ -158,13 +166,13 @@ h1 { margin: 20px 0 0; font-size: 48px; line-height: 56px; letter-spacing: -1.08
         <p>We may update these terms as the service develops. We will update the date at the top and, for significant changes, tell account holders before they take effect. If you keep using OrbytLink after that, the new terms apply.</p>
 
         <h2 id="contact">Contact</h2>
-        <p>Questions about these terms: <a href="mailto:hello@orbytlink.com">hello@orbytlink.com</a>.</p>
+        <p>Questions about these terms: <a href="mailto:hello@orbytlink.com">hello@orbytlink.com</a>. Orbyt Labs, Bengaluru, Karnataka, India.</p>
       </article>
     </div>
   </div>
 </main>
 <footer class="site-footer">
-  <div class="wrap"><span>© 2026 OrbytLink</span><nav aria-label="Legal"><a href="/">Home</a><a href="/privacy.html">Privacy</a><a href="/terms.html" aria-current="page">Terms</a><a href="mailto:hello@orbytlink.com">Contact</a></nav></div>
+  <div class="wrap"><span>© 2026 Orbyt Labs · OrbytLink</span><nav aria-label="Legal"><a href="/">Home</a><a href="/pricing.html">Pricing</a><a href="/privacy.html">Privacy</a><a href="/terms.html" aria-current="page">Terms</a><a href="/refund.html">Refunds</a><a href="/contact.html">Contact</a></nav></div>
 </footer>
 </body>
 </html>

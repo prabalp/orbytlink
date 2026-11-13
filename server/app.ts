@@ -19,6 +19,7 @@ import { authoredDetail, createAuthored, deleteAuthored, initializeLibrary, libr
 import { MIN_INSTALLS, searchRegistry } from "./skill-registry.js";
 import { AI_TOOL, aiConfigured, aiSummary, generate, saveAiSettings } from "./ai.js";
 import { BROWSER_TOOL, browserConfigured, browserSummary } from "./browser.js";
+import { BUNDLES, cashfreeConfigured, cashfreeMode, createOrder, currencies, dodoMode, dodoOrderFrom, listPayments, orderIdFrom, paymentsConfigured, providerFor, quote, settle, validSignature } from "./payments.js";
 import { alreadySaved, captureWorkflow, dismissSuggestion, keyFor, suggestionsFor } from "./capture.js";
 import { fromMarkdown, toMarkdown, workflowFileName } from "./workflow-md.js";
 import { clearCache, forgetState, forgetWorkflowData, listState, stepLogs } from "./workflow-data.js";
@@ -58,12 +59,13 @@ export function createApp(
       );
       res.setHeader(
         "Content-Security-Policy",
-        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'",
+        "default-src 'self'; script-src 'self' https://sdk.cashfree.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://sdk.cashfree.com https://api.cashfree.com https://sandbox.cashfree.com; frame-ancestors 'none'; base-uri 'none'",
       );
     }
     next();
   });
-  app.use(express.json({ limit: "256kb" }));
+  // The payment webhook is signed over the raw body, so keep it for that one route.
+  app.use(express.json({ limit: "256kb", verify: (req: any, _res, buf) => { if (req.url?.startsWith("/api/payments/webhook") || req.url?.startsWith("/api/payments/dodo/webhook")) req.rawBody = buf.toString("utf8"); } }));
   app.use("/api", rateLimit({ windowMs: 60000, limit: 180 }));
   // MCP clients such as Claude share egress IPs across many users; limit per credential.
   app.use(
@@ -108,6 +110,33 @@ export function createApp(
       gateway: "/mcp",
     }),
   );
+  // Cashfree calls this when an order's payment changes. It has no session, so the signature is the
+  // only credential; and it only names an order, which settle() re-checks with Cashfree itself.
+  app.post("/api/payments/webhook", async (req: any, res, next) => {
+    try {
+      if (!cashfreeConfigured()) return void res.status(404).json({ error: "Not found" });
+      if (!validSignature(String(req.rawBody ?? ""), String(req.headers["x-webhook-timestamp"] ?? ""), String(req.headers["x-webhook-signature"] ?? "")))
+        return void res.status(401).json({ error: "Bad signature" });
+      const id = orderIdFrom(req.body);
+      if (id) await settle(store, id);
+      res.json({ ok: true });
+    } catch (e) {
+      next(e);
+    }
+  });
+  // Dodo's webhook: same idea, Standard Webhooks signature. Answer 2xx for any verified event so Dodo
+  // stops retrying; only events that name one of our orders lead to a check.
+  app.post("/api/payments/dodo/webhook", async (req: any, res, next) => {
+    try {
+      if (!process.env.DODO_PAYMENTS_WEBHOOK_KEY) return void res.status(404).json({ error: "Not found" });
+      const { ok, orderId } = dodoOrderFrom(String(req.rawBody ?? ""), req.headers);
+      if (!ok) return void res.status(401).json({ error: "Bad signature" });
+      if (orderId) await settle(store, orderId);
+      res.json({ ok: true });
+    } catch (e) {
+      next(e);
+    }
+  });
   async function verify(token: string): Promise<Identity> {
     let payload;
     try {
@@ -466,6 +495,30 @@ export function createApp(
   app.get("/api/ai", permit("read"), (_req, res) => {
     const w = identity(res).workspace;
     res.json({ ...aiSummary(store, w), usage: store.list(w, "ai_usage").slice(0, 100), ledger: store.list(w, "ai_ledger").slice(0, 50) });
+  });
+  // Buying credit: prices, a new order (an admin's action), and a check on an order after returning from Cashfree.
+  app.get("/api/payments", permit("read"), (req, res) => {
+    const i = identity(res);
+    // Behind Cloudflare, cf-ipcountry says where the visitor is: India sees rupees first.
+    const country = String(req.headers["cf-ipcountry"] ?? "").toUpperCase();
+    res.json({
+      enabled: paymentsConfigured(),
+      mode: cashfreeMode(),
+      currencies: currencies(),
+      providers: { INR: providerFor("INR"), USD: providerFor("USD") },
+      testMode: { cashfree: cashfreeMode() === "sandbox", dodo: dodoMode() === "test_mode" },
+      suggested: country === "IN" ? "INR" : country ? "USD" : null,
+      bundles: BUNDLES.map((b) => ({ credit: b, USD: quote(b, "USD"), INR: quote(b, "INR") })),
+      history: listPayments(store, i.workspace),
+    });
+  });
+  app.post("/api/payments/orders", permit("configure"), async (req, res) => {
+    res.json(await createOrder(store, identity(res), req.body));
+  });
+  app.post("/api/payments/orders/:id/check", permit("read"), async (req, res) => {
+    const p = await settle(store, String(req.params.id), identity(res).workspace);
+    if (!p) throw Object.assign(new Error("Record not found"), { status: 404 });
+    res.json({ payment: p, balance: aiSummary(store, identity(res).workspace).balance });
   });
   app.put("/api/ai/settings", permit("configure"), (req, res) => {
     res.json(saveAiSettings(store, identity(res), req.body));

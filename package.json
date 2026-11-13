@@ -36,6 +36,7 @@
     "random-bytes": "https://registry.npmjs.org/random-bytes/-/random-bytes-1.0.0.tgz",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "standardwebhooks": "^1.0.0",
     "uid-safe": "https://registry.npmjs.org/uid-safe/-/uid-safe-2.1.5.tgz",
     "utils-merge": "https://registry.npmjs.org/utils-merge/-/utils-merge-1.0.1.tgz",
     "zod": "4.6.7"

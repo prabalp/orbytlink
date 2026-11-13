@@ -1,4 +1,4 @@
-// Generated from bundled skills, verified connection presets, workflow templates and docs/pay-per-call-tools.csv.
+// Generated from bundled skills, verified connection presets and workflow templates.
 window.orbytCatalog = {
   "skills": [
     {
@@ -117,1892 +117,782 @@ window.orbytCatalog = {
   "tools": [
     {
       "name": "Academic literature",
-      "category": "Research & knowledge",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "2 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Research & knowledge"
     },
     {
       "name": "AccuWeather",
-      "category": "Maps, travel & weather",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "Maps, travel & weather"
     },
     {
       "name": "Ahrefs",
-      "category": "Search & web data",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "Search & web data"
     },
     {
       "name": "AI judgment",
-      "category": "AI & content",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "AI & content"
     },
     {
       "name": "AI Visibility / AEO",
-      "category": "Search & web data",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "5 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Search & web data"
     },
     {
       "name": "Airbnb",
-      "category": "Maps, travel & weather",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Maps, travel & weather"
     },
     {
       "name": "Akta",
-      "category": "Other APIs",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "Supported by Instant; price not captured, see composio.dev/pricing"
-        }
-      ]
+      "category": "Other APIs"
     },
     {
       "name": "Alpha Vantage",
-      "category": "Finance & markets",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "Supported by Instant; price not captured, see composio.dev/pricing"
-        }
-      ]
+      "category": "Finance & markets"
     },
     {
       "name": "Amazon",
-      "category": "Shopping & marketplaces",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "6 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Shopping & marketplaces"
     },
     {
       "name": "API Ninjas",
-      "category": "Other APIs",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "Other APIs"
     },
     {
       "name": "API-Sports",
-      "category": "Other APIs",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "Supported by Instant; price not captured, see composio.dev/pricing"
-        }
-      ]
+      "category": "Other APIs"
     },
     {
       "name": "Apify",
-      "category": "Search & web data",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "Supported by Instant; price not captured, see composio.dev/pricing"
-        }
-      ]
+      "category": "Search & web data"
     },
     {
       "name": "Apollo",
-      "category": "People & companies",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "Supported by Instant; price not captured, see composio.dev/pricing"
-        }
-      ]
+      "category": "People & companies"
     },
     {
       "name": "Apollo.io",
-      "category": "Sales & Leads",
-      "sources": []
+      "category": "Sales & Leads"
     },
     {
       "name": "Apple App Store",
-      "category": "Social & media",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "5 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Social & media"
     },
     {
       "name": "Apple Maps",
-      "category": "Maps, travel & weather",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Maps, travel & weather"
     },
     {
       "name": "Apple Music",
-      "category": "Social & media",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Social & media"
     },
     {
       "name": "Artificial Analysis",
-      "category": "AI & content",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "Supported by Instant; price not captured, see composio.dev/pricing"
-        }
-      ]
+      "category": "AI & content"
     },
     {
       "name": "Atlassian (Jira & Confluence)",
-      "category": "Project management",
-      "sources": []
+      "category": "Project management"
     },
     {
       "name": "Bing Keyword Data",
-      "category": "Search & web data",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "3 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Search & web data"
     },
     {
       "name": "Black Forest Labs",
-      "category": "AI & content",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "Supported by Instant; price not captured, see composio.dev/pricing"
-        }
-      ]
+      "category": "AI & content"
     },
     {
       "name": "Bluesky",
-      "category": "Social & media",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Social & media"
     },
     {
       "name": "Booking.com",
-      "category": "Maps, travel & weather",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Maps, travel & weather"
     },
     {
       "name": "Bright Data",
-      "category": "Search & web data",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "Supported by Instant; price not captured, see composio.dev/pricing"
-        }
-      ]
+      "category": "Search & web data"
     },
     {
       "name": "Browser Use",
-      "category": "Search & web data",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "Supported by Instant; price not captured, see composio.dev/pricing"
-        }
-      ]
+      "category": "Search & web data"
     },
     {
       "name": "CarsXE",
-      "category": "Maps, travel & weather",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "Supported by Instant; price not captured, see composio.dev/pricing"
-        }
-      ]
+      "category": "Maps, travel & weather"
     },
     {
       "name": "Clay",
-      "category": "People & companies",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "Supported by Instant; price not captured, see composio.dev/pricing"
-        }
-      ]
+      "category": "People & companies"
     },
     {
       "name": "Cloro",
-      "category": "Search & web data",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "Supported by Instant; price not captured, see composio.dev/pricing"
-        }
-      ]
+      "category": "Search & web data"
     },
     {
       "name": "Cloudflare",
-      "category": "Developer tools",
-      "sources": []
+      "category": "Developer tools"
     },
     {
       "name": "Cloudflare Api Key",
-      "category": "Jobs & developer tools",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "Supported by Instant; price not captured, see composio.dev/pricing"
-        }
-      ]
+      "category": "Jobs & developer tools"
     },
     {
       "name": "CoinGecko",
-      "category": "Finance & markets",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "Supported by Instant; price not captured, see composio.dev/pricing"
-        }
-      ]
+      "category": "Finance & markets"
     },
     {
       "name": "Company data",
-      "category": "People & companies",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "47 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "People & companies"
     },
     {
       "name": "CompanyEnrich",
-      "category": "People & companies",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "Supported by Instant; price not captured, see composio.dev/pricing"
-        }
-      ]
+      "category": "People & companies"
     },
     {
       "name": "Composio",
-      "category": "Platforms",
-      "sources": []
+      "category": "Platforms"
     },
     {
       "name": "ContactOut",
-      "category": "People & companies",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "Supported by Instant; price not captured, see composio.dev/pricing"
-        }
-      ]
+      "category": "People & companies"
     },
     {
       "name": "Context.dev",
-      "category": "Search & web data",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "Supported by Instant; price not captured, see composio.dev/pricing"
-        }
-      ]
+      "category": "Search & web data"
     },
     {
       "name": "Creators & influencers",
-      "category": "Advertising & creators",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "3 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Advertising & creators"
     },
     {
       "name": "Crunchbase",
-      "category": "People & companies",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "People & companies"
     },
     {
       "name": "Crustdata",
-      "category": "People & companies",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "Supported by Instant; price not captured, see composio.dev/pricing"
-        }
-      ]
+      "category": "People & companies"
     },
     {
       "name": "Crypto Market Data",
-      "category": "Finance & markets",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "4 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Finance & markets"
     },
     {
       "name": "DataForSEO",
-      "category": "Search & web data",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "Supported by Instant; price not captured, see composio.dev/pricing"
-        }
-      ]
+      "category": "Search & web data"
     },
     {
       "name": "Deepgram",
-      "category": "AI & content",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "Supported by Instant; price not captured, see composio.dev/pricing"
-        }
-      ]
+      "category": "AI & content"
     },
     {
       "name": "DeepSeek",
-      "category": "AI & content",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "Supported by Instant; price not captured, see composio.dev/pricing"
-        }
-      ]
+      "category": "AI & content"
     },
     {
       "name": "DuckDuckGo SERP",
-      "category": "Search & web data",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "2 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Search & web data"
     },
     {
       "name": "eBay",
-      "category": "Shopping & marketplaces",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "3 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Shopping & marketplaces"
     },
     {
       "name": "Economic indicators",
-      "category": "Finance & markets",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Finance & markets"
     },
     {
       "name": "ElevenLabs",
-      "category": "AI & content",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "Supported by Instant; price not captured, see composio.dev/pricing"
-        }
-      ]
+      "category": "AI & content"
     },
     {
       "name": "EODHD APIs",
-      "category": "Finance & markets",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "Supported by Instant; price not captured, see composio.dev/pricing"
-        }
-      ]
+      "category": "Finance & markets"
     },
     {
       "name": "Etsy",
-      "category": "Shopping & marketplaces",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Shopping & marketplaces"
     },
     {
       "name": "Exa",
-      "category": "Search & web data",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "Supported by Instant; price not captured, see composio.dev/pricing"
-        }
-      ]
+      "category": "Search & web data"
     },
     {
       "name": "Exa Search",
-      "category": "Search & web data",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "Search & web data"
     },
     {
       "name": "Facebook",
-      "category": "Social & media",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "7 provider(s); price is the 'from' minimum"
-        },
-        {
-          "name": "Composio Instant Tools",
-          "notes": "5 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "Social & media"
     },
     {
       "name": "Fal.ai",
-      "category": "AI & content",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "Supported by Instant; price not captured, see composio.dev/pricing"
-        }
-      ]
+      "category": "AI & content"
     },
     {
       "name": "Finnhub",
-      "category": "Finance & markets",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "Supported by Instant; price not captured, see composio.dev/pricing"
-        }
-      ]
+      "category": "Finance & markets"
     },
     {
       "name": "Firecrawl",
-      "category": "Search & web data",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "Supported by Instant; price not captured, see composio.dev/pricing"
-        }
-      ]
+      "category": "Search & web data"
     },
     {
       "name": "Firecrawl Scrape URL",
-      "category": "Search & web data",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "Search & web data"
     },
     {
       "name": "Fish Audio",
-      "category": "AI & content",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "Supported by Instant; price not captured, see composio.dev/pricing"
-        }
-      ]
+      "category": "AI & content"
     },
     {
       "name": "Gemini",
-      "category": "AI & content",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "Supported by Instant; price not captured, see composio.dev/pricing"
-        }
-      ]
+      "category": "AI & content"
     },
     {
       "name": "GitHub",
-      "category": "Jobs & developer tools",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "2 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Jobs & developer tools"
     },
     {
       "name": "Glassdoor",
-      "category": "Jobs & developer tools",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Jobs & developer tools"
     },
     {
       "name": "Gmail",
-      "category": "Communication",
-      "sources": []
+      "category": "Communication"
     },
     {
       "name": "Google Ads",
-      "category": "Advertising & creators",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "3 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Advertising & creators"
     },
     {
       "name": "Google Analytics (GA4)",
-      "category": "Search & web data",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum; no price listed"
-        }
-      ]
+      "category": "Search & web data"
     },
     {
       "name": "Google Business Profile",
-      "category": "Search & web data",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum; no price listed"
-        }
-      ]
+      "category": "Search & web data"
     },
     {
       "name": "Google Calendar",
-      "category": "Calendar & contacts",
-      "sources": []
+      "category": "Calendar & contacts"
     },
     {
       "name": "Google Chat",
-      "category": "Communication",
-      "sources": []
+      "category": "Communication"
     },
     {
       "name": "Google Classroom",
-      "category": "Education",
-      "sources": []
+      "category": "Education"
     },
     {
       "name": "Google Contacts",
-      "category": "Calendar & contacts",
-      "sources": []
+      "category": "Calendar & contacts"
     },
     {
       "name": "Google Docs",
-      "category": "Documents & files",
-      "sources": []
+      "category": "Documents & files"
     },
     {
       "name": "Google Drive",
-      "category": "Documents & files",
-      "sources": []
+      "category": "Documents & files"
     },
     {
       "name": "Google Keyword Data",
-      "category": "Search & web data",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "16 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Search & web data"
     },
     {
       "name": "Google Maps",
-      "category": "Maps, travel & weather",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "Supported by Instant; price not captured, see composio.dev/pricing"
-        }
-      ]
+      "category": "Maps, travel & weather"
     },
     {
       "name": "Google Maps Geocoding",
-      "category": "Maps, travel & weather",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "Maps, travel & weather"
     },
     {
       "name": "Google Play",
-      "category": "Social & media",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "5 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Social & media"
     },
     {
       "name": "Google Search Console",
-      "category": "Search & web data",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum; no price listed"
-        }
-      ]
+      "category": "Search & web data"
     },
     {
       "name": "Google Sheets",
-      "category": "Documents & files",
-      "sources": []
+      "category": "Documents & files"
     },
     {
       "name": "Google Slides",
-      "category": "Documents & files",
-      "sources": []
+      "category": "Documents & files"
     },
     {
       "name": "Google Tag Manager",
-      "category": "Search & web data",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum; no price listed"
-        }
-      ]
+      "category": "Search & web data"
     },
     {
       "name": "GraphHopper",
-      "category": "Maps, travel & weather",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "Supported by Instant; price not captured, see composio.dev/pricing"
-        }
-      ]
+      "category": "Maps, travel & weather"
     },
     {
       "name": "Hacker News",
-      "category": "Jobs & developer tools",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Jobs & developer tools"
     },
     {
       "name": "Health & biomedical",
-      "category": "Research & knowledge",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Research & knowledge"
     },
     {
       "name": "Higgsfield",
-      "category": "AI & content",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "Supported by Instant; price not captured, see composio.dev/pricing"
-        }
-      ]
+      "category": "AI & content"
     },
     {
       "name": "Home Depot",
-      "category": "Shopping & marketplaces",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Shopping & marketplaces"
     },
     {
       "name": "HTML/CSS to Image",
-      "category": "AI & content",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "Supported by Instant; price not captured, see composio.dev/pricing"
-        }
-      ]
+      "category": "AI & content"
     },
     {
       "name": "Hunter",
-      "category": "People & companies",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "Supported by Instant; price not captured, see composio.dev/pricing"
-        }
-      ]
+      "category": "People & companies"
     },
     {
       "name": "Icypeas",
-      "category": "People & companies",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "Supported by Instant; price not captured, see composio.dev/pricing"
-        }
-      ]
+      "category": "People & companies"
     },
     {
       "name": "Ignav Flights",
-      "category": "Maps, travel & weather",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "Supported by Instant; price not captured, see composio.dev/pricing"
-        }
-      ]
+      "category": "Maps, travel & weather"
     },
     {
       "name": "Image generation",
-      "category": "AI & content",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "5 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "AI & content"
     },
     {
       "name": "IMDb",
-      "category": "Social & media",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "2 provider(s); price is the 'from' minimum"
-        },
-        {
-          "name": "Composio Instant Tools",
-          "notes": "22 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "Social & media"
     },
     {
       "name": "Indeed",
-      "category": "Jobs & developer tools",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Jobs & developer tools"
     },
     {
       "name": "Instagram",
-      "category": "Social & media",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "8 provider(s); price is the 'from' minimum"
-        },
-        {
-          "name": "Composio Instant Tools",
-          "notes": "7 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "Social & media"
     },
     {
       "name": "IPinfo",
-      "category": "Maps, travel & weather",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "Supported by Instant; price not captured, see composio.dev/pricing"
-        }
-      ]
+      "category": "Maps, travel & weather"
     },
     {
       "name": "Jev",
-      "category": "Other APIs",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "Supported by Instant; price not captured, see composio.dev/pricing"
-        }
-      ]
+      "category": "Other APIs"
     },
     {
       "name": "Job Search",
-      "category": "Jobs & developer tools",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "Supported by Instant; price not captured, see composio.dev/pricing"
-        }
-      ]
+      "category": "Jobs & developer tools"
     },
     {
       "name": "Just One API",
-      "category": "Other APIs",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "Supported by Instant; price not captured, see composio.dev/pricing"
-        }
-      ]
+      "category": "Other APIs"
     },
     {
       "name": "Kick",
-      "category": "Social & media",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Social & media"
     },
     {
       "name": "Lazada",
-      "category": "Shopping & marketplaces",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Shopping & marketplaces"
     },
     {
       "name": "LeadMagic",
-      "category": "People & companies",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "1 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "People & companies"
     },
     {
       "name": "Lemon8",
-      "category": "Social & media",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Social & media"
     },
     {
       "name": "LimaData",
-      "category": "People & companies",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "16 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "People & companies"
     },
     {
       "name": "Linear",
-      "category": "Project management",
-      "sources": []
+      "category": "Project management"
     },
     {
       "name": "Link-in-bio pages",
-      "category": "Social & media",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Social & media"
     },
     {
       "name": "LinkedIn",
-      "category": "People & companies",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "18 provider(s); price is the 'from' minimum"
-        },
-        {
-          "name": "Composio Instant Tools",
-          "notes": "3 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "People & companies"
     },
     {
       "name": "Listen Notes",
-      "category": "Social & media",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "24 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "Social & media"
     },
     {
       "name": "Logo.dev",
-      "category": "Other APIs",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "2 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "Other APIs"
     },
     {
       "name": "Luma Labs",
-      "category": "AI & content",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "3 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "AI & content"
     },
     {
       "name": "Lusha",
-      "category": "People & companies",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "4 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "People & companies"
     },
     {
       "name": "MagicSlides",
-      "category": "AI & content",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "3 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "AI & content"
     },
     {
       "name": "Marketstack",
-      "category": "Finance & markets",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "22 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "Finance & markets"
     },
     {
       "name": "Mathpix",
-      "category": "AI & content",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "2 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "AI & content"
     },
     {
       "name": "Medium",
-      "category": "Research & knowledge",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Research & knowledge"
     },
     {
       "name": "Memelord",
-      "category": "AI & content",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "20 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "AI & content"
     },
     {
       "name": "Meta Ads",
-      "category": "Advertising & creators",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "8 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Advertising & creators"
     },
     {
       "name": "Microsoft Advertising",
-      "category": "Advertising & creators",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum; no price listed"
-        }
-      ]
+      "category": "Advertising & creators"
     },
     {
       "name": "MiniMax",
-      "category": "AI & content",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "2 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "AI & content"
     },
     {
       "name": "Mistral AI",
-      "category": "AI & content",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "1 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "AI & content"
     },
     {
       "name": "MrScraper",
-      "category": "Search & web data",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "3 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "Search & web data"
     },
     {
       "name": "Music generation",
-      "category": "AI & content",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "AI & content"
     },
     {
       "name": "Notion",
-      "category": "Documents & files",
-      "sources": []
+      "category": "Documents & files"
     },
     {
       "name": "Open web & SEO data",
-      "category": "Search & web data",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "34 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Search & web data"
     },
     {
       "name": "OpenAI",
-      "category": "AI & content",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "1 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "AI & content"
     },
     {
       "name": "OpenAlex",
-      "category": "Research & knowledge",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "5 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "Research & knowledge"
     },
     {
       "name": "OpenRouter",
-      "category": "AI & content",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "1 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "AI & content"
     },
     {
       "name": "OpenWeb Ninja",
-      "category": "Search & web data",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "40 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "Search & web data"
     },
     {
       "name": "Other market data",
-      "category": "Finance & markets",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Finance & markets"
     },
     {
       "name": "Package registries",
-      "category": "Jobs & developer tools",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Jobs & developer tools"
     },
     {
       "name": "Parallel",
-      "category": "Search & web data",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "2 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "Search & web data"
     },
     {
       "name": "PDF.co",
-      "category": "AI & content",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "40 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "AI & content"
     },
     {
       "name": "People & contact data",
-      "category": "People & companies",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "50 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "People & companies"
     },
     {
       "name": "People Data Labs",
-      "category": "People & companies",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "26 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "People & companies"
     },
     {
       "name": "PhotoRoom",
-      "category": "AI & content",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "3 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "AI & content"
     },
     {
       "name": "Pinterest",
-      "category": "Social & media",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "2 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Social & media"
     },
     {
       "name": "Pinterest Ads",
-      "category": "Advertising & creators",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum; no price listed"
-        }
-      ]
+      "category": "Advertising & creators"
     },
     {
       "name": "Places (local search)",
-      "category": "Maps, travel & weather",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum; no price listed"
-        }
-      ]
+      "category": "Maps, travel & weather"
     },
     {
       "name": "PredictLeads",
-      "category": "People & companies",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "7 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "People & companies"
     },
     {
       "name": "Product Hunt",
-      "category": "Jobs & developer tools",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Jobs & developer tools"
     },
     {
       "name": "Prospeo",
-      "category": "People & companies",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "8 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "People & companies"
     },
     {
       "name": "Reddit",
-      "category": "Social & media",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "6 provider(s); price is the 'from' minimum"
-        },
-        {
-          "name": "Composio Instant Tools",
-          "notes": "3 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "Social & media"
     },
     {
       "name": "Remote OK",
-      "category": "Jobs & developer tools",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Jobs & developer tools"
     },
     {
       "name": "Rumble",
-      "category": "Social & media",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Social & media"
     },
     {
       "name": "ScrapeCreators",
-      "category": "Search & web data",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "60+ tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "Search & web data"
     },
     {
       "name": "Semrush",
-      "category": "Search & web data",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "12 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "Search & web data"
     },
     {
       "name": "SEOptimer",
-      "category": "Search & web data",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "2 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "Search & web data"
     },
     {
       "name": "SerpApi",
-      "category": "Search & web data",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "50+ tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "Search & web data"
     },
     {
       "name": "Serper",
-      "category": "Search & web data",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "10 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "Search & web data"
     },
     {
       "name": "Shopee",
-      "category": "Shopping & marketplaces",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "9 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "Shopping & marketplaces"
     },
     {
       "name": "Shopify stores",
-      "category": "Shopping & marketplaces",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Shopping & marketplaces"
     },
     {
       "name": "Slack",
-      "category": "Jobs & developer tools",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum; no price listed"
-        }
-      ]
+      "category": "Jobs & developer tools"
     },
     {
       "name": "Snapchat",
-      "category": "Social & media",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Social & media"
     },
     {
       "name": "Snapchat Ads",
-      "category": "Advertising & creators",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum; no price listed"
-        }
-      ]
+      "category": "Advertising & creators"
     },
     {
       "name": "Social Media Cross-Platform Search",
-      "category": "Social & media",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "1 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "Social & media"
     },
     {
       "name": "SoundCloud",
-      "category": "Social & media",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Social & media"
     },
     {
       "name": "Spotify",
-      "category": "Social & media",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Social & media"
     },
     {
       "name": "Stack Overflow",
-      "category": "Jobs & developer tools",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Jobs & developer tools"
     },
     {
       "name": "Steam",
-      "category": "Shopping & marketplaces",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Shopping & marketplaces"
     },
     {
       "name": "Stock Market Data",
-      "category": "Finance & markets",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "10 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Finance & markets"
     },
     {
       "name": "Strale",
-      "category": "Other APIs",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "2 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "Other APIs"
     },
     {
       "name": "Stripe",
-      "category": "Payments & finance",
-      "sources": []
+      "category": "Payments & finance"
     },
     {
       "name": "Substack",
-      "category": "Research & knowledge",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Research & knowledge"
     },
     {
       "name": "Supadata",
-      "category": "Search & web data",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "10 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "Search & web data"
     },
     {
       "name": "Surf",
-      "category": "Search & web data",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "100+ tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "Search & web data"
     },
     {
       "name": "Tavily",
-      "category": "Search & web data",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "2 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "Search & web data"
     },
     {
       "name": "Telegram",
-      "category": "Social & media",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "3 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Social & media"
     },
     {
       "name": "Temu",
-      "category": "Shopping & marketplaces",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "1 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "Shopping & marketplaces"
     },
     {
       "name": "The Companies API",
-      "category": "People & companies",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "6 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "People & companies"
     },
     {
       "name": "Threads",
-      "category": "Social & media",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "4 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Social & media"
     },
     {
       "name": "TikHub",
-      "category": "Search & web data",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "~282 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "Search & web data"
     },
     {
       "name": "TikTok",
-      "category": "Social & media",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "7 provider(s); price is the 'from' minimum"
-        },
-        {
-          "name": "Composio Instant Tools",
-          "notes": "8 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "Social & media"
     },
     {
       "name": "TikTok Ads",
-      "category": "Advertising & creators",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "5 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Advertising & creators"
     },
     {
       "name": "TikTok Shop",
-      "category": "Shopping & marketplaces",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "7 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Shopping & marketplaces"
     },
     {
       "name": "TinyFish",
-      "category": "Search & web data",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "2 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "Search & web data"
     },
     {
       "name": "Tomba",
-      "category": "People & companies",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "15 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "People & companies"
     },
     {
       "name": "Tripadvisor",
-      "category": "Maps, travel & weather",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "4 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Maps, travel & weather"
     },
     {
       "name": "Trustpilot",
-      "category": "Other APIs",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "3 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Other APIs"
     },
     {
       "name": "Truth Social",
-      "category": "Social & media",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Social & media"
     },
     {
       "name": "Twelve Data",
-      "category": "Finance & markets",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "71 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "Finance & markets"
     },
     {
       "name": "Twitch",
-      "category": "Social & media",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Social & media"
     },
     {
       "name": "Twitter",
-      "category": "Social & media",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "3 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "Social & media"
     },
     {
       "name": "Vaquill",
-      "category": "Research & knowledge",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "22 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "Research & knowledge"
     },
     {
       "name": "Video generation",
-      "category": "AI & content",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "5 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "AI & content"
     },
     {
       "name": "Voice generation",
-      "category": "AI & content",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "3 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "AI & content"
     },
     {
       "name": "Walmart",
-      "category": "Shopping & marketplaces",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "3 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Shopping & marketplaces"
     },
     {
       "name": "We Work Remotely",
-      "category": "Jobs & developer tools",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Jobs & developer tools"
     },
     {
       "name": "Weather",
-      "category": "Maps, travel & weather",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Maps, travel & weather"
     },
     {
       "name": "Web3 Career",
-      "category": "Jobs & developer tools",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "1 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "Jobs & developer tools"
     },
     {
       "name": "Wikipedia",
-      "category": "Research & knowledge",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Research & knowledge"
     },
     {
       "name": "X (Twitter)",
-      "category": "Social & media",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "7 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Social & media"
     },
     {
       "name": "Yahoo SERP",
-      "category": "Search & web data",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "2 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Search & web data"
     },
     {
       "name": "Yelp",
-      "category": "Maps, travel & weather",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "4 provider(s); price is the 'from' minimum"
-        },
-        {
-          "name": "Composio Instant Tools",
-          "notes": "10 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "Maps, travel & weather"
     },
     {
       "name": "You.com",
-      "category": "Search & web data",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "1 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "Search & web data"
     },
     {
       "name": "YouTube",
-      "category": "Social & media",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "9 provider(s); price is the 'from' minimum"
-        },
-        {
-          "name": "Composio Instant Tools",
-          "notes": "7 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "Social & media"
     },
     {
       "name": "ZeroBounce",
-      "category": "People & companies",
-      "sources": [
-        {
-          "name": "Composio Instant Tools",
-          "notes": "6 tools; 0% markup on provider cost; each call also uses one Composio tool call"
-        }
-      ]
+      "category": "People & companies"
     },
     {
       "name": "Zillow",
-      "category": "Maps, travel & weather",
-      "sources": [
-        {
-          "name": "treg.to",
-          "notes": "1 provider(s); price is the 'from' minimum"
-        }
-      ]
+      "category": "Maps, travel & weather"
     }
   ],
   "workflows": [
     {
       "name": "File an issue and announce it",
       "category": "Workflow templates",
-      "description": "Create a Linear issue, then post its title to a Slack channel.",
+      "description": "Create a Linear issue, then post its title to a Slack channel. The issue is filed even if the announcement fails.",
       "steps": [
         {
           "app": "Linear",
@@ -2032,7 +922,7 @@ window.orbytCatalog = {
     {
       "name": "Write a Notion page and share it",
       "category": "Workflow templates",
-      "description": "Create a page in Notion, then post a note about it in Slack.",
+      "description": "Create a page in Notion, then post a note about it in Slack. The page is kept even if the note fails.",
       "steps": [
         {
           "app": "Notion",
@@ -2045,13 +935,36 @@ window.orbytCatalog = {
       ]
     },
     {
-      "name": "Draft an email",
+      "name": "Draft an email from notes",
       "category": "Workflow templates",
-      "description": "Prepare a Gmail draft from a subject and body, ready to review and send.",
+      "description": "Turn rough notes into a Gmail draft, ready to review and send. The wording is a decision: the agent (or an AI model, if you switch it) writes it.",
       "steps": [
+        {
+          "app": "Decision",
+          "label": "Write the email"
+        },
         {
           "app": "Gmail",
           "label": "Create a draft"
+        }
+      ]
+    },
+    {
+      "name": "Summarise open issues for the team",
+      "category": "Workflow templates",
+      "description": "Read your Linear issues, have them summarised into a short digest, and post it to Slack. Set it to AI and a schedule to run unattended.",
+      "steps": [
+        {
+          "app": "Linear",
+          "label": "List issues"
+        },
+        {
+          "app": "Decision",
+          "label": "Write the digest"
+        },
+        {
+          "app": "Slack",
+          "label": "Send a Slack message"
         }
       ]
     }

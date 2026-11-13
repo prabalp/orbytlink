@@ -67,7 +67,7 @@ h1 { margin: 20px 0 0; font-size: 48px; line-height: 56px; letter-spacing: -1.08
 .note { margin-top: 32px; padding: 16px 20px; border-radius: 12px; background: var(--raised); box-shadow: inset 0 0 0 1px var(--border); font-size: 14px; line-height: 22px; color: var(--text-2); }
 .site-footer { border-top: 1px solid var(--border); padding: 32px 0; }
 .site-footer .wrap { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; font-size: 14px; color: var(--muted); }
-.site-footer nav { display: flex; gap: 20px; }
+.site-footer nav { display: flex; flex-wrap: wrap; gap: 8px 20px; }
 .site-footer a:hover, .site-footer a[aria-current] { color: var(--text); }
 @media (max-width: 900px) {
   .layout { grid-template-columns: 1fr; gap: 32px; margin-top: 40px; }
@@ -95,17 +95,17 @@ h1 { margin: 20px 0 0; font-size: 48px; line-height: 56px; letter-spacing: -1.08
   <div class="wrap">
     <div class="crumbs"><a href="/">Home</a> / Privacy policy</div>
     <h1>Privacy policy</h1>
-    <div class="meta">Last updated 31 October 2026</div>
+    <div class="meta">Last updated 13 November 2026</div>
     <div class="layout">
-      <nav class="toc" aria-label="On this page"><a href="#summary">The short version</a><a href="#website">The website</a><a href="#account">Your account</a><a href="#connections">Connected apps and credentials</a><a href="#gateway">Tool calls through the gateway</a><a href="#agents">Your AI agent</a><a href="#sharing">Who we share data with</a><a href="#retention">How long we keep it</a><a href="#security">Security</a><a href="#rights">Your rights</a><a href="#children">Children</a><a href="#changes">Changes to this policy</a><a href="#contact">Contact</a></nav>
+      <nav class="toc" aria-label="On this page"><a href="#summary">The short version</a><a href="#website">The website</a><a href="#account">Your account</a><a href="#connections">Connected apps and credentials</a><a href="#gateway">Tool calls through the gateway</a><a href="#agents">Your AI agent and AI models</a><a href="#payments">Payments</a><a href="#sharing">Who we share data with</a><a href="#retention">How long we keep it</a><a href="#security">Security</a><a href="#rights">Your rights</a><a href="#children">Children</a><a href="#changes">Changes to this policy</a><a href="#contact">Contact</a></nav>
       <article class="body">
-        <p class="intro">This policy explains what OrbytLink collects when you visit orbytlink.com or use the OrbytLink gateway at app.orbytlink.com, why we collect it, and the choices you have. We keep it short and specific to what the product actually does.</p>
+        <p class="intro">This policy explains what OrbytLink collects when you visit orbytlink.com or use the OrbytLink gateway at app.orbytlink.com, why we collect it, and the choices you have. OrbytLink is operated by Orbyt Labs, a sole proprietorship of Prabal Panda registered in Bengaluru, India (Udyam registration UDYAM-KR-03-0737483), which is responsible for your data under this policy. We keep it short and specific to what the product actually does.</p>
 
         <h2 id="summary">The short version</h2>
         <ul>
           <li><strong>We don't sell your data</strong>, and we don't use it to train AI models.</li>
           <li><strong>Credentials you connect are encrypted at rest</strong> and are never shown back to you or to your agent.</li>
-          <li><strong>We don't store what your agent sends or receives</strong> through a tool call. We keep a short record that a call happened.</li>
+          <li><strong>We don't store what your agent sends or receives</strong> through a tool call or an AI model. We keep a short record that a call happened.</li>
           <li><strong>The website has no analytics or tracking cookies.</strong></li>
         </ul>
 
@@ -131,8 +131,12 @@ h1 { margin: 20px 0 0; font-size: 48px; line-height: 56px; letter-spacing: -1.08
         </ul>
         <p>Before anything is stored or shown, values matching your saved secrets are redacted. Our server logs record errors and failed calls with a short description; they never include request bodies, passwords or credentials.</p>
 
-        <h2 id="agents">Your AI agent</h2>
-        <p>OrbytLink does not run an AI model on your data. Your agent, for example Claude, is provided by its own vendor, and whatever your agent receives from OrbytLink is handled under that vendor's terms and privacy policy. Choose an agent and plan whose data terms suit you.</p>
+        <h2 id="agents">Your AI agent and AI models</h2>
+        <p>Your agent, for example Claude, is provided by its own vendor, and whatever your agent receives from OrbytLink is handled under that vendor's terms and privacy policy. Choose an agent and plan whose data terms suit you.</p>
+        <p>If you or a workflow use a model from the AI models catalog, OrbytLink sends that prompt to the model through the Vercel AI Gateway, which passes it to the model's provider and returns the response. We don't store prompts or responses. For billing, we keep a usage record for each call: the model, token counts, cost, who made it and when.</p>
+
+        <h2 id="payments">Payments</h2>
+        <p>When you buy credit, you pay on a checkout page run by our payment partner: Cashfree Payments for payments in rupees, and Dodo Payments, our merchant of record, for payments in US dollars. They collect your payment details under their own privacy policies; we never see or store card numbers. We receive and keep the order ID, amount, currency, status and dates, and pass your email address to the payment partner to create the order.</p>
 
         <h2 id="sharing">Who we share data with</h2>
         <p>We share data only with the services needed to run OrbytLink, and with the apps you connect, on your instruction:</p>
@@ -140,6 +144,8 @@ h1 { margin: 20px 0 0; font-size: 48px; line-height: 56px; letter-spacing: -1.08
           <li><strong>Cloudflare</strong>, which delivers the website and sits in front of the gateway;</li>
           <li><strong>our hosting provider</strong>, whose servers run the gateway and hold its database and backups;</li>
           <li><strong>Google</strong>, for Google Fonts on the website and, if you use it, Google sign-in;</li>
+          <li><strong>Vercel</strong> and the model provider, when you use a model from the AI models catalog;</li>
+          <li><strong>Cashfree Payments</strong> and <strong>Dodo Payments</strong>, when you buy credit;</li>
           <li><strong>the apps you connect</strong>, which receive the requests your agent makes to them.</li>
         </ul>
         <p>We may also disclose data where the law requires it. We never sell personal data.</p>
@@ -160,13 +166,13 @@ h1 { margin: 20px 0 0; font-size: 48px; line-height: 56px; letter-spacing: -1.08
         <p>If we change this policy, we will update the date at the top. For significant changes, we will tell account holders by email or in the app before they take effect.</p>
 
         <h2 id="contact">Contact</h2>
-        <p>For privacy questions or requests, email <a href="mailto:hello@orbytlink.com">hello@orbytlink.com</a>.</p>
+        <p>For privacy questions or requests, email <a href="mailto:hello@orbytlink.com">hello@orbytlink.com</a>. Orbyt Labs, Bengaluru, Karnataka, India.</p>
       </article>
     </div>
   </div>
 </main>
 <footer class="site-footer">
-  <div class="wrap"><span>© 2026 OrbytLink</span><nav aria-label="Legal"><a href="/">Home</a><a href="/privacy.html" aria-current="page">Privacy</a><a href="/terms.html">Terms</a><a href="mailto:hello@orbytlink.com">Contact</a></nav></div>
+  <div class="wrap"><span>© 2026 Orbyt Labs · OrbytLink</span><nav aria-label="Legal"><a href="/">Home</a><a href="/pricing.html">Pricing</a><a href="/privacy.html" aria-current="page">Privacy</a><a href="/terms.html">Terms</a><a href="/refund.html">Refunds</a><a href="/contact.html">Contact</a></nav></div>
 </footer>
 </body>
 </html>

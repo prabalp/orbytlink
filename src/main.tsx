@@ -2325,7 +2325,8 @@ function SettingsPage({ state: s, busy, canConfigure, appearance, copy, onDialog
     ["gateway", "Gateway", Zap],
     ["ai", "AI credit", Sparkles],
   ] as [string, string, any][];
-  const [tab, setTab] = useState("general");
+  // Coming back from a payment (?pay_order=…, or ?cf_order=… from older orders) opens the AI credit tab, where the result is shown.
+  const [tab, setTab] = useState(() => (/[?&](pay_order|cf_order)=/.test(window.location.search) ? "ai" : "general"));
   const active = tabs.some(([id]) => id === tab) ? tab : "general";
   const settings = s.settings[0];
   const [name, setName] = useState(settings.name);

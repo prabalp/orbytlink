@@ -81,5 +81,5 @@ const skills = vendoredSkills.map(skill => {
   return { name: match?.[1] || skill.name, category: match?.[2] || 'Other', description: skill.description, source: skill.source.repo, url: `https://github.com/${skill.source.repo}/tree/${skill.source.commit}/${skill.source.path}` };
 });
 const workflows = workflowTemplates.map(item => ({ name: item.name, category: 'Workflow templates', description: item.description, steps: item.steps.map(step => ({ app: step.app, label: step.label })) }));
-fs.writeFileSync('landing/catalog-data.js', `// Generated from bundled skills, verified connection presets, workflow templates and docs/pay-per-call-tools.csv.\nwindow.orbytCatalog = ${JSON.stringify({ skills, tools: [...tools.values()].sort((a,b) => a.name.localeCompare(b.name)), workflows }, null, 2)};\n`);
+fs.writeFileSync('landing/catalog-data.js', `// Generated from bundled skills, verified connection presets and workflow templates.\nwindow.orbytCatalog = ${JSON.stringify({ skills, tools: [...tools.values()].map(({ sources, ...tool }) => tool).sort((a,b) => a.name.localeCompare(b.name)), workflows }, null, 2)};\n`);
 console.log(`${skills.length} skills, ${tools.size} tools, ${workflows.length} workflows`);
