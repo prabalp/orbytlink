@@ -12,6 +12,7 @@ import { Store, type Row } from "./store.js";
 import { configureEmailAuth, derive } from "./auth.js";
 import { configureOAuthCallback, configureOAuthRoutes, credentialFor, dropOAuth, redirectUri } from "./oauth.js";
 import { adapters, type ServiceAdapters } from "./adapters.js";
+import { configureMcpOAuth, crossOriginAllowed, mcpCors, resourceMetadataUrl } from "./mcp-oauth.js";
 import { API_REQUEST_TOOL, enabledApis, gatewayServer, gatewayTools, visibleWorkflowTools } from "./gateway.js";
 import { configureOrgs, describe, syncOrgName } from "./orgs.js";
 import { addSkill, libraryEntry, removeSkill, skillCatalog, skillText } from "./skills.js";
@@ -79,8 +80,9 @@ export function createApp(
           : ipKeyGenerator(req.ip || "127.0.0.1"),
     }),
   );
+  app.use(mcpCors);
   app.use((req, res, next) => {
-    if (!["GET", "HEAD", "OPTIONS"].includes(req.method)) {
+    if (!["GET", "HEAD", "OPTIONS"].includes(req.method) && !crossOriginAllowed(req)) {
       const origin = req.headers.origin;
       if (
         origin &&
@@ -93,6 +95,8 @@ export function createApp(
     next();
   });
   const emailAuth = configureEmailAuth(app, store);
+  // Agents sign in to /mcp with OAuth; registered before the session check below on purpose.
+  const mcpOAuth = configureMcpOAuth(app, store);
   initializeLibrary(store);
   initializeWorkflows(store);
   const oauthKey = derive(store, "orbytlink:oauth:v1");
@@ -197,9 +201,16 @@ export function createApp(
       store.seed(i.workspace);
       next();
     } catch (e) {
+      // Tell MCP clients where to sign in (RFC 9728); a rejected token is reported as invalid.
+      if (req.baseUrl === "/mcp")
+        res.setHeader(
+          "WWW-Authenticate",
+          `Bearer resource_metadata="${resourceMetadataUrl()}", scope="mcp"${req.headers.authorization ? ', error="invalid_token"' : ""}`,
+        );
       next(e);
     }
   });
+  app.post("/api/oauth/requests/:id", mcpOAuth.answer);
   configureOrgs(app, store);
   const identity = (res: Response) => res.locals.identity as Identity;
   const permit =

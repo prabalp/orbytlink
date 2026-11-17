@@ -118,8 +118,48 @@ test("generates a token in one click and fills it into the chosen agent's steps"
   await page.getByRole("button", { name: "Generate a token for Cursor" }).click();
   await expect(page.locator(".token-pill code")).toHaveText(/^ol_.{4}•+.{4}$/);
   await expect(page.locator(".hero-token small")).toContainText("Cursor ·");
+  // Signing in is the default setup; the token goes into the token setup.
+  await expect(page.locator(".snippet pre").first()).not.toContainText("Bearer");
+  await page.getByRole("radio", { name: "Token" }).click();
   await expect(page.locator(".snippet pre").first()).toContainText("Bearer ol_");
   await expect(page.getByRole("row", { name: /Cursor ·/ })).toBeVisible();
+});
+test("an agent signs in with only the /mcp URL and the person approves it", async ({ page, browser, baseURL }) => {
+  // What an agent does on its own: register itself, then send the person's browser to authorize.
+  const client = await (await page.request.post("/oauth/register", {
+    data: { client_name: "E2E agent", redirect_uris: ["https://agent.example/callback"], token_endpoint_auth_method: "none" },
+  })).json();
+  const authorize = `/oauth/authorize?${new URLSearchParams({
+    response_type: "code",
+    client_id: client.client_id,
+    redirect_uri: "https://agent.example/callback",
+    code_challenge: "E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM",
+    code_challenge_method: "S256",
+    state: "e2e-state",
+  })}`;
+  // Someone not signed in is asked to sign in first, and told which agent is asking.
+  const stranger = await (await browser.newContext({ baseURL })).newPage();
+  await stranger.goto(authorize);
+  await expect(stranger.getByText("Sign in to connect E2E agent to OrbytLink.")).toBeVisible();
+  await page.route("https://agent.example/**", (route) => route.fulfill({ body: "agent callback" }));
+  await page.goto(authorize);
+  await expect(page.getByRole("heading", { name: "Connect E2E agent", level: 1 })).toBeVisible();
+  await expect(page.getByText("You’ll return to agent.example.")).toBeVisible();
+  await page.getByLabel("App tools").selectOption("search");
+  await page.getByRole("button", { name: "Allow" }).click();
+  await page.waitForURL(/agent\.example\/callback/);
+  const back = new URL(page.url());
+  expect(back.searchParams.get("state")).toBe("e2e-state");
+  expect(back.searchParams.get("code")).toMatch(/^olac_/);
+  // The agent trades the code for tokens (the RFC 7636 example verifier matches the challenge above).
+  const tokens = await (await page.request.post("/oauth/token", {
+    form: { grant_type: "authorization_code", code: back.searchParams.get("code")!, code_verifier: "dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk", client_id: client.client_id, redirect_uri: "https://agent.example/callback" },
+  })).json();
+  expect(tokens.access_token).toMatch(/^ol_/);
+  await page.goto("/#connect-agents");
+  const row = page.getByRole("row", { name: /E2E agent/ });
+  await expect(row).toContainText("Signed in");
+  await expect(page.getByLabel("App tools for E2E agent")).toHaveValue("search");
 });
 test("turns a skill on, reads it, and sees workflow templates", async ({ page }) => {
   await page.locator(".sidebar nav").getByRole("link", { name: "Skills" }).click();

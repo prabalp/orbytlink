@@ -425,6 +425,16 @@ td small.muted { display: block; margin-top: 4px; }
 .auth-brand img { width: 40px; height: 40px; object-fit: contain; }
 .auth-brand span { font-size: 20px; font-weight: 600; }
 .auth h1 { margin: 0 0 16px; text-align: center; font-size: 36px; font-weight: 600; line-height: 1; letter-spacing: -0.05em; user-select: none; }
+.auth-notice { margin: 0 0 16px; text-align: center; font-size: 14px; color: var(--muted-foreground); }
+/* An agent's OAuth consent screen: the sign-in card, a little wider, with the page title size. */
+.consent-card { width: 420px; }
+.auth .consent-card h1 { font-size: 30px; letter-spacing: -0.025em; line-height: 1.2; }
+.consent-lead { text-align: center; font-size: 14px; color: var(--muted-foreground); }
+.consent-who { margin: 8px 0 20px; text-align: center; font-size: 14px; color: var(--muted-foreground); }
+.consent-fields { display: grid; gap: 20px; margin-bottom: 20px; }
+.consent-fields .field { margin-bottom: 0; }
+.consent-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 20px; }
+.consent-actions.single { grid-template-columns: 1fr; }
 .auth-error { margin: 0 0 8px; border: 1px solid var(--destructive); color: var(--destructive); border-radius: 8px; padding: 10px 12px; font-size: 14px; text-align: center; }
 .auth-form { margin-top: 24px; }
 .auth-field { margin-bottom: 16px; }

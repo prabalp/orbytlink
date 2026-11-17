@@ -173,7 +173,7 @@ it("creates a gateway token, shows it once, and revokes it", async () => {
   await click(button("Revoke"));
   await click(button("Revoke token"));
   await settle();
-  expect(document.body.textContent).toContain("No gateway tokens");
+  expect(document.body.textContent).toContain("No agents connected");
 });
 it("opens an app's connect form, filled in, from a connect link", async () => {
   location.hash = "connect=mcp:github";

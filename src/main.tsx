@@ -80,6 +80,34 @@ async function api(
   if (!response.ok) throw new Error(data.error || "Request failed");
   return data;
 }
+// An agent's sign-in request (#authorize=<id> from /oauth/authorize) is kept across sign-in,
+// including Google's redirect, until the person allows or declines it.
+const AUTHORIZE_KEY = "orbytlink:authorize";
+function pendingAuthorize() {
+  const m = /^#authorize=([A-Za-z0-9_-]+)$/.exec(location.hash);
+  try {
+    if (m) {
+      sessionStorage.setItem(AUTHORIZE_KEY, m[1]);
+      history.replaceState(null, "", location.pathname);
+    }
+    return sessionStorage.getItem(AUTHORIZE_KEY);
+  } catch {
+    // Without storage the request still works if the person is already signed in.
+    if (m) history.replaceState(null, "", location.pathname);
+    return m?.[1] ?? null;
+  }
+}
+function forgetAuthorize() {
+  try {
+    sessionStorage.removeItem(AUTHORIZE_KEY);
+  } catch {
+    // Nothing stored, nothing to forget.
+  }
+}
+const authorizeErrors: Record<string, string> = {
+  "unknown-client": "That agent is no longer registered with OrbytLink. Remove OrbytLink in the agent and add the gateway address again.",
+  "bad-redirect": "The agent asked to return to an address it never registered, so sign-in was stopped.",
+};
 function forgetInvite() {
   try {
     sessionStorage.removeItem("orbytlink:invite");
@@ -244,7 +272,10 @@ export function App() {
     [dialog, setDialog] = useState<{ type: string; data?: Data } | null>(null),
     [search, setSearch] = useState(""),
     // The token just created, kept in memory only so the setup snippets can include it.
-    [freshToken, setFreshToken] = useState<Data | null>(null);
+    [freshToken, setFreshToken] = useState<Data | null>(null),
+    [authorizeId, setAuthorizeId] = useState<string | null>(pendingAuthorize),
+    // Which agent is asking, readable before sign-in; an expired request carries an error instead.
+    [authorizeInfo, setAuthorizeInfo] = useState<Data | null>(null);
   const refresh = async () => {
     try {
       // Defaults keep the console usable against an older server that lacks newer fields.
@@ -309,6 +340,16 @@ export function App() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [appearance]);
+  useEffect(() => {
+    if (!authorizeId) return;
+    api(`/oauth/requests/${authorizeId}`).then(setAuthorizeInfo, (e) => setAuthorizeInfo({ error: (e as Error).message }));
+  }, [authorizeId]);
+  useEffect(() => {
+    const code = /^#authorize-error=([a-z-]+)$/.exec(location.hash)?.[1];
+    if (!code) return;
+    history.replaceState(null, "", location.pathname);
+    setError(authorizeErrors[code] || "The agent's sign-in request was not valid. Start connecting again from the agent.");
+  }, []);
   // An invite link is kept across sign-in (and Google's redirect) until the person answers it.
   const joinChecked = useRef(false);
   useEffect(() => {
@@ -438,6 +479,7 @@ export function App() {
           )
         }
         clearError={() => setError("")}
+        notice={authorizeInfo?.client ? `Sign in to connect ${authorizeInfo.client} to OrbytLink.` : undefined}
         dark={dark(appearance)}
         onToggleTheme={() => changeTheme(dark(appearance) ? "light" : "dark")}
       />
@@ -448,6 +490,20 @@ export function App() {
         <LoaderCircle className="spin" /> Loading gateway…
         {error && <p>{error}</p>}
       </div>
+    );
+  if (authorizeId && authorizeInfo)
+    return (
+      <AuthorizeAgent
+        id={authorizeId}
+        info={authorizeInfo}
+        state={state}
+        onDone={() => {
+          forgetAuthorize();
+          setAuthorizeId(null);
+          setAuthorizeInfo(null);
+        }}
+        onSignOut={() => act(() => api("/session/logout", {}), "Signed out")}
+      />
     );
   const s = state,
     settings = s.settings[0],
@@ -1182,6 +1238,7 @@ function EmailLogin({
   error,
   onSubmit,
   clearError,
+  notice,
   dark,
   onToggleTheme,
 }: {
@@ -1189,6 +1246,7 @@ function EmailLogin({
   error: string;
   onSubmit: (data: Data, register: boolean) => void;
   clearError: () => void;
+  notice?: string;
   dark: boolean;
   onToggleTheme: () => void;
 }) {
@@ -1235,6 +1293,7 @@ function EmailLogin({
             <span>OrbytLink</span>
           </div>
           <h1>{register ? "Create your account" : "Welcome back"}</h1>
+          {notice && <p className="auth-notice">{notice}</p>}
           {(error || oauthError) && <div className="auth-error" role="alert">{error || oauthError}</div>}
           <form
             className="auth-form"
@@ -1291,6 +1350,83 @@ function EmailLogin({
       <button className="auth-theme" type="button" aria-label="Toggle theme" aria-keyshortcuts="Ctrl+Shift+T" onClick={onToggleTheme}>
         {dark ? <Moon size={22} /> : <Sun size={22} />}
       </button>
+    </div>
+  );
+}
+// The consent screen an agent's OAuth sign-in lands on: which workspace it may use, how it sees
+// app tools, and Allow or Cancel. Either answer sends the browser back to the agent.
+function AuthorizeAgent({ id, info, state: s, onDone, onSignOut }: { id: string; info: Data; state: Data; onDone: () => void; onSignOut: () => void }) {
+  const workspaces: Data[] = s.workspaces?.length ? s.workspaces : [{ id: s.identity.workspace, name: s.identity.workspaceName, current: true }];
+  const [workspace, setWorkspace] = useState<string>(workspaces.find((w) => w.current)?.id || workspaces[0].id),
+    [toolMode, setToolMode] = useState("auto"),
+    [busy, setBusy] = useState(false),
+    [error, setError] = useState("");
+  const answer = async (allow: boolean) => {
+    setBusy(true);
+    setError("");
+    try {
+      const { redirect } = await api(`/oauth/requests/${id}`, { allow, workspace, toolMode });
+      onDone();
+      location.href = redirect;
+    } catch (e) {
+      setError((e as Error).message);
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="auth">
+      <main className="auth-main">
+        <div className="auth-card consent-card">
+          <div className="auth-brand">
+            <img src="/assets/logo.svg" alt="" aria-hidden="true" />
+            <span>OrbytLink</span>
+          </div>
+          {info.error ? (
+            <>
+              <h1>Sign-in expired</h1>
+              <p className="consent-lead">{info.error}</p>
+              <div className="consent-actions single">
+                <button className="primary" onClick={onDone}>Open OrbytLink</button>
+              </div>
+            </>
+          ) : (
+            <>
+              <h1>Connect {info.client}</h1>
+              <p className="consent-lead">
+                {info.client} wants to use the connected apps, skills and workflows in your OrbytLink workspace.
+              </p>
+              <p className="consent-who">
+                Signed in as {s.identity.email} · <button type="button" className="text-button" onClick={onSignOut}>Not you?</button>
+              </p>
+              {error && <div className="auth-error" role="alert">{error}</div>}
+              <div className="consent-fields">
+                {workspaces.length > 1 && (
+                  <Field label="Workspace">
+                    <select value={workspace} onChange={(e) => setWorkspace(e.target.value)} disabled={busy}>
+                      {workspaces.map((w) => <option key={w.id} value={w.id}>{w.name}</option>)}
+                    </select>
+                  </Field>
+                )}
+                <Field label="App tools" hint={toolModeHint}>
+                  <select value={toolMode} onChange={(e) => setToolMode(e.target.value)} disabled={busy}>
+                    {toolModes.map(([v, label]) => <option key={v} value={v}>{label}</option>)}
+                  </select>
+                </Field>
+              </div>
+              <div className="info-row">
+                <LockKeyhole size={16} />
+                <p>You’ll return to {info.destination}. Disconnect {info.client} any time from Connect agents.</p>
+              </div>
+              <div className="consent-actions">
+                <button className="secondary" disabled={busy} onClick={() => void answer(false)}>Cancel</button>
+                <button className="primary" disabled={busy} onClick={() => void answer(true)}>
+                  {busy ? <LoaderCircle className="spin" size={16} /> : "Allow"}
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      </main>
     </div>
   );
 }
@@ -2162,7 +2298,7 @@ function AgentsPage({ state: s, busy, copy, freshToken, onQuickCreate, onCreate,
       <header className="agents-hero">
         <BrandTile id="agent-mcp" name="MCP" />
         <h1>Connect any agent</h1>
-        <p>Connect once to use every app in this gateway. Copy the address, create a token, then follow the steps for your agent.</p>
+        <p>Paste this address into your agent. It opens OrbytLink for you to sign in and approve, so there’s no token to copy.</p>
         <span className="agents-field-label">Gateway address</span>
         <div className="hero-url">
           <code id="gateway-mcp-url">{url}</code>
@@ -2184,7 +2320,7 @@ function AgentsPage({ state: s, busy, copy, freshToken, onQuickCreate, onCreate,
               {busy ? <LoaderCircle size={14} className="spin" /> : <KeyRound size={14} />}
               Generate a token{agent === generic ? "" : ` for ${agent.name}`}
             </button>
-            <small>Valid for 90 days. Revoke it any time. <button className="text-button" onClick={onCreate}>Custom name or expiry</button></small>
+            <small>Only for agents that can’t sign in. Valid for 90 days. <button className="text-button" onClick={onCreate}>Custom name or expiry</button></small>
           </div>
         )}
       </header>
@@ -2239,14 +2375,14 @@ function AgentsPage({ state: s, busy, copy, freshToken, onQuickCreate, onCreate,
       </section>
 
       <section className="panel agents-tokens">
-        <div className="section-heading"><h2>Gateway tokens</h2><span className="count">{s.tokens.length}</span></div>
+        <div className="section-heading"><h2>Agents and tokens</h2><span className="count">{s.tokens.length}</span></div>
         {s.tokens.length ? <div className="table-scroll">
           <table>
             <thead><tr><th>Name</th>{s.tokens.some((t: Data) => !t.mine) && <th>Owner</th>}<th title={toolModeHint}>App tools</th><th>Created</th><th>Last used</th><th>Expires</th><th /></tr></thead>
             <tbody>
               {s.tokens.map((t: Data) => (
                 <tr key={t.id}>
-                  <td><strong>{t.name}</strong></td>
+                  <td><strong>{t.name}</strong>{t.signedIn && <small>Signed in · renews while in use</small>}</td>
                   {s.tokens.some((x: Data) => !x.mine) && <td className="muted">{t.mine ? "You" : t.owner}</td>}
                   <td>
                     <select className="table-select" aria-label={`App tools for ${t.name}`} value={t.toolMode || "auto"} disabled={busy} onChange={(e) => onToolMode(t, e.target.value)}>
@@ -2256,12 +2392,12 @@ function AgentsPage({ state: s, busy, copy, freshToken, onQuickCreate, onCreate,
                   <td className="muted">{when(t.createdAt)}</td>
                   <td className="muted">{t.lastUsedAt ? when(t.lastUsedAt) : "Never"}</td>
                   <td className="muted">{when(t.expiresAt)}</td>
-                  <td><button className="text-button" disabled={busy} onClick={() => onRevoke(t)}>Revoke</button></td>
+                  <td><button className="text-button" disabled={busy} onClick={() => onRevoke(t)}>{t.signedIn ? "Disconnect" : "Revoke"}</button></td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div> : <Empty icon={LockKeyhole} title="No gateway tokens" action={<button className="primary" onClick={onCreate}><Plus size={16} /> Create token</button>}>Create one token per agent or device, so you can revoke each independently.</Empty>}
+        </div> : <Empty icon={LockKeyhole} title="No agents connected" action={<button className="primary" onClick={onCreate}><Plus size={16} /> Create token</button>}>Agents you approve by signing in appear here, along with any tokens you create. Revoke each one independently.</Empty>}
       </section>
     </div>
   );

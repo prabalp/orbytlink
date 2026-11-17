@@ -1,7 +1,7 @@
 // How each agent connects to the gateway. Every snippet follows the client's own docs
 // (links below); keep it that way when adding one. `u` is the MCP URL, `t` the token.
 export type Step = { text: string; file?: string; code?: (u: string, t: string) => string };
-export type Method = { id: "cli" | "config" | "app" | "api"; label: string; steps: Step[] };
+export type Method = { id: "signin" | "cli" | "config" | "app" | "api"; label: string; steps: Step[] };
 export type Agent = {
   id: string;
   name: string;
@@ -18,6 +18,9 @@ const bearer = (t: string) => `Bearer ${t}`;
 // Agents that read the token from the environment keep it out of config files.
 const ENV = "ORBYTLINK_TOKEN";
 const exportToken = (t: string) => `export ${ENV}="${t}"`;
+// Agents that support MCP sign-in (OAuth) need only the URL: the gateway's /mcp answers with
+// where to sign in, the agent registers itself, and the person approves it in the browser.
+const signIn = (steps: Step[]): Method => ({ id: "signin", label: "Sign in", steps });
 const envStep: Step = {
   text: "Put the token in your shell profile (~/.zshrc or ~/.bashrc), then open a new terminal.",
   code: (_u, t) => exportToken(t),
@@ -30,9 +33,16 @@ export const agents: Agent[] = [
     name: "Claude Code",
     kind: "CLI",
     methods: [
+      signIn([
+        {
+          text: "Run this once. --scope user makes OrbytLink available in every project.",
+          code: (u) => `claude mcp add --transport http --scope user orbytlink ${u}`,
+        },
+        { text: "Start Claude Code, run /mcp, pick orbytlink and choose Authenticate. Approve it in the browser window that opens." },
+      ]),
       {
         id: "cli",
-        label: "Command",
+        label: "Token",
         steps: [
           {
             text: "Run this once. --scope user makes OrbytLink available in every project.",
@@ -60,8 +70,13 @@ export const agents: Agent[] = [
     id: "claude",
     logo: "agent-claude",
     name: "Claude",
-    kind: "Desktop app",
+    kind: "Web, desktop and mobile",
     methods: [
+      signIn([
+        { text: "In Claude, open Settings → Connectors and choose Add custom connector." },
+        { text: "Name it OrbytLink and paste the gateway address:", code: (u) => u },
+        { text: "Choose Connect, sign in to OrbytLink and choose Allow. The connector then works in Claude on the web, desktop and mobile." },
+      ]),
       {
         id: "config",
         label: "Desktop config",
@@ -85,7 +100,7 @@ export const agents: Agent[] = [
         ],
       },
     ],
-    note: "Custom connectors on claude.ai and in Claude’s Connectors settings sign in with OAuth, which the gateway does not offer to clients yet. Use the desktop config above for now.",
+    note: "On Team and Enterprise plans, an owner may need to add the connector for the organization first.",
   },
   {
     id: "codex",
@@ -93,6 +108,10 @@ export const agents: Agent[] = [
     name: "Codex",
     kind: "CLI and IDE",
     methods: [
+      signIn([
+        { text: "Add the gateway:", code: (u) => `codex mcp add orbytlink --url ${u}` },
+        { text: "Sign in. Your browser opens to approve Codex:", code: () => "codex mcp login orbytlink" },
+      ]),
       {
         id: "config",
         label: "config.toml",
@@ -113,11 +132,16 @@ export const agents: Agent[] = [
     id: "chatgpt",
     logo: "agent-chatgpt",
     name: "ChatGPT",
-    kind: "Desktop app",
+    kind: "Web and desktop",
     methods: [
+      signIn([
+        { text: "In ChatGPT, open Settings → Apps & Connectors → Advanced settings and turn on Developer mode." },
+        { text: "Back in Apps & Connectors, choose Create. Name it OrbytLink, choose OAuth for authentication, and paste the gateway address:", code: (u) => u },
+        { text: "Choose Create, sign in to OrbytLink and choose Allow." },
+      ]),
       {
         id: "app",
-        label: "In the app",
+        label: "Desktop app",
         steps: [
           { text: "In the ChatGPT desktop app open Settings → MCP servers → Add server, and choose Streamable HTTP." },
           { text: "Server URL:", code: (u) => u },
@@ -125,7 +149,7 @@ export const agents: Agent[] = [
         ],
       },
     ],
-    note: "ChatGPT on the web connects through plugins and is not supported yet. The desktop app shares its servers with Codex.",
+    note: "Developer mode is available on paid ChatGPT plans; on business plans an admin may need to enable it.",
     docs: "https://learn.chatgpt.com/docs/extend/mcp?surface=cli",
   },
   {
@@ -134,9 +158,17 @@ export const agents: Agent[] = [
     name: "Cursor",
     kind: "Editor",
     methods: [
+      signIn([
+        {
+          text: "Add this to ~/.cursor/mcp.json for every project, or .cursor/mcp.json for one. It holds no secret.",
+          file: "~/.cursor/mcp.json",
+          code: (u) => json({ mcpServers: { orbytlink: { url: u } } }),
+        },
+        { text: "Open Cursor Settings → MCP. Next to orbytlink, choose Connect (or Needs login) and approve it in the browser." },
+      ]),
       {
         id: "config",
-        label: "mcp.json",
+        label: "Token",
         steps: [
           {
             text: "Add this to ~/.cursor/mcp.json for every project, or .cursor/mcp.json for one. Keep the file private: it holds your token.",
@@ -155,9 +187,16 @@ export const agents: Agent[] = [
     name: "VS Code",
     kind: "GitHub Copilot",
     methods: [
+      signIn([
+        {
+          text: "Run this to add OrbytLink to your VS Code profile:",
+          code: (u) => `code --add-mcp '${JSON.stringify({ name: "orbytlink", type: "http", url: u })}'`,
+        },
+        { text: "Start the server from the MCP view. VS Code asks you to sign in once; approve it in the browser." },
+      ]),
       {
         id: "cli",
-        label: "Command",
+        label: "Token",
         steps: [
           {
             text: "Run this to add OrbytLink to your VS Code profile:",
@@ -191,9 +230,16 @@ export const agents: Agent[] = [
     name: "Gemini CLI",
     kind: "CLI",
     methods: [
+      signIn([
+        {
+          text: "Run this once. --scope user makes it available everywhere.",
+          code: (u) => `gemini mcp add --scope user --transport http orbytlink ${u}`,
+        },
+        { text: "Start Gemini CLI and sign in. Your browser opens to approve it:", code: () => "/mcp auth orbytlink" },
+      ]),
       {
         id: "cli",
-        label: "Command",
+        label: "Token",
         steps: [
           {
             text: "Run this once. --scope user makes it available everywhere.",
@@ -302,11 +348,15 @@ export const agents: Agent[] = [
     id: "mcp",
     logo: "agent-mcp",
     name: "Any MCP client",
-    kind: "URL and token",
+    kind: "URL, with sign-in or a token",
     methods: [
+      signIn([
+        { text: "Transport: Streamable HTTP. Server URL:", code: (u) => u },
+        { text: "Clients that support MCP sign-in (OAuth) find everything else from this address: they register themselves and open your browser to approve. Nothing to paste." },
+      ]),
       {
         id: "config",
-        label: "Settings",
+        label: "Token",
         steps: [
           { text: "Transport: Streamable HTTP. Server URL:", code: (u) => u },
           { text: "Send this header with every request:", code: (_u, t) => `Authorization: ${bearer(t)}` },

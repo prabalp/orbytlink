@@ -99,6 +99,15 @@ CREATE UNIQUE INDEX IF NOT EXISTS accounts_google ON accounts(google_sub) WHERE 
     !(store.db.prepare("PRAGMA table_info(access_tokens)").all() as { name: string }[]).some((c) => c.name === "tool_mode")
   )
     store.db.exec("ALTER TABLE access_tokens ADD COLUMN tool_mode TEXT NOT NULL DEFAULT 'auto'");
+  // Tokens an agent got by signing in (OAuth, see mcp-oauth.ts): which client holds them, the
+  // rotating refresh token, and the hour the current access token lasts. `expires` is the grant's.
+  if (
+    !(store.db.prepare("PRAGMA table_info(access_tokens)").all() as { name: string }[]).some((c) => c.name === "client_id")
+  )
+    store.db.exec(`ALTER TABLE access_tokens ADD COLUMN client_id TEXT;
+ALTER TABLE access_tokens ADD COLUMN refresh_hash TEXT;
+ALTER TABLE access_tokens ADD COLUMN access_expires INTEGER;
+CREATE UNIQUE INDEX IF NOT EXISTS tokens_refresh ON access_tokens(refresh_hash) WHERE refresh_hash IS NOT NULL;`);
   initializeOrgTables(store);
 }
 export async function createAccount(store: Store, input: unknown) {
@@ -506,9 +515,9 @@ export function configureEmailAuth(app: Express, store: Store) {
       const hash = digest(token);
       const row = store.db
         .prepare(
-          "SELECT a.*,t.permissions,t.last_used,t.tool_mode,t.workspace AS token_workspace FROM access_tokens t JOIN accounts a ON a.id=t.account_id WHERE t.token_hash=? AND t.expires>? AND a.disabled=0",
+          "SELECT a.*,t.permissions,t.last_used,t.tool_mode,t.workspace AS token_workspace FROM access_tokens t JOIN accounts a ON a.id=t.account_id WHERE t.token_hash=? AND t.expires>? AND (t.access_expires IS NULL OR t.access_expires>?) AND a.disabled=0",
         )
-        .get(hash, Date.now()) as
+        .get(hash, Date.now(), Date.now()) as
         | (Account & { permissions: string; last_used: number | null; tool_mode: string; token_workspace: string | null })
         | undefined;
       if (!row) return;
@@ -553,7 +562,7 @@ export function configureEmailAuth(app: Express, store: Store) {
       return (
         store.db
           .prepare(
-            "SELECT t.id,t.name,t.created_at,t.expires,t.last_used,t.tool_mode,t.account_id,a.email FROM access_tokens t JOIN accounts a ON a.id=t.account_id WHERE t.workspace=? AND t.expires>? AND t.id IS NOT NULL AND (t.account_id=? OR ?) ORDER BY t.created_at DESC",
+            "SELECT t.id,t.name,t.created_at,t.expires,t.last_used,t.tool_mode,t.account_id,t.client_id,a.email FROM access_tokens t JOIN accounts a ON a.id=t.account_id WHERE t.workspace=? AND t.expires>? AND t.id IS NOT NULL AND (t.account_id=? OR ?) ORDER BY t.created_at DESC",
           )
           .all(user.workspace, Date.now(), user.id, all) as any[]
       ).map((t) => ({
@@ -565,6 +574,8 @@ export function configureEmailAuth(app: Express, store: Store) {
         toolMode: t.tool_mode,
         owner: t.email,
         mine: t.account_id === user.id,
+        // Connected by signing in (OAuth) rather than a pasted token; it renews itself while used.
+        signedIn: !!t.client_id,
       }));
     },
     // The owner, or an organization admin, picks how the token's client sees app tools.

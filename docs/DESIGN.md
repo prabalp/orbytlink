@@ -144,7 +144,7 @@ danger section uses a red label and a faint red border. Never a single long form
 The Connect agents page is an introduction, not a form, and is the one page without the
 standard heading. It opens with a centred block: the MCP mark, a 30px title, one 16px grey
 sentence, the MCP URL as a large copyable field (the page's primary action), and one line
-about the token. Below it, agent presets are round chips (logo + name) in a centred row;
+about the token (only for agents that can't sign in). Each guide opens on its Sign in setup. Below it, agent presets are round chips (logo + name) in a centred row;
 choosing one opens a single guide card (12px radius, numbered steps, copyable snippets).
 Nothing selected means "any MCP client". The column is 820px wide and centred. Tokens sit
 at the bottom in a normal box. Don't copy this layout to other pages.
@@ -165,3 +165,10 @@ at the bottom in a normal box. Don't copy this layout to other pages.
 - [ ] Empty state is inside the box and one sentence long.
 - [ ] Works collapsed, expanded, and at 420px wide; no horizontal page scroll.
 - [ ] Only tokens, no raw colours.
+
+## 8. Exception: agent consent
+
+When an agent signs in to `/mcp` (OAuth), the person lands on a consent screen built on the
+sign-in card (`.auth`, `.consent-card`): logo, 30px "Connect {agent}", one grey sentence, who
+is signed in, the workspace and App tools selects, an info row naming where they return, and
+Cancel / Allow side by side. No sidebar: it is a step in the agent's flow, not a console page.

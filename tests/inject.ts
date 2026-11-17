@@ -42,8 +42,9 @@ export async function inject(
     ),
   };
   if (body !== undefined) {
-    const serialized = JSON.stringify(body);
-    req.headers["content-type"] = "application/json";
+    // A string body is sent as-is (form posts set their own content type); anything else as JSON.
+    const serialized = typeof body === "string" ? body : JSON.stringify(body);
+    req.headers["content-type"] ??= "application/json";
     req.headers["content-length"] = String(Buffer.byteLength(serialized));
     req.push(serialized);
   }
