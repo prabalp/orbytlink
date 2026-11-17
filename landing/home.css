@@ -52,7 +52,7 @@
 
 /* 1. How it works: hub diagram + three steps */
 .hub { position: relative; border: 1px solid var(--line); border-radius: 16px; background: var(--panel); overflow: hidden; }
-.hub svg { display: block; width: 100%; height: auto; }
+.hub > svg { display: block; width: 100%; height: auto; }
 .hub .wire { fill: none; stroke: var(--line); stroke-width: 1.5; transition: stroke 300ms var(--base); }
 .hub .wire.on { stroke: var(--accent); }
 .hub .node rect { fill: var(--panel); stroke: var(--line); stroke-width: 1; transition: stroke 300ms var(--base), fill 300ms var(--base); }
