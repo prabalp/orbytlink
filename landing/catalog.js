@@ -65,7 +65,8 @@
     document.querySelector('#empty-state').hidden = items.length > 0;
   }
   function selectView() {
-    view = Object.hasOwn(titles, location.hash.slice(1)) ? location.hash.slice(1) : 'skills';
+    const page = location.pathname.split('/').pop().replace(/\.html$/, '');
+    view = Object.hasOwn(titles, page) ? page : 'skills';
     document.querySelectorAll('.catalog-nav [data-view]').forEach(link => { if (link.dataset.view === view) link.setAttribute('aria-current', 'page'); else link.removeAttribute('aria-current'); });
     document.querySelector('#view-title').textContent = titles[view];
     document.querySelector('#view-description').textContent = descriptions[view];
@@ -102,7 +103,6 @@
       row.hidden=!open;button.setAttribute('aria-expanded',String(open));
     }
   });
-  window.addEventListener('hashchange', selectView);
   const menu = document.querySelector('#menu');
   const mobileNav = document.querySelector('#mobile-nav');
   function closeMenu() { mobileNav.classList.remove('open'); menu.setAttribute('aria-expanded', 'false'); menu.setAttribute('aria-label', 'Open menu'); }

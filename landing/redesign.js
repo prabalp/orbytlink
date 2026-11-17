@@ -1,13 +1,4 @@
 (() => {
-  const button = document.querySelector('#demo-toggle');
-  button.addEventListener('click', () => {
-    const kept = button.getAttribute('aria-pressed') !== 'true';
-    button.setAttribute('aria-pressed', String(kept));
-    document.querySelector('#demo-label').textContent = kept ? 'WHAT YOU KEEP' : 'THE FIRST TIME';
-    document.querySelector('#demo-title').innerHTML = kept ? 'A repeatable workflow.<br>Ready for your review.' : 'A job done.<br>A process discovered.';
-    document.querySelector('#demo-desc').textContent = kept ? 'Keep the routine steps. Bring your agent back for the decisions that need judgment.' : 'Your agent uses the connected tools to find the steps that work.';
-    button.firstChild.textContent = kept ? 'Back to the first run ' : 'See what you keep ';
-  });
   const heading = document.querySelector('.tagline');
   if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
     heading.innerHTML = heading.innerHTML.split(/(<br\s*\/?>)/).map(part => part.startsWith('<br') ? part : part.trim().split(' ').map(word => `<span>${word}</span>`).join(' ')).join('');
