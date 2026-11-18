@@ -20,6 +20,7 @@ import { toMarkdown, workflowFileName } from "./workflow-md.js";
 import { libraryCount, librarySearch, viewerFor } from "./library.js";
 import { allowedMethods, apiCall } from "./apis.js";
 import { ToolIndex, sameApp } from "./tool-search.js";
+import { origin } from "./mcp-oauth.js";
 
 // MCP clients accept tool names matching ^[a-zA-Z0-9_-]{1,64}$.
 const clean = (value: string) =>
@@ -112,7 +113,12 @@ export function gatewayServer(
   // The mode is fixed per request from the configuration at that moment.
   const mode = effectiveMode(identity.toolMode, gatewayTools(store, w).length);
   const server = new Server(
-    { name: "OrbytLink", version: "0.3.0" },
+    {
+      name: "OrbytLink",
+      version: "0.3.0",
+      websiteUrl: "https://orbytlink.com",
+      icons: [{ src: `${origin()}/favicon.png`, mimeType: "image/png", sizes: ["128x128"] }],
+    },
     {
       capabilities: { tools: { listChanged: false }, prompts: { listChanged: false } },
       instructions: mode === "search" ? SEARCH_INSTRUCTIONS : ALL_INSTRUCTIONS,

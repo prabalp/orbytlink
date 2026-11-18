@@ -8,6 +8,7 @@ import { createRemoteJWKSet, jwtVerify } from "jose";
 import { z } from "zod";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { createHash } from "node:crypto";
+import path from "node:path";
 import { Store, type Row } from "./store.js";
 import { configureEmailAuth, derive } from "./auth.js";
 import { configureOAuthCallback, configureOAuthRoutes, credentialFor, dropOAuth, redirectUri } from "./oauth.js";
@@ -64,6 +65,24 @@ export function createApp(
       );
     }
     next();
+  });
+  // Brand icons, public and cacheable: clients such as Claude.ai pick the connector icon from
+  // this host's favicon. The files live in public/ (copied to dist/ by the Vite build).
+  const ICONS: Record<string, [file: string, type: string]> = {
+    "/favicon.ico": ["favicon.ico", "image/x-icon"],
+    "/favicon.png": ["favicon-128x128.png", "image/png"],
+    "/apple-touch-icon.png": ["apple-touch-icon.png", "image/png"],
+    "/icon.svg": ["icon.svg", "image/svg+xml"],
+    ...Object.fromEntries([32, 48, 64, 128, 256].map((s) => [`/favicon-${s}x${s}.png`, [`favicon-${s}x${s}.png`, "image/png"]])),
+  };
+  const iconRoot = path.resolve(dev ? "public" : "dist");
+  app.get(Object.keys(ICONS), (req, res, next) => {
+    const [file, type] = ICONS[req.path];
+    res.sendFile(file, {
+      root: iconRoot,
+      headers: { "Content-Type": type, "Cache-Control": "public, max-age=86400" },
+      cacheControl: false,
+    }, (error) => error && next(error));
   });
   // The payment webhook is signed over the raw body, so keep it for that one route.
   app.use(express.json({ limit: "256kb", verify: (req: any, _res, buf) => { if (req.url?.startsWith("/api/payments/webhook") || req.url?.startsWith("/api/payments/dodo/webhook")) req.rawBody = buf.toString("utf8"); } }));
