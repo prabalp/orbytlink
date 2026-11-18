@@ -3,6 +3,8 @@ import { z } from "zod";
 import type { Express, Request } from "express";
 import type { Store } from "./store.js";
 import { allPermissions, type Identity } from "./schema.js";
+import { inviteMail, mailConfigured, sendMail } from "./mail.js";
+import { origin } from "./mcp-oauth.js";
 
 // An organization is a shared workspace: connections, credentials, tokens and activity
 // belong to the workspace, and memberships decide who may use or change them. A person's
@@ -15,7 +17,9 @@ export const rolePermissions: Record<Role, string[]> = {
 };
 const INVITE_DAYS = 7,
   MAX_ORGS = 10,
-  MAX_INVITES = 50;
+  MAX_INVITES = 50,
+  // Anyone can create an organization, so invite emails per sender are capped to stop spam.
+  MAX_EMAILS_PER_DAY = 20;
 const digest = (value: string) => createHash("sha256").update(value).digest("hex");
 // Business-rule failures whose message is safe to show.
 const conflict = (message: string) => Object.assign(new Error(message), { status: 409 });
@@ -34,11 +38,15 @@ export function initializeOrgTables(store: Store) {
 CREATE TABLE IF NOT EXISTS memberships(account_id TEXT NOT NULL,workspace TEXT NOT NULL,role TEXT NOT NULL CHECK(role IN('admin','member')),created_at INTEGER NOT NULL,PRIMARY KEY(account_id,workspace));
 CREATE INDEX IF NOT EXISTS memberships_workspace ON memberships(workspace);
 CREATE TABLE IF NOT EXISTS invites(id TEXT PRIMARY KEY,workspace TEXT NOT NULL,token_hash TEXT UNIQUE NOT NULL,role TEXT NOT NULL,created_by TEXT NOT NULL,created_at INTEGER NOT NULL,expires INTEGER NOT NULL);
-CREATE INDEX IF NOT EXISTS invites_workspace ON invites(workspace);`);
+CREATE INDEX IF NOT EXISTS invites_workspace ON invites(workspace);
+CREATE TABLE IF NOT EXISTS invite_emails(account_id TEXT NOT NULL,sent_at INTEGER NOT NULL);
+CREATE INDEX IF NOT EXISTS invite_emails_account ON invite_emails(account_id,sent_at);`);
   const has = (table: string, column: string) =>
     (store.db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]).some(
       (c) => c.name === column,
     );
+  // Invites sent by email remember the address, so admins can see and resend them.
+  if (!has("invites", "email")) store.db.exec("ALTER TABLE invites ADD COLUMN email TEXT");
   if (!has("accounts", "active_workspace"))
     store.db.exec("ALTER TABLE accounts ADD COLUMN active_workspace TEXT");
   // A gateway token belongs to one workspace; earlier tokens belonged to their owner's own.
@@ -124,11 +132,11 @@ export function describe(store: Store, accountId: string | undefined, identity: 
     identity.role === "admin"
       ? (
           store.db
-            .prepare("SELECT id,role,created_at,expires FROM invites WHERE workspace=? AND expires>? ORDER BY created_at DESC")
-            .all(identity.workspace, Date.now()) as { id: string; role: Role; created_at: number; expires: number }[]
-        ).map((i) => ({ id: i.id, role: i.role, createdAt: i.created_at, expiresAt: i.expires }))
+            .prepare("SELECT id,role,email,created_at,expires FROM invites WHERE workspace=? AND expires>? ORDER BY created_at DESC")
+            .all(identity.workspace, Date.now()) as { id: string; role: Role; email: string | null; created_at: number; expires: number }[]
+        ).map((i) => ({ id: i.id, role: i.role, email: i.email, createdAt: i.created_at, expiresAt: i.expires }))
       : [];
-  return { workspaces, org: { id: org.id, name: org.name, role: identity.role, members, invites } };
+  return { workspaces, org: { id: org.id, name: org.name, role: identity.role, members, invites, inviteEmails: mailConfigured() } };
 }
 
 // An organization renamed from Settings keeps its name here in step.
@@ -138,6 +146,9 @@ export function syncOrgName(store: Store, workspace: string, name: string) {
 
 const nameSchema = z.object({ name: z.string().trim().min(2).max(80) });
 const roleSchema = z.object({ role: z.enum(["admin", "member"]) });
+const inviteSchema = roleSchema.extend({
+  email: z.string().trim().toLowerCase().pipe(z.email().max(254)).optional().or(z.literal("").transform(() => undefined)),
+});
 const tokenSchema = z.object({ token: z.string().regex(/^oi_[A-Za-z0-9_-]{43}$/) });
 
 export function configureOrgs(app: Express, store: Store) {
@@ -216,21 +227,77 @@ export function configureOrgs(app: Express, store: Store) {
     res.json({ ok: true });
   });
 
-  app.post("/api/org/invites", (req, res) => {
+  const newToken = () => `oi_${randomBytes(32).toString("base64url")}`;
+  const inviteExpiry = () => Date.now() + INVITE_DAYS * 24 * 60 * 60 * 1000;
+  // Emails the link if email is set up. A failure never loses the invite: the admin still gets
+  // the link to copy, with the reason, so nothing here throws once the invite exists.
+  const deliver = async (identity: Identity, accountId: string, email: string, role: Role, token: string) => {
+    if (!mailConfigured()) return { emailed: false, emailError: "Email isn't set up on this server, so copy the link and send it yourself." };
+    const inviter = store.db.prepare("SELECT name FROM accounts WHERE id=?").get(accountId) as { name: string };
+    const org = orgOf(store, identity.workspace)!;
+    try {
+      await sendMail(inviteMail({ to: email, inviter: inviter.name, org: org.name, role, link: `${origin()}/#invite=${token}`, days: INVITE_DAYS }));
+    } catch {
+      return { emailed: false, emailError: "The email could not be sent. Copy the link and send it yourself, or try Resend later." };
+    }
+    store.db.prepare("INSERT INTO invite_emails(account_id,sent_at) VALUES(?,?)").run(accountId, Date.now());
+    store.audit(identity.workspace, identity.user, "invite.emailed", email);
+    return { emailed: true };
+  };
+  const checkEmailQuota = (accountId: string) => {
+    if (!mailConfigured()) return;
+    const since = Date.now() - 24 * 60 * 60 * 1000;
+    store.db.prepare("DELETE FROM invite_emails WHERE sent_at<=?").run(since);
+    const sent = (store.db.prepare("SELECT COUNT(*) AS n FROM invite_emails WHERE account_id=?").get(accountId) as { n: number }).n;
+    if (sent >= MAX_EMAILS_PER_DAY)
+      throw conflict(`You can send up to ${MAX_EMAILS_PER_DAY} invite emails a day. Create a link without an email address, or try again tomorrow.`);
+  };
+
+  app.post("/api/org/invites", async (req, res) => {
     const { identity, accountId } = admin(req);
-    const { role } = roleSchema.parse(req.body);
+    const { role, email } = inviteSchema.parse(req.body);
     store.db.prepare("DELETE FROM invites WHERE expires<=?").run(Date.now());
     const pending = (store.db.prepare("SELECT COUNT(*) AS n FROM invites WHERE workspace=?").get(identity.workspace) as { n: number }).n;
     if (pending >= MAX_INVITES) throw conflict("Revoke some pending invites before creating more.");
+    if (email) {
+      const member = store.db
+        .prepare("SELECT 1 FROM memberships m JOIN accounts a ON a.id=m.account_id WHERE m.workspace=? AND a.email=?")
+        .get(identity.workspace, email);
+      if (member) throw conflict(`${email} is already a member of this organization.`);
+      checkEmailQuota(accountId);
+    }
     // Possession of the link is the invitation: shown once, stored only as a hash, single use.
-    const token = `oi_${randomBytes(32).toString("base64url")}`,
+    const token = newToken(),
       id = randomUUID(),
-      expires = Date.now() + INVITE_DAYS * 24 * 60 * 60 * 1000;
-    store.db
-      .prepare("INSERT INTO invites(id,workspace,token_hash,role,created_by,created_at,expires) VALUES(?,?,?,?,?,?,?)")
-      .run(id, identity.workspace, digest(token), role, accountId, Date.now(), expires);
-    store.audit(identity.workspace, identity.user, "invite.created", role);
-    res.json({ id, token, role, expiresAt: expires });
+      expires = inviteExpiry();
+    store.transaction(() => {
+      // A new invite to the same address replaces the earlier one, so only the latest link works.
+      if (email) store.db.prepare("DELETE FROM invites WHERE workspace=? AND email=?").run(identity.workspace, email);
+      store.db
+        .prepare("INSERT INTO invites(id,workspace,token_hash,role,email,created_by,created_at,expires) VALUES(?,?,?,?,?,?,?,?)")
+        .run(id, identity.workspace, digest(token), role, email ?? null, accountId, Date.now(), expires);
+      store.audit(identity.workspace, identity.user, "invite.created", email ? `${email} · ${role}` : role);
+    });
+    const delivery = email ? await deliver(identity, accountId, email, role, token) : {};
+    res.json({ id, token, role, email: email ?? null, expiresAt: expires, ...delivery });
+  });
+
+  // Only a hash of the link is kept, so resending issues a fresh link (the old one stops working)
+  // and restarts the expiry.
+  app.post("/api/org/invites/:id/resend", async (req, res) => {
+    const { identity, accountId } = admin(req);
+    const invite = store.db
+      .prepare("SELECT id,role,email FROM invites WHERE id=? AND workspace=? AND expires>?")
+      .get(String(req.params.id), identity.workspace, Date.now()) as { id: string; role: Role; email: string | null } | undefined;
+    if (!invite) throw Object.assign(new Error("Record not found"), { status: 404 });
+    if (!invite.email) throw conflict("This invite has no email address. Create a new invite to email someone.");
+    if (!mailConfigured()) throw conflict("Email isn't set up on this server.");
+    checkEmailQuota(accountId);
+    const token = newToken(),
+      expires = inviteExpiry();
+    store.db.prepare("UPDATE invites SET token_hash=?,expires=?,created_at=? WHERE id=?").run(digest(token), expires, Date.now(), invite.id);
+    const delivery = await deliver(identity, accountId, invite.email, invite.role, token);
+    res.json({ id: invite.id, token, role: invite.role, email: invite.email, expiresAt: expires, ...delivery });
   });
 
   app.delete("/api/org/invites/:id", (req, res) => {

@@ -717,7 +717,7 @@ export function App() {
             />
           )}
           {title === "Team" && (
-            <TeamPage state={s} busy={busy} isAdmin={isAdmin} onDialog={setDialog} onRole={(m: Data, role: string) => act(() => api(`/org/members/${m.id}`, { role }, "PUT"), "Role updated", false)} onRevokeInvite={(i: Data) => act(() => api(`/org/invites/${i.id}`, {}, "DELETE"), "Invite revoked", false)} />
+            <TeamPage state={s} busy={busy} isAdmin={isAdmin} onDialog={setDialog} onRole={(m: Data, role: string) => act(() => api(`/org/members/${m.id}`, { role }, "PUT"), "Role updated", false)} onRevokeInvite={(i: Data) => act(() => api(`/org/invites/${i.id}`, {}, "DELETE"), "Invite revoked", false)} onResendInvite={(i: Data) => act(async () => { const invite = await api(`/org/invites/${i.id}/resend`, {}); if (!invite.emailed) setDialog({ type: "invite-link", data: invite }); return { toast: invite.emailed ? `Invite resent to ${invite.email}` : "Invite link renewed" }; }, "Invite resent", false)} />
           )}
           {title === "Activity" && (
             <>
@@ -814,7 +814,7 @@ export function App() {
             workspaces: "Workspaces",
             "new-org": "Create organization",
             invite: "Invite a member",
-            "invite-link": "Invite link",
+            "invite-link": dialog.data?.emailed ? "Invite sent" : "Invite link",
             join: "Join organization",
             "remove-member": dialog.data?.you ? "Leave organization" : "Remove member",
             "delete-org": "Delete organization",
@@ -1045,27 +1045,42 @@ export function App() {
               onSubmit={(event: FormEvent<HTMLFormElement>) => {
                 event.preventDefault();
                 const f = new FormData(event.currentTarget);
+                const email = String(f.get("email") || "").trim();
                 void act(async () => {
-                  const invite = await api("/org/invites", { role: f.get("role") });
+                  const invite = await api("/org/invites", { role: f.get("role"), ...(email ? { email } : {}) });
                   setDialog({ type: "invite-link", data: invite });
-                }, "Invite created", false);
+                }, email ? "Invite created" : "Invite link created", false);
               }}
             >
+              {s.org?.inviteEmails && (
+                <Field label="Email" hint="Optional. Leave it empty to get a link to send yourself.">
+                  <input name="email" type="email" maxLength={254} autoFocus placeholder="name@company.com" />
+                </Field>
+              )}
               <Field label="Role" hint="You can change anyone's role later.">
                 <select name="role" defaultValue="member">
                   <option value="member">Member: uses the gateway, cannot change it</option>
                   <option value="admin">Admin: manages connections, members and settings</option>
                 </select>
               </Field>
-              <p className="muted">You get a one-time link to send them. It works for one person and expires in 7 days.</p>
-              <FormActions busy={busy} onCancel={close} label="Create invite link" />
+              <p className="muted">{s.org?.inviteEmails ? "We email them a one-time link, and you can copy it too." : "You get a one-time link to send them."} It works for one person and expires in 7 days.</p>
+              <FormActions busy={busy} onCancel={close} label={s.org?.inviteEmails ? "Send invite" : "Create invite link"} />
             </form>
           )}
           {dialog.type === "invite-link" && (
             <div className="form-body">
+              {dialog.data!.emailed && (
+                <div className="info-row">
+                  <Check size={18} />
+                  <p>Invite sent to <strong>{dialog.data!.email}</strong>. You can also copy the link below.</p>
+                </div>
+              )}
+              {dialog.data!.email && !dialog.data!.emailed && dialog.data!.emailError && (
+                <div className="error" role="alert">{dialog.data!.emailError}</div>
+              )}
               <div className="info-row">
                 <LockKeyhole size={18} />
-                <p>Copy this link now. It is shown once and only its hash is stored. Anyone who opens it while signed in can join as {dialog.data!.role === "admin" ? "an admin" : "a member"}, once.</p>
+                <p>{dialog.data!.emailed ? "This link is shown once and only its hash is stored." : "Copy this link now. It is shown once and only its hash is stored."} Anyone who opens it while signed in can join as {dialog.data!.role === "admin" ? "an admin" : "a member"}, once.</p>
               </div>
               <CodeLine text={`${location.origin}/#invite=${dialog.data!.token}`} copy={copy} label="Invite link" />
               <div className="form-footer"><button className="primary" onClick={close}>Done</button></div>
@@ -2570,7 +2585,7 @@ function SettingsPage({ state: s, busy, canConfigure, appearance, copy, onDialog
     </div>
   );
 }
-function TeamPage({ state: s, busy, isAdmin, onDialog, onRole, onRevokeInvite }: any) {
+function TeamPage({ state: s, busy, isAdmin, onDialog, onRole, onRevokeInvite, onResendInvite }: any) {
   if (!s.org)
     return (
       <section className="panel">
@@ -2611,17 +2626,28 @@ function TeamPage({ state: s, busy, isAdmin, onDialog, onRole, onRevokeInvite }:
           {s.org.invites.length ? (
             <div className="table-scroll">
               <table>
-                <thead><tr><th>Role</th><th>Created</th><th>Expires</th><th /></tr></thead>
+                <thead><tr><th>Sent to</th><th>Role</th><th>Created</th><th>Expires</th><th>Actions</th></tr></thead>
                 <tbody>
                   {s.org.invites.map((i: Data) => (
-                    <tr key={i.id}><td><span className="tag">{i.role}</span></td><td className="muted">{when(i.createdAt)}</td><td className="muted">{when(i.expiresAt)}</td><td><button className="text-button" disabled={busy} onClick={() => onRevokeInvite(i)}>Revoke</button></td></tr>
+                    <tr key={i.id}>
+                      <td>{i.email ? <strong>{i.email}</strong> : <span className="muted">Link only</span>}</td>
+                      <td><span className="tag">{i.role}</span></td>
+                      <td className="muted">{when(i.createdAt)}</td>
+                      <td className="muted">{when(i.expiresAt)}</td>
+                      <td>
+                        <div className="row-actions">
+                          {i.email && s.org.inviteEmails && <button className="text-button" disabled={busy} onClick={() => onResendInvite(i)}>Resend</button>}
+                          <button className="text-button" disabled={busy} onClick={() => onRevokeInvite(i)}>Revoke</button>
+                        </div>
+                      </td>
+                    </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           ) : (
             <Empty icon={Users} title="No pending invites">
-              Invite links are single use and expire after 7 days.
+              {s.org.inviteEmails ? "Invite someone by email or link. Invites are single use and expire after 7 days." : "Invite links are single use and expire after 7 days."}
             </Empty>
           )}
         </section>

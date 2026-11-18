@@ -1,4 +1,4 @@
-import { beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp } from "../server/app";
 import { Store } from "../server/store";
 import type { ServiceAdapters } from "../server/adapters";
@@ -237,4 +237,106 @@ it("organization management is refused to gateway tokens", async () => {
   expect(made.status).toBe(200);
   const r = await request("/api/orgs", `Bearer ${made.data.token}`, { name: "Sneaky" });
   expect(r.status).toBe(403);
+});
+
+describe("invites by email", () => {
+  let sent: { to: string[]; subject: string; text: string; html: string; from: string }[];
+  beforeEach(() => {
+    sent = [];
+    vi.stubEnv("RESEND_API_KEY", "re_test");
+    vi.stubEnv("MAIL_FROM", "OrbytLink <invites@example.invalid>");
+    vi.stubGlobal("fetch", vi.fn(async (url: string, init: any) => {
+      expect(url).toBe("https://api.resend.com/emails");
+      expect(init.headers.Authorization).toBe("Bearer re_test");
+      sent.push(JSON.parse(init.body));
+      return Response.json({ id: "email_1" });
+    }));
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+  });
+
+  it("emails a working link with the org and inviter, and lists who it went to", async () => {
+    const alice = await signup("Alice");
+    await request("/api/orgs", alice, { name: "Acme <Corp>" });
+    const r = await request("/api/org/invites", alice, { role: "admin", email: " Carol@Example.invalid " });
+    expect(r.status).toBe(200);
+    expect(r.data).toMatchObject({ email: "carol@example.invalid", emailed: true, role: "admin" });
+    expect(sent).toHaveLength(1);
+    expect(sent[0]).toMatchObject({ to: ["carol@example.invalid"], from: "OrbytLink <invites@example.invalid>", subject: "Alice invited you to Acme <Corp> on OrbytLink" });
+    expect(sent[0].text).toContain(`/#invite=${r.data.token}`);
+    expect(sent[0].html).toContain("Acme &lt;Corp&gt;");
+    expect(sent[0].html).not.toContain("Acme <Corp>");
+    const state = await request("/api/state", alice);
+    expect(state.data.org.inviteEmails).toBe(true);
+    expect(state.data.org.invites[0]).toMatchObject({ email: "carol@example.invalid", role: "admin" });
+
+    const carol = await signup("Carol");
+    expect((await request("/api/invites/accept", carol, { token: r.data.token })).status).toBe(200);
+  });
+
+  it("resending issues a new link and retires the old one", async () => {
+    const alice = await signup("Alice");
+    await request("/api/orgs", alice, { name: "Acme Corp" });
+    const first = (await request("/api/org/invites", alice, { role: "member", email: "carol@example.invalid" })).data;
+    const again = await request(`/api/org/invites/${first.id}/resend`, alice, {});
+    expect(again.data).toMatchObject({ id: first.id, emailed: true });
+    expect(again.data.token).not.toBe(first.token);
+    expect(sent[1].text).toContain(again.data.token);
+    const carol = await signup("Carol");
+    expect((await request("/api/invites/accept", carol, { token: first.token })).status).toBe(409);
+    expect((await request("/api/invites/accept", carol, { token: again.data.token })).status).toBe(200);
+  });
+
+  it("a second invite to the same address replaces the first, and members can't be re-invited", async () => {
+    const { alice } = await setup("member");
+    const one = (await request("/api/org/invites", alice, { role: "member", email: "dana@example.invalid" })).data;
+    const two = (await request("/api/org/invites", alice, { role: "admin", email: "dana@example.invalid" })).data;
+    const invites = (await request("/api/state", alice)).data.org.invites;
+    expect(invites.map((i: any) => i.id)).toEqual([two.id]);
+    expect(invites[0].role).toBe("admin");
+    expect(one.id).not.toBe(two.id);
+    const r = await request("/api/org/invites", alice, { role: "member", email: "bobby@example.invalid" });
+    expect(r.status).toBe(409);
+    expect(r.data.error).toContain("already a member");
+  });
+
+  it("keeps the invite and hands back the link when sending fails", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ message: "domain not verified" }, { status: 403 })));
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const alice = await signup("Alice");
+    await request("/api/orgs", alice, { name: "Acme Corp" });
+    const r = await request("/api/org/invites", alice, { role: "member", email: "carol@example.invalid" });
+    expect(r.status).toBe(200);
+    expect(r.data.emailed).toBe(false);
+    expect(r.data.emailError).toContain("could not be sent");
+    const carol = await signup("Carol");
+    expect((await request("/api/invites/accept", carol, { token: r.data.token })).status).toBe(200);
+  });
+
+  it("caps invite emails per sender per day, but links still work", async () => {
+    const alice = await signup("Alice");
+    await request("/api/orgs", alice, { name: "Acme Corp" });
+    for (let n = 0; n < 20; n++)
+      expect((await request("/api/org/invites", alice, { role: "member", email: `p${n}@example.invalid` })).data.emailed).toBe(true);
+    const over = await request("/api/org/invites", alice, { role: "member", email: "p20@example.invalid" });
+    expect(over.status).toBe(409);
+    expect(over.data.error).toContain("20 invite emails a day");
+    expect((await request("/api/org/invites", alice, { role: "member" })).status).toBe(200);
+    store.db.prepare("UPDATE invite_emails SET sent_at=?").run(Date.now() - 25 * 60 * 60 * 1000);
+    expect((await request("/api/org/invites", alice, { role: "member", email: "p20@example.invalid" })).data.emailed).toBe(true);
+  });
+
+  it("without email set up, an address is kept but nothing is sent, and members can't send invites", async () => {
+    vi.unstubAllEnvs();
+    const { alice, bob } = await setup("member");
+    expect((await request("/api/state", alice)).data.org.inviteEmails).toBe(false);
+    const r = await request("/api/org/invites", alice, { role: "member", email: "carol@example.invalid" });
+    expect(r.data).toMatchObject({ emailed: false });
+    expect(sent).toHaveLength(0);
+    expect((await request(`/api/org/invites/${r.data.id}/resend`, alice, {})).status).toBe(409);
+    expect((await request("/api/org/invites", bob, { role: "member", email: "x@example.invalid" })).status).toBe(403);
+    expect((await request(`/api/org/invites/${r.data.id}/resend`, bob, {})).status).toBe(403);
+  });
 });
