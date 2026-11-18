@@ -32,6 +32,7 @@ export function toMarkdown(w: Row) {
     ...(s.forEach ? { forEach: s.forEach } : {}),
     ...(s.when ? { when: s.when } : {}),
     ...(s.retries ? { retries: s.retries } : {}),
+    ...(s.repeatable ? { repeatable: true } : {}),
     ...(s.onError && s.onError !== "stop" ? { onError: s.onError } : {}),
     ...(s.mode ? { mode: s.mode } : {}),
     ...(s.cache ? { cache: s.cache } : {}),

@@ -32,6 +32,9 @@ const step = z.object({
   // Run the step only when the condition holds; otherwise it is skipped and the run goes on.
   when: condition.optional(),
   retries: z.number().int().min(0).max(3).default(0),
+  // Running it twice does no harm (a read, or an update that sets the same value), so a retry may
+  // follow any error. Otherwise a step that changes things is retried only when it surely didn't run.
+  repeatable: z.boolean().default(false),
   onError: z.enum(["stop", "continue"]).default("stop"),
   // A judgment step (tool "judge"): who decides, overriding the workflow's preset.
   mode: z.enum(["ai", "agent"]).optional(),
@@ -258,6 +261,7 @@ export const listedFor = (store: Store, identity: Identity) =>
 export type RunOutcome = {
   status: "succeeded" | "failed" | "waiting";
   runId?: string;
+  workflowId?: string;
   // A paused run: what has to be decided, and in what shape, before it can go on.
   question?: string;
   returns?: string;
@@ -266,7 +270,29 @@ export type RunOutcome = {
   // The value the run screen shows: the chosen step's JSON (or text) at the chosen path.
   data?: unknown;
   error?: string;
+  // What a successful run spared the agent: the tool calls it made in the agent's place, and the
+  // data those calls moved that never reached the agent's context (estimated tokens, chars / 4).
+  saved?: { calls: number; tokens: number };
+  // Agent runs only: the calls that ran, so a failed run can be finished and repaired from them.
+  trace?: { tool: string; args: Record<string, unknown>; text: string }[];
 };
+
+// Whether a step can change something outside OrbytLink (send, create, update, delete). Only a
+// tool that says it is read-only, a GET/HEAD to a stored API, an AI answer or a decision is a read.
+export function changesThings(store: Store, workspace: string, tool: string, method?: unknown) {
+  if (tool === JUDGE || tool === AI_TOOL) return false;
+  if (tool === API_REQUEST_TOOL) return !/^\s*(GET|HEAD)\s*$/i.test(String(method ?? ""));
+  if (tool === BROWSER_TOOL || tool.startsWith("workflow__")) return true;
+  const def = gatewayTools(store, workspace).find((t) => t.name === tool)?.tool;
+  return toolChanges(def);
+}
+// An app's own hints win; without them, a tool named like a read (get_, list_, search_ …) is one.
+export const READ_NAME = /^(get|list|search|find|read|fetch|query|lookup|describe|count|check|retrieve|view|show)([_\-A-Z]|$)/;
+export const toolChanges = (def?: Partial<Row>) =>
+  def?.annotations?.readOnlyHint ? false : def?.annotations?.destructiveHint ? true : !READ_NAME.test(String(def?.name ?? ""));
+// A failure that certainly happened before the app acted on the request: retrying can't repeat
+// the action. Anything else (a timeout, a 500) may have taken effect, so a write isn't retried.
+const undelivered = (message: string) => /\b429\b|Too Many Requests|rate.?limit|ECONNREFUSED|ENOTFOUND|EAI_AGAIN|OrbytLink is busy/i.test(message);
 
 const SAFE_ERROR = /^(Authorization (required|expired|denied)|Missing path input|Tool inputs do not match|API request failed with status \d+|Response too large|Tool response too large|Operation path leaves)/;
 const shownError = (message: string) =>
@@ -322,13 +348,14 @@ function schemaFor(store: Store, identity: Identity, tool: string): Record<strin
   if (tool.startsWith("workflow__")) return {};
   return gatewayTools(store, identity.workspace).find((t) => t.name === tool)?.tool.inputSchema?.properties || {};
 }
-async function withRetries<T>(retries: number, deadline: number, fn: () => Promise<T>): Promise<T> {
+async function withRetries<T>(retries: number, deadline: number, fn: () => Promise<T>, writes = false): Promise<T> {
   for (let attempt = 0; ; attempt++) {
     try {
       return await fn();
     } catch (error) {
       const wait = retryDelay.ms * 2 ** attempt;
       if (attempt >= retries || Date.now() + wait > deadline) throw error;
+      if (writes && !undelivered(String((error as Error)?.message))) throw error;
       await new Promise((r) => setTimeout(r, wait));
     }
   }
@@ -357,7 +384,7 @@ async function execute(
   const run: Run = parent ? { ...parent, stack: [...parent.stack, workflow.id] } : { deadline: Date.now() + 120_000, calls: 0, stack: [workflow.id] };
   const results: Record<string, StepResult> = resume ? resume.results : {};
   const runId = resume?.runId ?? randomUUID();
-  const outcome: RunOutcome = { status: "succeeded", runId, steps: resume ? [...resume.steps] : [], output: "" };
+  const outcome: RunOutcome = { status: "succeeded", runId, workflowId: workflow.id, steps: resume ? [...resume.steps] : [], output: "" };
   const createdAt = new Date().toISOString();
   // The run is on record while it goes: a restart in the middle leaves it "interrupted", not lost.
   if (trigger !== "workflow") store.put(w, "workflow_runs", { id: runId, workflowId: workflow.id, workflow: workflow.name, status: "running", steps: outcome.steps, trigger, user: identity.user, createdAt });
@@ -368,6 +395,10 @@ async function execute(
   const state: Record<string, string> = /\{\{\s*state\./.test(JSON.stringify(steps)) ? loadState(store, workflow.id) : {};
   const rd = (v: string, item?: unknown) => render(v, inputs, results, item, state);
   const top = trigger !== "workflow";
+  // Data the steps moved (arguments out, results back): what an agent would have read and written.
+  let moved = 0,
+    calls = 0;
+  const trace: NonNullable<RunOutcome["trace"]> | undefined = trigger === "agent" ? [] : undefined;
   const log = (s: Row, status: string, input: string, output: string, ms: number) => {
     if (top && workflow.logData !== false) logStep(store, { runId, idx: outcome.steps.length - 1, workflowId: workflow.id, workspace: w, stepId: s.id, tool: s.tool, status, input: String(store.redact(w, input)), output: String(store.redact(w, output)), ms });
   };
@@ -395,6 +426,7 @@ async function execute(
           const ask = `${question}${returns ? `\n\nAnswer with ${returns}. Reply with the answer only.` : ""}`;
           const text = (await generate(store, identity, { model: workflow.judgeModel || DEFAULT_JUDGE_MODEL, prompt: ask, maxTokens: 2048, json: /json/i.test(returns) }, "workflow")).text;
           results[s.id] = { text, json: parseJson(text) };
+          moved += question.length + text.length;
           outcome.steps.push({ id: s.id, tool: s.tool, status: "ok", ms: Date.now() - started, note: "Decided by AI" });
           log(s, "ok", question, text, Date.now() - started);
           outcome.output = text;
@@ -427,12 +459,18 @@ async function execute(
         const args = argsFor(item);
         firstArgs ??= args;
         const key = s.cache ? cacheKey(s.tool, args) : "";
+        let text: string | undefined;
         if (key) {
-          const hit = cacheGet(store, w, key);
-          if (hit !== undefined) return hits++, hit;
+          text = cacheGet(store, w, key);
+          if (text !== undefined) hits++;
         }
-        const text = await withRetries(s.retries || 0, run.deadline, () => callStep(store, services, identity, s.tool, args, run));
-        if (key) cachePut(store, w, key, text, s.cache);
+        if (text === undefined) {
+          const writes = !!s.retries && !s.repeatable && changesThings(store, w, s.tool, args.method);
+          text = await withRetries(s.retries || 0, run.deadline, () => callStep(store, services, identity, s.tool, args, run), writes);
+          if (key) cachePut(store, w, key, text, s.cache);
+        }
+        moved += JSON.stringify(args).length + text.length;
+        calls++;
         return text;
       };
       if (s.forEach) {
@@ -448,6 +486,8 @@ async function execute(
       } else {
         const text = await once();
         results[s.id] = { text, json: parseJson(text) };
+        // A loop can't be replayed as one call, so only single calls go in the trace.
+        trace?.push({ tool: s.tool, args: firstArgs ?? {}, text });
         outcome.steps.push({ id: s.id, tool: s.tool, status: "ok", ms: Date.now() - started, ...(hits ? { cached: hits } : {}) });
         log(s, "ok", JSON.stringify(firstArgs ?? {}), text, Date.now() - started);
       }
@@ -475,6 +515,11 @@ async function execute(
     dropCheckpoint(store, runId);
     trimLogs(store, workflow.id);
   }
+  if (trace && outcome.status === "failed") outcome.trace = trace;
+  if (outcome.status === "succeeded") {
+    const crossed = JSON.stringify(inputs).length + outcome.output.length;
+    outcome.saved = { calls, tokens: Math.max(0, Math.round((moved - crossed) / 4)) };
+  }
   if (outcome.status === "waiting") {
     if (trigger !== "workflow") store.put(w, "workflow_runs", { id: runId, workflowId: workflow.id, workflow: workflow.name, status: "waiting", steps: outcome.steps, trigger, user: identity.user, createdAt });
     return outcome;
@@ -488,7 +533,7 @@ async function execute(
   // Runs record what happened, not the data that moved: no inputs or outputs are stored,
   // except the latest result of a workflow set to keep it, for the person who ran it.
   if (trigger !== "workflow") {
-    store.put(w, "workflow_runs", { id: runId, workflowId: workflow.id, workflow: workflow.name, status: outcome.status, steps: outcome.steps, trigger, user: identity.user, createdAt });
+    store.put(w, "workflow_runs", { id: runId, workflowId: workflow.id, workflow: workflow.name, status: outcome.status, steps: outcome.steps, trigger, user: identity.user, createdAt, ...(outcome.saved ? { saved: outcome.saved } : {}) });
     store.trim(w, "workflow_runs", 500);
   }
   if (workflow.keepLastResult && trigger !== "workflow")
@@ -501,7 +546,14 @@ async function execute(
       output: outcome.data === undefined ? outcome.output.slice(0, 20_000) : "",
       createdAt: new Date().toISOString(),
     });
-  store.put(w, "workflows", { ...store.get(w, "workflows", workflow.id), lastRunAt: new Date().toISOString(), lastStatus: outcome.status });
+  const current = store.get(w, "workflows", workflow.id);
+  // Running totals since the workflow was made; failStreak counts failures since the last success.
+  const was = current?.stats || { runs: 0, succeeded: 0, failed: 0, calls: 0, tokens: 0, failStreak: 0, since: new Date().toISOString() };
+  const ok = outcome.status === "succeeded";
+  const stats = top
+    ? { ...was, runs: was.runs + 1, succeeded: was.succeeded + (ok ? 1 : 0), failed: was.failed + (ok ? 0 : 1), calls: was.calls + (outcome.saved?.calls || 0), tokens: was.tokens + (outcome.saved?.tokens || 0), failStreak: ok ? 0 : was.failStreak + 1, ...(ok ? {} : { lastError: outcome.error?.slice(0, 300) }) }
+    : current?.stats;
+  if (current) store.put(w, "workflows", { ...current, lastRunAt: new Date().toISOString(), lastStatus: outcome.status, ...(stats ? { stats } : {}) });
   store.audit(w, identity.user, outcome.status === "succeeded" ? "workflow.ran" : "workflow.failed", workflow.name);
   return outcome;
 }
@@ -615,7 +667,7 @@ const countWorkflows = (store: Store, w: string) => (store.db.prepare("SELECT co
 // Saving from the console or from an agent. Agents only ever create disabled drafts. Members
 // (who can call tools but not configure) may keep private workflows of their own; sharing a
 // workflow with the workspace, or scheduling one for it, takes an admin.
-export function saveWorkflow(store: Store, identity: Identity, input: unknown, existing?: Row, source: "console" | "agent" | "template" = "console") {
+export function saveWorkflow(store: Store, identity: Identity, input: unknown, existing?: Row, source: "console" | "agent" | "template" = "console", applyFix = false) {
   const data = workflowSchema.parse(input);
   const w = identity.workspace;
   const admin = identity.permissions.includes("configure");
@@ -631,12 +683,14 @@ export function saveWorkflow(store: Store, identity: Identity, input: unknown, e
     // A schedule runs as the person who set it, with their access at the time of each run.
     scheduledBy: data.schedule ? (JSON.stringify(data.schedule) === JSON.stringify(existing?.schedule) ? existing?.scheduledBy || identity.user : identity.user) : null,
     source: existing?.source ?? source,
+    // A fix an agent proposed stays beside the workflow until it is applied (or turned down).
+    proposal: applyFix ? undefined : existing?.proposal,
     createdBy: owner,
     createdAt: existing?.createdAt ?? new Date().toISOString(),
   });
   if (existing && !data.keepLastResult) forgetResults(store, w, row.id);
   syncSchedule(store, w, row);
-  store.audit(w, identity.user, existing ? "workflow.updated" : source === "agent" ? "workflow.drafted-by-agent" : "workflow.created", row.name);
+  store.audit(w, identity.user, applyFix && existing?.proposal ? "workflow.fix-applied" : existing ? "workflow.updated" : source === "agent" ? "workflow.drafted-by-agent" : "workflow.created", row.name);
   return row;
 }
 

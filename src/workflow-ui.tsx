@@ -144,7 +144,30 @@ export function ResultView({ workflow, data, text }: { workflow: Data; data?: un
 }
 
 // ── Editor parts ─────────────────────────────────────────────────────────────
-export function StepOptions({ step, onChange }: { step: Data; onChange: (patch: Data) => void }) {
+// Mirrors the server's rule (workflows.ts changesThings): whether a step can change something
+// outside OrbytLink, which decides whether a retry could do it twice.
+const READ_NAME = /^(get|list|search|find|read|fetch|query|lookup|describe|count|check|retrieve|view|show)([_\-A-Z]|$)/;
+export function stepChanges(step: Data, def?: Data) {
+  if (step.tool === "judge" || step.tool === "orbytlink__ai_generate") return false;
+  if (step.tool === "orbytlink__api_request") return !/^\s*(GET|HEAD)\s*$/i.test(String(step.args?.method || ""));
+  if (step.tool === "orbytlink__browse" || String(step.tool).startsWith("workflow__")) return true;
+  if (def?.annotations?.readOnlyHint) return false;
+  if (def?.annotations?.destructiveHint) return true;
+  return !READ_NAME.test(String(def?.name || String(step.tool).split("__").pop()));
+}
+// Where a step argument's value comes from, for reviewing a workflow before trusting it.
+export function argSource(value: unknown): { kind: "input" | "step" | "item" | "memory" | "fixed" | "empty"; label: string } {
+  const v = String(value ?? "");
+  if (!v.trim()) return { kind: "empty", label: "" };
+  const step = /\{\{\s*steps\.([a-z][a-z0-9_]*)/.exec(v);
+  if (step) return { kind: "step", label: `From step ${step[1]}` };
+  if (/\{\{\s*input\./.test(v)) return { kind: "input", label: "From an input, given at each run" };
+  if (/\{\{\s*item/.test(v)) return { kind: "item", label: "From each item of the loop" };
+  if (/\{\{\s*state\./.test(v)) return { kind: "memory", label: "Remembered from the last run" };
+  return { kind: "fixed", label: "Fixed: the same every run" };
+}
+
+export function StepOptions({ step, onChange, writes = false }: { step: Data; onChange: (patch: Data) => void; writes?: boolean }) {
   const set = (patch: Data) => onChange(patch);
   const open = !!(step.forEach || step.when || step.retries || step.onError === "continue" || step.cache || Object.keys(step.remember || {}).length);
   const memo: [string, string][] = Object.entries(step.remember || {});
@@ -190,6 +213,15 @@ export function StepOptions({ step, onChange }: { step: Data; onChange: (patch: 
           </select>
         </div>
       </div>
+      {writes && step.retries > 0 && (
+        <div className="wf-arg">
+          <span />
+          <div className="wf-arg-value">
+            <label className="check-row"><input type="checkbox" checked={!!step.repeatable} onChange={(e) => set({ repeatable: e.target.checked || undefined })} /> Safe to repeat: running it twice does no harm</label>
+            <small>{step.repeatable ? "Retried after any error." : "This step changes things, so it is retried only when the app was busy or unreachable. After other errors it may already have happened, and a retry could do it twice."}</small>
+          </div>
+        </div>
+      )}
       {step.tool !== "judge" && (
         <label className="wf-arg">
           <span>Reuse the result</span>

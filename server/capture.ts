@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { Row, Store } from "./store.js";
 import type { Identity } from "./schema.js";
-import { JUDGE, manageable, saveWorkflow, visibleTo, workflowToolName } from "./workflows.js";
+import { JUDGE, manageable, saveWorkflow, visibleTo, workflowSchema, workflowToolName } from "./workflows.js";
 
 // Workflows made from real work. Every tool call an agent makes goes through the gateway, so the
 // gateway keeps a short memory of each person's recent calls and results. "Save this as a
@@ -231,7 +231,27 @@ export function captureWorkflow(store: Store, identity: Identity, raw: unknown, 
   const picked = pickCalls(calls ?? recentCalls(keyFor(identity)), input.tools);
   if (!picked.length) throw bad("No recent tool calls to save. Run the task through OrbytLink first, then save it.");
   const built = buildFromCalls(picked, input);
-  const existing = input.replaces ? store.list(identity.workspace, "workflows").find((w) => w.name.toLowerCase() === input.replaces!.toLowerCase() && manageable(w, identity)) : undefined;
+  const want = input.replaces?.toLowerCase();
+  const named = want ? store.list(identity.workspace, "workflows").find((w) => (w.name.toLowerCase() === want || workflowToolName(w) === want) && visibleTo(w, identity)) : undefined;
+  // A live workflow is never overwritten by an agent: the rebuild waits beside it as a proposed fix
+  // until someone who manages it reviews it. Anyone who can use the workflow may propose one.
+  if (named?.enabled) {
+    const proposal = {
+      name: input.name,
+      description: input.description || named.description,
+      inputs: built.inputs,
+      steps: built.steps,
+      judgment: input.judgment ?? named.judgment ?? "agent",
+      proposedBy: identity.user,
+      proposedAt: new Date().toISOString(),
+    };
+    // Checked now, so a broken fix is refused to the agent rather than found at review.
+    workflowSchema.parse({ ...named, ...proposal });
+    const row = store.put(identity.workspace, "workflows", { ...named, proposal });
+    store.audit(identity.workspace, identity.user, "workflow.fix-proposed", row.name);
+    return { row, proposed: true, linked: built.linked, tool: workflowToolName(row), fixed: fixedValues(built.steps) };
+  }
+  const existing = named && manageable(named, identity) ? named : undefined;
   if (input.replaces && !existing) throw bad(`No workflow named "${input.replaces}" that you can change.`);
   const row = saveWorkflow(
     store,
@@ -251,5 +271,7 @@ export function captureWorkflow(store: Store, identity: Identity, raw: unknown, 
     existing,
     "agent",
   );
-  return { row, linked: built.linked, tool: workflowToolName(row), fixed: built.steps.filter((s: Row) => s.tool !== JUDGE).flatMap((s: Row) => Object.entries(s.args).filter(([, v]) => !String(v).includes("{{")).map(([k, v]) => `${s.id}.${k} = ${String(v).slice(0, 40)}`)) };
+  return { row, proposed: false, linked: built.linked, tool: workflowToolName(row), fixed: fixedValues(built.steps) };
 }
+const fixedValues = (steps: Row[]) =>
+  steps.filter((s) => s.tool !== JUDGE).flatMap((s) => Object.entries(s.args as Record<string, string>).filter(([, v]) => !String(v).includes("{{")).map(([k, v]) => `${s.id}.${k} = ${String(v).slice(0, 40)}`));

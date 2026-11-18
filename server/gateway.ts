@@ -588,6 +588,7 @@ function ownTools(store: Store, w: string, identity: Identity) {
                 required: ["value"],
               },
               retries: { type: "integer", minimum: 0, maximum: 3 },
+              repeatable: { type: "boolean", description: "true if running the step twice does no harm; otherwise a step that changes something is only retried when the app surely didn't receive the call" },
               onError: { type: "string", enum: ["stop", "continue"] },
             },
             required: ["id", "tool"],
@@ -644,12 +645,29 @@ const RESUME_TOOL = "orbytlink__resume_workflow",
   SAVE_TOOL = "orbytlink__save_workflow",
   EXPORT_TOOL = "orbytlink__export_workflow";
 // What an agent reads back from a run: the result, the failure, or the decision it has to make.
-function outcomeText(outcome: RunOutcome) {
+function outcomeText(outcome: RunOutcome, workflow?: Row) {
   if (outcome.status === "waiting")
     return toolText(
       `The workflow paused for a decision (run ${outcome.runId}).\n\nDecide: ${outcome.question}${outcome.returns ? `\n\nAnswer with ${outcome.returns}.` : ""}\n\nThen call ${RESUME_TOOL} with {"run": "${outcome.runId}", "answer": "<your decision>"} and the rest of the workflow runs.`,
     );
-  return toolText(outcome.status === "succeeded" ? outcome.output || "Workflow finished." : `Workflow failed. ${outcome.error}`, outcome.status !== "succeeded");
+  if (outcome.status === "succeeded") return toolText(outcome.output || "Workflow finished.");
+  if (!workflow) return toolText(`Workflow failed. ${outcome.error}`, true);
+  return toolText(fallbackText(workflow, outcome), true);
+}
+// A failed workflow is not the end of the task: say what already happened (so it isn't done twice),
+// what is left, and how to turn the agent's own finish into a fix for the workflow.
+function fallbackText(workflow: Row, outcome: RunOutcome) {
+  const line = (st: RunOutcome["steps"][number]) => `${st.id} (${st.tool})`;
+  const done = outcome.steps.filter((st) => st.status === "ok" && st.tool !== "judge");
+  const failed = outcome.steps.find((st) => st.status === "error");
+  const rest = outcome.steps.filter((st) => st.status === "skipped" && st.note !== "Condition not met");
+  return [
+    `Workflow "${workflow.name}" failed. ${outcome.error}`,
+    done.length ? `Already done, and these took effect (don't repeat them): ${done.map(line).join(", ")}.` : "Nothing took effect before the failure.",
+    `Not done: ${[...(failed ? [line(failed)] : []), ...rest.map(line)].join(", ") || "nothing"}.`,
+    `Finish the user's task yourself: make the remaining calls directly (find tools with orbytlink__find_tools if they aren't listed), fixing what made "${failed?.id ?? "the step"}" fail. Use the results of the steps that already ran instead of running them again.`,
+    `Then repair the workflow: call ${SAVE_TOOL} with replaces "${workflow.name}", the same name, and tools listing every tool of the whole task in order (${done.map((st) => st.tool).join(", ")}${done.length ? ", then " : ""}the ones you called). The steps that already ran are on record, so the fix is built from real calls. It is saved as a proposed fix for a person to review; the current workflow stays as it is until they apply it.`,
+  ].join("\n\n");
 }
 async function callOwnTool(store: Store, services: ServiceAdapters, identity: Identity, name: string, args: Record<string, unknown>) {
   const w = identity.workspace;
@@ -718,6 +736,19 @@ async function callOwnTool(store: Store, services: ServiceAdapters, identity: Id
   if (name === SAVE_TOOL) {
     try {
       const saved = captureWorkflow(store, identity, args);
+      if (saved.proposed) {
+        const steps = saved.row.proposal.steps.map((s: Row, i: number) => `${i + 1}. ${s.id} (${s.tool})`).join("\n");
+        return toolText(
+          [
+            `Saved a proposed fix for "${saved.row.name}". The current workflow keeps running as it is until someone who manages it reviews the fix in OrbytLink → Workflows and applies it.`,
+            `Proposed steps:\n${steps}`,
+            saved.fixed.length ? `Fixed values (check these should not be inputs): ${saved.fixed.slice(0, 12).join("; ")}` : "",
+            "Tell the user the task is done, and that a fix for the workflow is waiting for their review.",
+          ]
+            .filter(Boolean)
+            .join("\n\n"),
+        );
+      }
       const steps = saved.row.steps.map((s: Row, i: number) => `${i + 1}. ${s.id}${s.tool === "judge" ? ` (decision by ${s.mode || saved.row.judgment})` : ` (${s.tool})`}`).join("\n");
       return toolText(
         [
@@ -746,7 +777,9 @@ async function callOwnTool(store: Store, services: ServiceAdapters, identity: Id
   if (name === RESUME_TOOL) {
     if (typeof args.run !== "string" || typeof args.answer !== "string" || !args.answer.trim()) return toolText("Give the run id and your answer.", true);
     try {
-      return outcomeText(await resumeWorkflow(store, services, identity, args.run, args.answer, "agent"));
+      const outcome = await resumeWorkflow(store, services, identity, args.run, args.answer, "agent");
+      for (const t of outcome.trace || []) recordCall(keyFor(identity), t.tool, store.redact(w, t.args) || {}, t.text, true);
+      return outcomeText(outcome, store.list(w, "workflows").find((r) => r.id === outcome.workflowId));
     } catch (error) {
       return toolText((error as Error).message, true);
     }
@@ -754,7 +787,10 @@ async function callOwnTool(store: Store, services: ServiceAdapters, identity: Id
   const match = visibleWorkflowTools(store, identity).find((t) => t.name === name);
   if (!match) return;
   try {
-    return outcomeText(await runWorkflow(store, services, identity, match.workflow, args, "agent"));
+    const outcome = await runWorkflow(store, services, identity, match.workflow, args, "agent");
+    // The steps that worked count as calls the agent made, so a repair can be saved from them.
+    for (const t of outcome.trace || []) recordCall(keyFor(identity), t.tool, store.redact(w, t.args) || {}, t.text, true);
+    return outcomeText(outcome, match.workflow);
   } catch (error) {
     return toolText((error as Error).message, true);
   }

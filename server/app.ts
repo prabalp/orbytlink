@@ -440,7 +440,8 @@ export function createApp(
   });
   app.put("/api/workflows/:id", permit("call"), (req, res) => {
     const i = identity(res);
-    res.json(saveWorkflow(store, i, req.body, store.get(i.workspace, "workflows", String(req.params.id))));
+    // ?fix=apply: this save is the reviewed version of an agent's proposed fix, so the proposal goes.
+    res.json(saveWorkflow(store, i, req.body, store.get(i.workspace, "workflows", String(req.params.id)), "console", req.query.fix === "apply"));
   });
   app.delete("/api/workflows/:id", permit("call"), (req, res) => {
     const i = identity(res),
@@ -451,6 +452,16 @@ export function createApp(
     forgetWorkflowData(store, wf.id);
     unschedule(store, wf.id);
     store.audit(i.workspace, i.user, "workflow.deleted", wf.name);
+    res.json({ ok: true });
+  });
+  // Turn down a fix an agent proposed; the workflow stays as it is. (Applying it is a normal save.)
+  app.delete("/api/workflows/:id/proposal", permit("call"), (req, res) => {
+    const i = identity(res),
+      wf = store.get(i.workspace, "workflows", String(req.params.id));
+    if (!manageable(wf, i)) throw Object.assign(new Error("Only an admin or the workflow's owner can do this."), { status: 403 });
+    const { proposal: _dropped, ...rest } = wf;
+    store.put(i.workspace, "workflows", rest);
+    store.audit(i.workspace, i.user, "workflow.fix-dismissed", wf.name);
     res.json({ ok: true });
   });
   // Running uses the same tools agents can call, so members (who can call tools) may run.

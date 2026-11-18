@@ -103,7 +103,8 @@ it("loops over a list, skips steps whose condition fails, retries, and can carry
         { id: "tag", tool: "crm__tag_lead", forEach: "{{steps.leads.json.leads}}", args: { name: "{{item.name}}", label: "lead {{item.name}}" } },
         { id: "skip_me", tool: "crm__notify", when: { value: "{{input.mode}}", op: "equals", to: "loud" } },
         { id: "fails", tool: "crm__broken", onError: "continue" },
-        { id: "retry", tool: "crm__flaky", retries: 2 },
+        // Not named like a read, so it may change things: retrying any error needs the step's say-so.
+        { id: "retry", tool: "crm__flaky", retries: 2, repeatable: true },
       ],
     })
   ).data;

@@ -47,7 +47,7 @@ import { brands, monograms } from "./brand-icons";
 import { agents } from "./agents";
 import { bindTemplate, missingApps, templateLogos, workflowTemplates, type WorkflowTemplate } from "./workflow-templates";
 import { FlowDiagram, type Describe, type StepNote } from "./workflow-flow";
-import { describeSchedule, ResultView, RunFields, StepOptions, WorkflowSettings } from "./workflow-ui";
+import { argSource, describeSchedule, ResultView, RunFields, StepOptions, stepChanges, WorkflowSettings } from "./workflow-ui";
 import { AiCredit, callable, ModelDetail, type ModelRow } from "./ai-ui";
 import { LibraryView } from "./library-ui";
 import { SkillEditor } from "./skill-editor";
@@ -127,7 +127,7 @@ const when = (s?: string | number) =>
 function Status({ value }: { value: string }) {
   return (
     <span
-      className={`status ${["Connected", "Verified", "succeeded", "approved", "Enabled"].includes(value) ? "good" : ["Error", "failed", "rejected"].includes(value) ? "bad" : ["waiting-for-approval", "pending", "Authorization needed", "Draft"].includes(value) ? "pending" : ""}`}
+      className={`status ${["Connected", "Verified", "succeeded", "approved", "Enabled"].includes(value) ? "good" : ["Error", "failed", "rejected", "Failing"].includes(value) ? "bad" : ["waiting-for-approval", "pending", "Authorization needed", "Draft"].includes(value) ? "pending" : ""}`}
     >
       <i />
       {value.replaceAll("-", " ")}
@@ -707,6 +707,7 @@ export function App() {
               busy={busy}
               canConfigure={canConfigure}
               onEdit={(wf: Data) => setDialog({ type: "workflow", data: { id: wf.id, draft: wf } })}
+              onReviewFix={(wf: Data) => setDialog({ type: "workflow", data: { id: wf.id, proposal: wf.proposal, draft: { ...wf, name: wf.proposal.name, description: wf.proposal.description, inputs: wf.proposal.inputs, steps: wf.proposal.steps, judgment: wf.proposal.judgment } } })}
               onTemplate={(t: WorkflowTemplate) => setDialog({ type: "workflow", data: { draft: bindTemplate(t, toolIndex(s)), template: true } })}
               onRun={(wf: Data) => setDialog({ type: "run", data: wf })}
               onRunDetail={(r: Data) => setDialog({ type: "run-detail", data: r })}
@@ -822,7 +823,7 @@ export function App() {
             api: dialog.data?.id ? `Edit ${dialog.data.name}` : dialog.data?._preset ? `Connect ${dialog.data.name}` : "Add API",
             "api-detail": dialog.data?.name,
             "delete-api": "Remove API",
-            workflow: dialog.data?.id ? "Edit workflow" : dialog.data?.template ? "New workflow from template" : "New workflow",
+            workflow: dialog.data?.proposal ? "Review proposed fix" : dialog.data?.id ? "Edit workflow" : dialog.data?.template ? "New workflow from template" : "New workflow",
             run: `Run · ${dialog.data?.name}`,
             "run-detail": `Run · ${dialog.data?.workflow}`,
             "delete-workflow": "Delete workflow",
@@ -1167,10 +1168,11 @@ export function App() {
               busy={busy}
               copy={copy}
               onCancel={close}
+              onDiscardFix={() => act(() => api(`/workflows/${dialog.data!.id}/proposal`, {}, "DELETE"), "Fix turned down. The workflow is unchanged.")}
               onSave={(wf: Data) =>
                 act(
-                  () => api(`/workflows${dialog.data?.id ? `/${dialog.data.id}` : ""}`, { ...wf, ...(dialog.data?.template ? { source: "template" } : {}) }, dialog.data?.id ? "PUT" : "POST"),
-                  wf.enabled ? "Workflow saved and enabled" : "Workflow saved as a draft",
+                  () => api(`/workflows${dialog.data?.id ? `/${dialog.data.id}` : ""}${dialog.data?.proposal ? "?fix=apply" : ""}`, { ...wf, ...(dialog.data?.template ? { source: "template" } : {}) }, dialog.data?.id ? "PUT" : "POST"),
+                  dialog.data?.proposal ? "Fix applied" : wf.enabled ? "Workflow saved and enabled" : "Workflow saved as a draft",
                 )
               }
             />
@@ -2883,6 +2885,7 @@ const cleanWorkflow = (wf: Data) => ({
     ...(st.forEach?.trim() ? { forEach: st.forEach.trim() } : {}),
     ...(st.when?.value?.trim() ? { when: { value: st.when.value, op: st.when.op || "truthy", to: st.when.to || "" } } : {}),
     retries: st.retries || 0,
+    ...(st.retries && st.repeatable ? { repeatable: true } : {}),
     onError: st.onError || "stop",
     ...(st.cache && st.tool !== "judge" ? { cache: st.cache } : {}),
     ...(st.tool !== "judge" && Object.keys(st.remember || {}).length ? { remember: Object.fromEntries(Object.entries(st.remember).filter(([k, v]) => k && String(v).trim())) } : {}),
@@ -2919,7 +2922,7 @@ function AppMarks({ tools, steps }: { tools: ToolInfo[]; steps: Data[] }) {
     </span>
   );
 }
-function WorkflowsPage({ state: s, busy, canConfigure, onEdit, onTemplate, onRun, onRunDetail, onToggle, onDelete, onChanged, notify }: any) {
+function WorkflowsPage({ state: s, busy, canConfigure, onEdit, onReviewFix, onTemplate, onRun, onRunDetail, onToggle, onDelete, onChanged, notify }: any) {
   const tools = toolIndex(s);
   const me = s.identity.user;
   const mine = (wf: Data) => canConfigure || (wf.visibility === "private" && wf.createdBy === me);
@@ -2927,10 +2930,28 @@ function WorkflowsPage({ state: s, busy, canConfigure, onEdit, onTemplate, onRun
   const workflows: Data[] = s.workflows;
   const drafts = workflows.filter((w) => !w.enabled && w.source === "agent").length;
   const runs: Data[] = s.workflowRuns;
+  const fixes = workflows.filter((w) => w.proposal && mine(w)).length;
+  const saved = workflows.reduce((t, w) => ({ runs: t.runs + (w.stats?.succeeded || 0), calls: t.calls + (w.stats?.calls || 0), tokens: t.tokens + (w.stats?.tokens || 0) }), { runs: 0, calls: 0, tokens: 0 });
   return (
     <>
       {drafts > 0 && canConfigure && (
         <div className="info-row"><Workflow size={17} /><p><strong>{drafts} {drafts === 1 ? "draft" : "drafts"} from agents</strong> {drafts === 1 ? "needs" : "need"} review. Open it, check each step, then enable it.</p></div>
+      )}
+      {fixes > 0 && (
+        <div className="info-row"><Workflow size={17} /><p><strong>{fixes === 1 ? "A workflow has a proposed fix" : `${fixes} workflows have proposed fixes`}.</strong> An agent finished the task after a run failed and rebuilt the steps from its own calls. Review the fix before it replaces the current version.</p></div>
+      )}
+      {saved.runs > 0 && (
+        <section className="panel">
+          <div className="section-heading"><h2>What workflows saved</h2></div>
+          <div className="settings-body">
+            <div className="wf-stats">
+              <div className="wf-stat"><small>Successful runs</small><strong>{compact(saved.runs)}</strong></div>
+              <div className="wf-stat"><small>Tool calls made for agents</small><strong>{compact(saved.calls)}</strong></div>
+              <div className="wf-stat"><small>Tokens kept out of agent context</small><strong>≈{compact(saved.tokens)}</strong></div>
+            </div>
+            <p className="muted wf-saved-note">Counted from real runs: the arguments and results each step moved, which an agent would otherwise send and read call by call, minus what the workflow returned. Tokens are estimated at four characters each.</p>
+          </div>
+        </section>
       )}
       <Suggestions canCreate={canCreate} onChanged={onChanged} notify={notify} />
       <section className="panel">
@@ -2944,7 +2965,7 @@ function WorkflowsPage({ state: s, busy, canConfigure, onEdit, onTemplate, onRun
         {workflows.length ? (
           <div className="table-scroll">
             <table className="wf-table">
-              <thead><tr><th>Workflow</th><th>Apps</th><th>Status</th><th>Last run</th><th>Actions</th></tr></thead>
+              <thead><tr><th>Workflow</th><th>Apps</th><th>Status</th><th>Last run</th><th>Saved</th><th>Actions</th></tr></thead>
               <tbody>
                 {workflows.map((wf) => (
                   <tr key={wf.id}>
@@ -2957,11 +2978,18 @@ function WorkflowsPage({ state: s, busy, canConfigure, onEdit, onTemplate, onRun
                       <small>{[wf.description || `${wf.steps.length} ${wf.steps.length === 1 ? "step" : "steps"}`, describeSchedule(wf.schedule)].filter(Boolean).join(" · ")}</small>
                     </td>
                     <td><div className="wf-apps"><AppMarks tools={tools} steps={wf.steps} /><small>{wf.steps.length} {wf.steps.length === 1 ? "step" : "steps"}</small></div></td>
-                    <td><Status value={wf.enabled ? "Enabled" : "Draft"} /></td>
+                    <td>
+                      <div className="wf-last">
+                        <Status value={wf.enabled && wf.stats?.failStreak >= 3 ? "Failing" : wf.enabled ? "Enabled" : "Draft"} />
+                        {wf.proposal ? <small>Fix proposed</small> : wf.enabled && wf.stats?.failStreak >= 3 ? <small>Failed {wf.stats.failStreak} runs in a row</small> : null}
+                      </div>
+                    </td>
                     <td>{wf.lastRunAt ? <div className="wf-last"><Status value={wf.lastStatus} /><small>{when(wf.lastRunAt)}</small></div> : <small>Never</small>}</td>
+                    <td>{wf.stats?.calls ? <div className="wf-last"><span>≈{compact(wf.stats.tokens)} tokens</span><small>{compact(wf.stats.calls)} calls</small></div> : <small>None yet</small>}</td>
                     <td>
                       <div className="row-actions">
                         <button className="secondary compact" disabled={busy || (!wf.enabled && !mine(wf)) || (wf.visibility === "private" && wf.createdBy !== me)} onClick={() => onRun(wf)}><Play size={12} /> Run</button>
+                        {mine(wf) && wf.proposal && <button className="text-button" onClick={() => onReviewFix(wf)}>Review fix</button>}
                         {mine(wf) && <button className="text-button" onClick={() => onEdit(wf)}>{wf.source === "agent" && !wf.enabled ? "Review" : "Edit"}</button>}
                         {mine(wf) && <button className="text-button" disabled={busy} onClick={() => onToggle(wf)}>{wf.enabled ? "Disable" : "Enable"}</button>}
                         <a className="icon-button" href={`/api/workflows/${wf.id}/markdown`} aria-label={`Download ${wf.name} as a file`} title="Download workflow_<name>.md"><Download size={15} /></a>
@@ -3106,7 +3134,7 @@ function ImportWorkflow({ onChanged, notify }: { onChanged: () => void; notify: 
     </label>
   );
 }
-function WorkflowEditor({ state: s, data, busy, copy, onSave, onCancel, canConfigure }: any) {
+function WorkflowEditor({ state: s, data, busy, copy, onSave, onCancel, onDiscardFix, canConfigure }: any) {
   const tools = toolIndex(s);
   // Members keep private workflows only; sharing with the workspace takes an admin.
   const [wf, setWf] = useState<Data>(() => ({ ...JSON.parse(JSON.stringify(data.draft)), ...(canConfigure ? {} : { visibility: "private" }) }));
@@ -3115,6 +3143,15 @@ function WorkflowEditor({ state: s, data, busy, copy, onSave, onCancel, canConfi
   const setStep = (i: number, patch: Data) => set({ steps: wf.steps.map((st: Data, n: number) => (n === i ? { ...st, ...patch } : st)) });
   const setInput = (i: number, patch: Data) => set({ inputs: wf.inputs.map((x: Data, n: number) => (n === i ? { ...x, ...patch } : x)) });
   const apps = [...new Set(tools.map((t) => t.app))];
+  // Turn a fixed argument into a run input: a value captured once that should change each run.
+  const makeInput = (i: number, key: string, value: string) => {
+    const base = key.toLowerCase().replace(/[^a-z0-9_]/g, "_").replace(/^[^a-z]+/, "").slice(0, 36) || "value";
+    let name = base;
+    for (let n = 2; wf.inputs.some((x: Data) => x.name === name); n++) name = `${base}_${n}`;
+    set({ inputs: [...wf.inputs, { name, description: `e.g. ${value}`.slice(0, 200), required: true }] });
+    setStep(i, { args: { ...wf.steps[i].args, [key]: `{{input.${name}}}` } });
+  };
+  const fromAgent = !!data.proposal || (wf.source === "agent" && !wf.enabled);
   return (
     <form
       className="form-body wf-editor"
@@ -3125,6 +3162,19 @@ function WorkflowEditor({ state: s, data, busy, copy, onSave, onCancel, canConfi
         onSave(cleanWorkflow(wf));
       }}
     >
+      {data.proposal && (
+        <div className="info-row">
+          <Workflow size={17} />
+          <p>An agent proposed this after a run failed ({data.draft.stats?.lastError || "see the latest run"}). It finished the task with these calls; saving applies them to the workflow. Proposed by {data.proposal.proposedBy}, {when(data.proposal.proposedAt)}.</p>
+          <button type="button" className="secondary compact" disabled={busy} onClick={onDiscardFix}>Turn down fix</button>
+        </div>
+      )}
+      {fromAgent && (
+        <div className="info-row">
+          <LockKeyhole size={17} />
+          <p>Check what each argument is. A <strong>fixed</strong> value is used on every run; if it should change from run to run, make it an input.</p>
+        </div>
+      )}
       <div className="form-grid">
         <Field label="Name"><input value={wf.name} onChange={(e) => set({ name: e.target.value })} required minLength={2} maxLength={80} placeholder="e.g. File and announce a bug" /></Field>
         <Field label="Description" hint="Shown to agents next to the workflow’s tool."><input value={wf.description} onChange={(e) => set({ description: e.target.value })} maxLength={300} /></Field>
@@ -3177,12 +3227,24 @@ function WorkflowEditor({ state: s, data, busy, copy, onSave, onCancel, canConfi
                 {tool && (
                   <div className="wf-args">
                     {keys.length === 0 && <p className="muted">This tool takes no arguments.</p>}
-                    {keys.map((key) => (
-                      <label className="wf-arg" key={key}>
-                        <span><code>{key}</code>{required.includes(key) && <em>required</em>}</span>
-                        <input value={st.args?.[key] ?? ""} onChange={(e) => setStep(i, { args: { ...st.args, [key]: e.target.value } })} placeholder={props[key]?.description || props[key]?.type || ""} />
-                      </label>
-                    ))}
+                    {keys.map((key) => {
+                      const value = st.args?.[key] ?? "";
+                      const source = argSource(value);
+                      return (
+                        <div className="wf-arg" key={key}>
+                          <span><code>{key}</code>{required.includes(key) && <em>required</em>}</span>
+                          <div className="wf-arg-value">
+                            <input aria-label={`${st.id} ${key}`} value={value} onChange={(e) => setStep(i, { args: { ...st.args, [key]: e.target.value } })} placeholder={props[key]?.description || props[key]?.type || ""} />
+                            {source.kind !== "empty" && (
+                              <small className={`wf-source is-${source.kind}`}>
+                                {source.label}
+                                {source.kind === "fixed" && wf.inputs.length < 10 && <button type="button" className="text-button" onClick={() => makeInput(i, key, String(value))}>Make it an input</button>}
+                              </small>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
                     {refs.length > 0 && (
                       <div className="wf-refs">
                         <small>Insert:</small>
@@ -3191,7 +3253,7 @@ function WorkflowEditor({ state: s, data, busy, copy, onSave, onCancel, canConfi
                     )}
                   </div>
                 )}
-                {st.tool && <StepOptions step={st} onChange={(patch) => setStep(i, patch)} />}
+                {st.tool && <StepOptions step={st} writes={stepChanges(st, tool?.def)} onChange={(patch) => setStep(i, patch)} />}
               </li>
             );
           })}
@@ -3241,7 +3303,7 @@ function RunDetail({ run, workflow, describe, me, canConfigure, onDone }: { run:
   );
   return (
     <div className="form-body">
-      <div className="wf-section-head"><Status value={shown.status} /><small>{({ agent: "Agent", schedule: "Schedule", workflow: "Workflow" } as Data)[shown.trigger] || "Console"} · {shown.user} · {when(shown.createdAt)}</small></div>
+      <div className="wf-section-head"><Status value={shown.status} /><small>{({ agent: "Agent", schedule: "Schedule", workflow: "Workflow" } as Data)[shown.trigger] || "Console"} · {shown.user} · {when(shown.createdAt)}{shown.saved ? ` · ${shown.saved.calls} calls, ≈${compact(shown.saved.tokens)} tokens kept out of agent context` : ""}</small></div>
       {shown.status === "interrupted" && <div className="info-row"><LockKeyhole size={17} /><p>{canResume ? "The server restarted during this run. Continue picks it up from the step it had reached; the step that was running starts again, so check it didn’t already take effect." : "The server restarted during this run, and there is nothing to continue from. Start the workflow again."}</p></div>}
       <FlowDiagram workflow={shape} describe={describe} notes={notes} memory={memory || undefined} />
       {logs && !logs.length && shown.steps?.length > 0 && <p className="muted">No step data was kept for this run: the workflow keeps none, or this run is older than its latest ten.</p>}
