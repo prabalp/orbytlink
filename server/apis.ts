@@ -53,7 +53,7 @@ export const apiSchema = z
 
 export const allowedMethods = (api: Row): string[] => (api.access === "write" ? [...READ, ...WRITE] : [...READ]);
 
-const textOfHtml = (html: string) =>
+export const textOfHtml = (html: string) =>
   html
     .replace(/<(script|style|nav|footer|svg)[\s\S]*?<\/\1>/gi, " ")
     .replace(/<\/(p|div|h\d|li|tr|pre|section|article)>/gi, "\n")

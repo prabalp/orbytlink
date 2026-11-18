@@ -509,7 +509,7 @@ export function App() {
     settings = s.settings[0],
     // Old links to #connect-claude still land on the renamed page.
     // Old links: #connect-claude is now Connect agents. #apis and #ai-models are Catalog views.
-    title = nav.find(([n]) => slug(n) === (page === "connect-claude" ? "connect-agents" : page === "apis" || page === "ai-models" || page === "browser" ? "catalog" : page))?.[0] || "Connections",
+    title = nav.find(([n]) => slug(n) === (page === "connect-claude" ? "connect-agents" : page === "apis" || page === "ai-models" || page === "browser" || page === "scraper" ? "catalog" : page))?.[0] || "Connections",
     filtered = s.connections.filter((c: Data) =>
       `${c.name} ${c.description || ""} ${c.endpoint || ""}`
         .toLowerCase()
@@ -696,7 +696,7 @@ export function App() {
               onToolMode={(t: Data, toolMode: string) => act(() => api(`/tokens/${t.id}`, { toolMode }, "PUT"), toolModeSaved[toolMode] || "Saved", false)} />
           )}
           {title === "Catalog" && (
-            <CatalogPage key={page} initialView={page === "apis" ? "api" : page === "ai-models" ? "models" : page === "browser" ? "browser" : "mcp"} state={s} canConfigure={canConfigure} search={search} setSearch={setSearch} onConnect={(p: Preset) => setDialog({ type: "connection", data: presetDraft(p) })} onApi={(p: ApiPreset) => setDialog({ type: "api", data: presetApiDraft(p) })} onModel={(m: ModelRow) => setDialog({ type: "model", data: m })} />
+            <CatalogPage key={page} initialView={page === "apis" ? "api" : page === "ai-models" ? "models" : page === "browser" ? "browser" : page === "scraper" ? "scraper" : "mcp"} state={s} canConfigure={canConfigure} search={search} setSearch={setSearch} onConnect={(p: Preset) => setDialog({ type: "connection", data: presetDraft(p) })} onApi={(p: ApiPreset) => setDialog({ type: "api", data: presetApiDraft(p) })} onModel={(m: ModelRow) => setDialog({ type: "model", data: m })} />
           )}
           {title === "Skills" && (
             <SkillsPage state={s} busy={busy} canConfigure={canConfigure} search={search} setSearch={setSearch} onOpen={(skill: Data) => setDialog({ type: "skill", data: skill })} onToggle={(skill: Data, enabled: boolean) => act(() => api(`/skills/${skill.id}`, { enabled }, "PUT"), enabled ? `${skill.title} is on for your agents` : `${skill.title} is off`, false)} onChanged={() => void refresh()} notify={setToast} />
@@ -1636,8 +1636,34 @@ function presetDraft(p: Preset): Data {
   };
 }
 const SOON = "Coming soon";
-type CatalogView = "mcp" | "api" | "models" | "browser";
-const viewHash: Record<CatalogView, string> = { mcp: "#catalog", api: "#apis", models: "#ai-models", browser: "#browser" };
+type CatalogView = "mcp" | "api" | "models" | "browser" | "scraper";
+const viewHash: Record<CatalogView, string> = { mcp: "#catalog", api: "#apis", models: "#ai-models", browser: "#browser", scraper: "#scraper" };
+// The scraper that comes with OrbytLink: nothing to connect, so this is its status page.
+function ScraperView({ state: s }: any) {
+  const stealth = !!s.scraper?.stealth;
+  const u: Data = s.scraper?.usage || { pages: 0, stealth: 0, maps: 0, limits: { pages: 0, stealth: 0, maps: 0 } };
+  const n = (v: number) => v.toLocaleString();
+  return (
+    <section className="panel">
+      <div className="section-heading">
+        <h2>Scraper</h2>
+        <span className="count">{stealth ? "On" : "Plain reads only"}</span>
+      </div>
+      <p className="muted browser-note">Comes with OrbytLink, nothing to connect. Agents get <code>orbytlink__scrape</code> to read public pages and the contacts they publish (emails, phones, social profiles, contact pages, store platform){stealth ? <> and <code>orbytlink__scrape_maps</code> to find local businesses on Google Maps</> : null}. Both are workflow steps too. It tries a plain request first and switches to a stealth browser when a site blocks it or needs JavaScript. It obeys robots.txt, backs off from sites that push back, and reads public addresses only.</p>
+      <div className="table-scroll">
+        <table>
+          <thead><tr><th>Today</th><th>Used</th><th>Daily allowance</th></tr></thead>
+          <tbody>
+            <tr><td>Pages read</td><td>{n(u.pages)}</td><td>{n(u.limits.pages)}</td></tr>
+            <tr><td>Pages that needed the browser</td><td>{stealth ? n(u.stealth) : "—"}</td><td>{stealth ? n(u.limits.stealth) : "Not running on this server"}</td></tr>
+            <tr><td>Google Maps searches</td><td>{stealth ? n(u.maps) : "—"}</td><td>{stealth ? n(u.limits.maps) : "Not running on this server"}</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p className="muted browser-note">Free for this workspace. The allowance resets at midnight UTC.{stealth ? "" : " The operator starts the stealth scraper (SCRAPER_URL and SCRAPER_TOKEN) to read protected pages and Google Maps."}</p>
+    </section>
+  );
+}
 // A real browser for tasks with no API or MCP server. It is a tool, not a connection, so this is its status page.
 function BrowserView({ state: s }: any) {
   const on = !!s.browser?.configured;
@@ -1677,7 +1703,7 @@ function CatalogPage({ state: s, canConfigure, search, setSearch, onConnect, onA
   };
   const viewSwitch = (
     <div className="segmented catalog-view" role="radiogroup" aria-label="Catalog">
-      {([["mcp", "MCP servers"], ["api", "APIs"], ["models", "AI models"], ["browser", "Browser"]] as const).map(([v, label]) => (
+      {([["mcp", "MCP servers"], ["api", "APIs"], ["models", "AI models"], ["browser", "Browser"], ["scraper", "Scraper"]] as const).map(([v, label]) => (
         <button type="button" role="radio" aria-checked={view === v} className={view === v ? "active" : ""} key={v} onClick={() => switchView(v)}>{label}</button>
       ))}
     </div>
@@ -1687,6 +1713,13 @@ function CatalogPage({ state: s, canConfigure, search, setSearch, onConnect, onA
       <>
         {viewSwitch}
         <BrowserView state={s} />
+      </>
+    );
+  if (view === "scraper")
+    return (
+      <>
+        {viewSwitch}
+        <ScraperView state={s} />
       </>
     );
   if (view === "models")

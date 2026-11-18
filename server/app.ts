@@ -21,6 +21,7 @@ import { authoredDetail, createAuthored, deleteAuthored, initializeLibrary, libr
 import { MIN_INSTALLS, searchRegistry } from "./skill-registry.js";
 import { AI_TOOL, aiConfigured, aiSummary, generate, saveAiSettings } from "./ai.js";
 import { BROWSER_TOOL, browserConfigured, browserSummary } from "./browser.js";
+import { MAPS_TOOL, SCRAPE_TOOL, scraperConfigured, scraperSummary } from "./scraper.js";
 import { BUNDLES, cashfreeConfigured, cashfreeMode, createOrder, currenciesFor, dodoMode, dodoOrderFrom, listPayments, orderIdFrom, paymentsConfigured, providerFor, quote, settle, validSignature } from "./payments.js";
 import { alreadySaved, captureWorkflow, dismissSuggestion, keyFor, suggestionsFor } from "./capture.js";
 import { fromMarkdown, toMarkdown, workflowFileName } from "./workflow-md.js";
@@ -261,6 +262,7 @@ export function createApp(
           .slice(0, 50),
         ai: aiSummary(store, i.workspace),
         browser: browserSummary(),
+        scraper: scraperSummary(store, i.workspace),
         // Steps can also call stored APIs, AI models and other workflows, besides app tools.
         workflowStepTools: [
           ...(aiConfigured() ? [{ name: AI_TOOL, title: "Ask an AI model", app: "AI models", args: ["model", "prompt", "system", "maxTokens", "temperature", "json"] }] : []),
@@ -268,6 +270,8 @@ export function createApp(
           ...(enabledApis(store, i.workspace).length
             ? [{ name: API_REQUEST_TOOL, title: "Call a stored API", app: "APIs", args: ["api", "method", "path", "query", "body"], apis: enabledApis(store, i.workspace).map((a) => a.slug) }]
             : []),
+          { name: SCRAPE_TOOL, title: "Scrape web pages", app: "Scraper", args: ["url", "urls", "contacts", "mode", "select", "waitFor"] },
+          ...(scraperConfigured() ? [{ name: MAPS_TOOL, title: "Search Google Maps", app: "Scraper", args: ["query", "location", "maxResults"] }] : []),
           ...visibleWorkflowTools(store, i).map((t) => ({ name: t.name, title: t.workflow.name, app: "Workflows", args: (t.workflow.inputs || []).map((x: { name: string }) => x.name) })),
         ],
         apis: store.list(i.workspace, "apis").map(publicApi),

@@ -8,6 +8,7 @@ import { credentialFor } from "./oauth.js";
 import { identityFor } from "./orgs.js";
 import { AI_TOOL, aiInputSchema, generate } from "./ai.js";
 import { BROWSER_TOOL, browse, browseText, browserInputSchema } from "./browser.js";
+import { MAPS_TOOL, SCRAPE_TOOL, mapsInputSchema, scrape, scrapeInputSchema, scrapeMaps } from "./scraper.js";
 import { cacheGet, cacheKey, cachePut, dropCheckpoint, ensure as ensureData, loadCheckpoint, loadState, logStep, pruneWorkflowData, saveCheckpoint, saveState, trimLogs } from "./workflow-data.js";
 
 // A workflow is a fixed, ordered list of tool calls on this gateway. Arguments are templates
@@ -280,7 +281,7 @@ export type RunOutcome = {
 // Whether a step can change something outside OrbytLink (send, create, update, delete). Only a
 // tool that says it is read-only, a GET/HEAD to a stored API, an AI answer or a decision is a read.
 export function changesThings(store: Store, workspace: string, tool: string, method?: unknown) {
-  if (tool === JUDGE || tool === AI_TOOL) return false;
+  if (tool === JUDGE || tool === AI_TOOL || tool === SCRAPE_TOOL || tool === MAPS_TOOL) return false;
   if (tool === API_REQUEST_TOOL) return !/^\s*(GET|HEAD)\s*$/i.test(String(method ?? ""));
   if (tool === BROWSER_TOOL || tool.startsWith("workflow__")) return true;
   const def = gatewayTools(store, workspace).find((t) => t.name === tool)?.tool;
@@ -312,6 +313,8 @@ async function callStep(store: Store, services: ServiceAdapters, identity: Ident
   const w = identity.workspace;
   if (++run.calls > MAX_CALLS) throw new Error(`Too many tool calls in one run (over ${MAX_CALLS})`);
   if (tool === AI_TOOL) return (await generate(store, identity, args, "workflow")).text;
+  if (tool === SCRAPE_TOOL) return JSON.stringify(await scrape(store, w, args));
+  if (tool === MAPS_TOOL) return JSON.stringify(await scrapeMaps(store, w, args));
   if (tool === BROWSER_TOOL) {
     const r = await browse(store, identity, args, "workflow");
     if (r.status === "failed") throw new Error(browseText(r));
@@ -345,6 +348,8 @@ function schemaFor(store: Store, identity: Identity, tool: string): Record<strin
   if (tool === API_REQUEST_TOOL) return { query: { type: "object" }, body: {} };
   if (tool === AI_TOOL) return aiInputSchema.properties;
   if (tool === BROWSER_TOOL) return browserInputSchema.properties;
+  if (tool === SCRAPE_TOOL) return scrapeInputSchema.properties;
+  if (tool === MAPS_TOOL) return mapsInputSchema.properties;
   if (tool.startsWith("workflow__")) return {};
   return gatewayTools(store, identity.workspace).find((t) => t.name === tool)?.tool.inputSchema?.properties || {};
 }

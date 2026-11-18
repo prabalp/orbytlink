@@ -148,7 +148,7 @@ export function ResultView({ workflow, data, text }: { workflow: Data; data?: un
 // outside OrbytLink, which decides whether a retry could do it twice.
 const READ_NAME = /^(get|list|search|find|read|fetch|query|lookup|describe|count|check|retrieve|view|show)([_\-A-Z]|$)/;
 export function stepChanges(step: Data, def?: Data) {
-  if (step.tool === "judge" || step.tool === "orbytlink__ai_generate") return false;
+  if (["judge", "orbytlink__ai_generate", "orbytlink__scrape", "orbytlink__scrape_maps"].includes(step.tool)) return false;
   if (step.tool === "orbytlink__api_request") return !/^\s*(GET|HEAD)\s*$/i.test(String(step.args?.method || ""));
   if (step.tool === "orbytlink__browse" || String(step.tool).startsWith("workflow__")) return true;
   if (def?.annotations?.readOnlyHint) return false;

@@ -1,0 +1,5 @@
+fastapi==0.115.0
+uvicorn==0.30.6
+pydantic==2.9.2
+# The stealth Chromium driver Lead Orbyt's scraper (Scrapling) runs on.
+patchright==1.64.4

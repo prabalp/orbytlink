@@ -47,6 +47,24 @@ services:
     shm_size: 1gb
     mem_limit: 2g
     expose: ["8800"]
+  # The scraper that comes with OrbytLink: a stealth Chromium for pages that block plain requests,
+  # and for Google Maps. Reachable only from the api container. Needs SCRAPER_URL=http://scraper:8700
+  # and SCRAPER_TOKEN in .env; without them the scraper still reads pages with plain requests.
+  scraper:
+    build: ./scraper
+    container_name: OrbytLink-Scraper
+    restart: unless-stopped
+    environment:
+      SCRAPER_TOKEN: ${SCRAPER_TOKEN}
+      SCRAPER_CONCURRENCY: ${SCRAPER_CONCURRENCY:-3}
+    shm_size: 1gb
+    mem_limit: 2g
+    expose: ["8700"]
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 volumes:
   orbytlink-data:
   orbytlink-backups:

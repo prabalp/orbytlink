@@ -27,3 +27,7 @@ landing/previous/
 # macOS folder metadata, and the design tool's local cache (session ids, local paths)
 .DS_Store
 .impeccable/hook.cache.json
+
+# Local notes on lead_orbyt (not part of the app)
+leadorbyt-stack.csv
+__pycache__/
