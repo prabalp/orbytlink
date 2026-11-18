@@ -118,6 +118,14 @@ function BuyCredit({ call, canConfigure, onPaid }: { call: Call; canConfigure: b
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  // Rupee payments go through Cashfree, which needs a mobile number. Remembered in this browser only.
+  const [phone, setPhone] = useState(() => {
+    try {
+      return localStorage.getItem("orbytlink:pay-phone") || "";
+    } catch {
+      return "";
+    }
+  });
   const load = () =>
     call("/payments").then((d: Data) => {
       setData(d);
@@ -170,7 +178,15 @@ function BuyCredit({ call, canConfigure, onPaid }: { call: Call; canConfigure: b
     setBusy(String(bundle));
     setError("");
     try {
-      const order = await call("/payments/orders", { bundle, currency });
+      const cashfree = data.providers?.[currency] === "cashfree";
+      if (cashfree && !/^(\+?91|0)?[6-9]\d{9}$/.test(phone.replace(/[\s()-]/g, ""))) throw new Error("Enter your 10-digit mobile number to pay in rupees.");
+      const order = await call("/payments/orders", { bundle, currency, ...(cashfree ? { phone } : {}) });
+      if (cashfree)
+        try {
+          localStorage.setItem("orbytlink:pay-phone", phone.trim());
+        } catch {
+          // Storage can be unavailable; the number is then asked for again next time.
+        }
       if (order.provider === "dodo") {
         window.location.assign(order.checkoutUrl);
         return;
@@ -198,12 +214,22 @@ function BuyCredit({ call, canConfigure, onPaid }: { call: Call; canConfigure: b
               Credit is added as soon as the payment clears.
               {(data.providers?.[currency] === "dodo" ? data.testMode?.dodo : data.testMode?.cashfree) ? " Test mode: no real money moves." : ""}
             </p>
-            <div className="segmented" role="radiogroup" aria-label="Currency">
-              {([["INR", "₹ INR"], ["USD", "$ USD"]] as const).filter(([c]) => (data.currencies || ["INR", "USD"]).includes(c)).map(([c, label]) => (
-                <button type="button" role="radio" aria-checked={currency === c} className={currency === c ? "active" : ""} key={c} onClick={() => setCurrency(c)}>{label}</button>
-              ))}
-            </div>
+            {/* The server offers one currency per country (rupees in India, dollars elsewhere); a switch only where it offers more. */}
+            {(data.currencies || []).length > 1 && (
+              <div className="segmented" role="radiogroup" aria-label="Currency">
+                {([["INR", "₹ INR"], ["USD", "$ USD"]] as const).filter(([c]) => data.currencies.includes(c)).map(([c, label]) => (
+                  <button type="button" role="radio" aria-checked={currency === c} className={currency === c ? "active" : ""} key={c} onClick={() => setCurrency(c)}>{label}</button>
+                ))}
+              </div>
+            )}
           </div>
+          {data.providers?.[currency] === "cashfree" && (
+            <label className="field pay-phone">
+              <span>Mobile number</span>
+              <input type="tel" inputMode="tel" autoComplete="tel" maxLength={16} placeholder="98765 43210" value={phone} onChange={(e) => setPhone(e.target.value)} disabled={!canConfigure || !!busy} />
+              <small>Cashfree sends UPI payment requests and your receipt to this number.</small>
+            </label>
+          )}
           <div className="bundle-grid">
             {data.bundles.map((b: Data) => {
               const q = b[currency];

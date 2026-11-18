@@ -20,7 +20,7 @@ import { authoredDetail, createAuthored, deleteAuthored, initializeLibrary, libr
 import { MIN_INSTALLS, searchRegistry } from "./skill-registry.js";
 import { AI_TOOL, aiConfigured, aiSummary, generate, saveAiSettings } from "./ai.js";
 import { BROWSER_TOOL, browserConfigured, browserSummary } from "./browser.js";
-import { BUNDLES, cashfreeConfigured, cashfreeMode, createOrder, currencies, dodoMode, dodoOrderFrom, listPayments, orderIdFrom, paymentsConfigured, providerFor, quote, settle, validSignature } from "./payments.js";
+import { BUNDLES, cashfreeConfigured, cashfreeMode, createOrder, currenciesFor, dodoMode, dodoOrderFrom, listPayments, orderIdFrom, paymentsConfigured, providerFor, quote, settle, validSignature } from "./payments.js";
 import { alreadySaved, captureWorkflow, dismissSuggestion, keyFor, suggestionsFor } from "./capture.js";
 import { fromMarkdown, toMarkdown, workflowFileName } from "./workflow-md.js";
 import { clearCache, forgetState, forgetWorkflowData, listState, stepLogs } from "./workflow-data.js";
@@ -60,7 +60,7 @@ export function createApp(
       );
       res.setHeader(
         "Content-Security-Policy",
-        "default-src 'self'; script-src 'self' https://sdk.cashfree.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://sdk.cashfree.com https://api.cashfree.com https://sandbox.cashfree.com; frame-ancestors 'none'; base-uri 'none'",
+        "default-src 'self'; script-src 'self' https://sdk.cashfree.com; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://sdk.cashfree.com https://api.cashfree.com https://sandbox.cashfree.com; frame-src https://sdk.cashfree.com; frame-ancestors 'none'; base-uri 'none'",
       );
     }
     next();
@@ -508,14 +508,15 @@ export function createApp(
     res.json({ ...aiSummary(store, w), usage: store.list(w, "ai_usage").slice(0, 100), ledger: store.list(w, "ai_ledger").slice(0, 50) });
   });
   // Buying credit: prices, a new order (an admin's action), and a check on an order after returning from Cashfree.
+  // Behind Cloudflare, cf-ipcountry says where the visitor is: India pays in rupees, others in dollars.
+  const countryOf = (req: Request) => String(req.headers["cf-ipcountry"] ?? "").toUpperCase();
   app.get("/api/payments", permit("read"), (req, res) => {
     const i = identity(res);
-    // Behind Cloudflare, cf-ipcountry says where the visitor is: India sees rupees first.
-    const country = String(req.headers["cf-ipcountry"] ?? "").toUpperCase();
+    const country = countryOf(req);
     res.json({
       enabled: paymentsConfigured(),
       mode: cashfreeMode(),
-      currencies: currencies(),
+      currencies: currenciesFor(country),
       providers: { INR: providerFor("INR"), USD: providerFor("USD") },
       testMode: { cashfree: cashfreeMode() === "sandbox", dodo: dodoMode() === "test_mode" },
       suggested: country === "IN" ? "INR" : country ? "USD" : null,
@@ -524,6 +525,10 @@ export function createApp(
     });
   });
   app.post("/api/payments/orders", permit("configure"), async (req, res) => {
+    const allowed = currenciesFor(countryOf(req));
+    // Unknown currencies fall through to the order's own validation (a 400).
+    if (["USD", "INR"].includes(req.body?.currency) && !allowed.includes(req.body.currency))
+      throw Object.assign(new Error(`Payments from your country are taken in ${allowed.join(" or ") || "no currency yet"}.`), { status: 409, safe: true });
     res.json(await createOrder(store, identity(res), req.body));
   });
   app.post("/api/payments/orders/:id/check", permit("read"), async (req, res) => {

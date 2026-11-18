@@ -3,7 +3,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { Express } from "express";
 import { createApp } from "../server/app";
 import { Store } from "../server/store";
-import { quote } from "../server/payments";
+import { indianMobile, quote } from "../server/payments";
 import type { ServiceAdapters } from "../server/adapters";
 import { inject } from "./inject";
 import { Webhook } from "standardwebhooks";
@@ -24,7 +24,7 @@ async function webhook(orderId: string, sign = true) {
   const signature = createHmac("sha256", SECRET).update(ts + JSON.stringify(body)).digest("base64");
   return inject(app, { url: "/api/payments/webhook", method: "POST", headers: { "x-webhook-timestamp": ts, "x-webhook-signature": sign ? signature : "AAAA" }, body });
 }
-const buy = async (bundle = 25, currency = "USD") => (await api("/api/payments/orders", { bundle, currency })).data;
+const buy = async (bundle = 25, currency = "USD") => (await api("/api/payments/orders", { bundle, currency, phone: "98765 43210" })).data;
 const pay = (orderId: string, patch: Record<string, unknown> = {}) => orders.set(orderId, { ...orders.get(orderId), order_status: "PAID", ...patch });
 
 beforeEach(async () => {
@@ -149,14 +149,14 @@ it("keeps one workspace's orders private, and records a failure without creditin
   expect((await inject(app, { url: `/api/payments/orders/${o.orderId}/check`, method: "POST", headers: { Cookie: theirs }, body: {} })).status).toBe(404);
   expect((await inject(app, { url: "/api/payments", headers: { Cookie: theirs } })).data.history).toEqual([]);
   down = true;
-  expect((await api("/api/payments/orders", { bundle: 10, currency: "USD" })).status).toBe(502);
+  expect((await api("/api/payments/orders", { bundle: 10, currency: "USD", phone: "9876543210" })).status).toBe(502);
   expect((await api("/api/payments")).data.history.some((h: any) => h.status === "failed")).toBe(true);
 });
 
 it("is off, and the webhook does not exist, until Cashfree is configured", async () => {
   delete process.env.CASHFREE_APP_ID;
   expect((await api("/api/payments")).data.enabled).toBe(false);
-  expect((await api("/api/payments/orders", { bundle: 10, currency: "USD" })).status).toBe(409);
+  expect((await api("/api/payments/orders", { bundle: 10, currency: "USD", phone: "9876543210" })).status).toBe(409);
   expect((await webhook("olp_000000000000000000000000")).status).toBe(404);
 });
 
@@ -231,4 +231,39 @@ it("offers only the currencies a configured provider can take", async () => {
   expect((await api("/api/payments")).data).toMatchObject({ enabled: true, currencies: ["USD"] });
   expect((await api("/api/payments/orders", { bundle: 10, currency: "INR" })).status).toBe(409);
   expect((await webhook("olp_000000000000000000000000")).status).toBe(404); // Cashfree's webhook is off
+});
+
+it("locks the currency to the payer's country: rupees in India, dollars everywhere else", async () => {
+  useDodo();
+  const from = (country: string, url: string, body?: unknown) =>
+    inject(app, { url, method: body ? "POST" : "GET", headers: { Cookie: cookie, "CF-IPCountry": country }, body });
+  expect((await from("IN", "/api/payments")).data).toMatchObject({ currencies: ["INR"], suggested: "INR" });
+  expect((await from("US", "/api/payments")).data).toMatchObject({ currencies: ["USD"], suggested: "USD" });
+  expect((await from("DE", "/api/payments")).data.currencies).toEqual(["USD"]);
+  // The server refuses the other currency, whatever the page sends.
+  const blocked = await from("IN", "/api/payments/orders", { bundle: 10, currency: "USD" });
+  expect(blocked.status).toBe(409);
+  expect(blocked.data.error).toBe("Payments from your country are taken in INR.");
+  expect((await from("GB", "/api/payments/orders", { bundle: 10, currency: "INR" })).status).toBe(409);
+  expect((await from("IN", "/api/payments/orders", { bundle: 10, currency: "INR", phone: "9876543210" })).data).toMatchObject({ provider: "cashfree" });
+  expect((await from("US", "/api/payments/orders", { bundle: 10, currency: "USD" })).data).toMatchObject({ provider: "dodo" });
+  // Until Cashfree is set up, India can still pay in dollars rather than not at all.
+  delete process.env.CASHFREE_APP_ID;
+  expect((await from("IN", "/api/payments")).data.currencies).toEqual(["USD"]);
+});
+
+it("sends Cashfree the payer's own mobile number, and refuses a rupee order without one", async () => {
+  const none = await api("/api/payments/orders", { bundle: 10, currency: "INR" });
+  expect(none.status).toBe(400);
+  expect(none.data.error).toBe("Enter your 10-digit mobile number to pay in rupees.");
+  expect((await api("/api/payments/orders", { bundle: 10, currency: "INR", phone: "12345" })).status).toBe(400);
+  expect(calls.filter((c) => c.url.includes("cashfree"))).toHaveLength(0);
+  await api("/api/payments/orders", { bundle: 10, currency: "INR", phone: "+91 98765-43210" });
+  const sent = calls.find((c) => c.url.endsWith("/orders"))!;
+  expect(sent.body.customer_details.customer_phone).toBe("9876543210");
+  expect(JSON.stringify(sent.body)).not.toContain("9999999999");
+  // The number goes to Cashfree only; it is not kept with the order.
+  expect(JSON.stringify(store.db.prepare("SELECT * FROM payments").all())).not.toContain("9876543210");
+  for (const ok of ["9876543210", "+919876543210", "09876543210", "98765 43210", "(+91) 98765-43210"]) expect(indianMobile(ok)).toBe("9876543210");
+  for (const bad of ["", "5876543210", "987654321", "98765432101", "+1 415 555 0100"]) expect(indianMobile(bad)).toBeNull();
 });

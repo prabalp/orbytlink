@@ -30,6 +30,16 @@ export type Provider = "cashfree" | "dodo";
 export const providerFor = (currency: Currency): Provider | null =>
   currency === "USD" && dodoConfigured() ? "dodo" : cashfreeConfigured() ? "cashfree" : null;
 export const currencies = () => (["INR", "USD"] as const).filter((c) => providerFor(c));
+// Where the payer is decides the currency: India pays in rupees (Cashfree), everyone else in
+// dollars (Dodo). `country` is Cloudflare's CF-IPCountry; without it (local development) every
+// configured currency is offered. Until that country's provider is set up, fall back to the others,
+// so nobody is left without a way to pay.
+export function currenciesFor(country: string): Currency[] {
+  const all: Currency[] = [...currencies()];
+  if (!country) return all;
+  const local: Currency = country.toUpperCase() === "IN" ? "INR" : "USD";
+  return all.includes(local) ? [local] : all;
+}
 export const dodoMode = () => (process.env.DODO_PAYMENTS_ENVIRONMENT === "live_mode" ? "live_mode" : "test_mode");
 const dodoApi = () => (dodoMode() === "live_mode" ? "https://live.dodopayments.com" : "https://test.dodopayments.com");
 export const cashfreeMode = () => (process.env.CASHFREE_ENV === "production" ? "production" : "sandbox");
@@ -122,14 +132,26 @@ async function dodo(method: "GET" | "POST", path: string, body?: unknown): Promi
   return data;
 }
 
-const orderInput = z.object({ bundle: z.number().int().refine((n) => BUNDLES.includes(n), "Pick one of the listed amounts"), currency: z.enum(["USD", "INR"]) });
+const orderInput = z.object({
+  bundle: z.number().int().refine((n) => BUNDLES.includes(n), "Pick one of the listed amounts"),
+  currency: z.enum(["USD", "INR"]),
+  phone: z.string().max(20).optional(),
+});
+// Cashfree needs the payer's mobile number (it sends UPI requests and receipts to it). Accept the
+// usual ways of writing an Indian mobile and keep the 10 digits; anything else is refused.
+export function indianMobile(value: string | undefined) {
+  const digits = String(value ?? "").replace(/[\s()-]/g, "").replace(/^(\+91|0091|91(?=\d{10}$)|0(?=\d{10}$))/, "");
+  return /^[6-9]\d{9}$/.test(digits) ? digits : null;
+}
 const origin = () => (process.env.APP_ORIGIN || "http://127.0.0.1:3100").replace(/\/+$/, "");
 export async function createOrder(store: Store, identity: Identity, input: unknown) {
   ensure(store);
   if (!paymentsConfigured()) throw safe("Online payments are not switched on for this OrbytLink server yet.");
-  const { bundle, currency } = orderInput.parse(input);
+  const { bundle, currency, phone } = orderInput.parse(input);
   const provider = providerFor(currency);
   if (!provider) throw safe(`Payments in ${currency} are not switched on for this OrbytLink server yet.`);
+  const mobile = provider === "cashfree" ? indianMobile(phone) : null;
+  if (provider === "cashfree" && !mobile) throw safe("Enter your 10-digit mobile number to pay in rupees.", 400);
   // A small guard against a stuck button or a script creating orders in a loop.
   const recent = (store.db.prepare("SELECT count(*) AS n FROM payments WHERE workspace=? AND created_at>?").get(identity.workspace, Date.now() - 3_600_000) as { n: number }).n;
   if (recent >= 20) throw safe("Too many payment attempts in the last hour. Try again later.", 429);
@@ -158,8 +180,8 @@ export async function createOrder(store: Store, identity: Identity, input: unkno
       order_amount: q.total,
       order_currency: currency,
       order_note: `OrbytLink AI credit $${bundle}`,
-      // Cashfree requires a customer id and phone; OrbytLink does not collect a phone number.
-      customer_details: { customer_id: `u_${createHash("sha256").update(identity.user).digest("hex").slice(0, 24)}`, customer_phone: "9999999999", ...(email ? { customer_email: email } : {}) },
+      // Cashfree requires a customer id and phone; the phone is asked for at checkout and not stored.
+      customer_details: { customer_id: `u_${createHash("sha256").update(identity.user).digest("hex").slice(0, 24)}`, customer_phone: mobile!, ...(email ? { customer_email: email } : {}) },
       order_meta: { return_url: `${origin()}/?pay_order={order_id}#settings`, notify_url: `${origin()}/api/payments/webhook` },
     });
     if (typeof order.payment_session_id !== "string") throw safe("Cashfree did not return a payment session. Nothing was charged.", 502);
