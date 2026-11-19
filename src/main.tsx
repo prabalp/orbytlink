@@ -583,14 +583,14 @@ export function App() {
               <h1>{title}</h1>
               <p>
                 {({
-                  Connections: "Connect MCP servers and APIs once. Claude reaches all of them through one endpoint.",
-                  Catalog: "Ready-made MCP servers and APIs, and the AI models available. Pick one, sign in or paste a key, and Claude can use it.",
-                  Skills: "Proven instructions your agents load when a task calls for them. Turn one on and every connected agent can use it.",
-                  Workflows: "Fixed sequences of tool calls across your apps. Run them here, or let agents call each one as a single tool.",
+                  Connections: "Apps your agents can use.",
+                  Catalog: "Apps, tools and AI models, ready to connect.",
+                  Skills: "Instructions your agents follow for specific tasks.",
+                  Workflows: "Multi-step tasks across your apps, run in one go.",
                   "Connect agents": "Connect Claude, Codex, Cursor and any other MCP client to every app in this gateway.",
-                  Team: s.org ? `Members of ${s.org.name}, and who can change what.` : "Share this gateway with teammates by creating an organization.",
-                  Activity: "Every tool call and configuration change in this gateway.",
-                  Settings: "Your workspace, account and gateway preferences.",
+                  Team: s.org ? `Members of ${s.org.name}.` : "Share your apps with teammates.",
+                  Activity: "Tool calls and changes.",
+                  Settings: "Workspace and account preferences.",
                 } as Data)[title]}
               </p>
             </div>
@@ -668,17 +668,14 @@ export function App() {
                 </div>}
                 {!filtered.length && !filteredApis.length && (
                   <Empty icon={Link2} title={search ? "No connections found" : canConfigure ? "Connect your first app" : "Nothing connected yet"} action={!search && canConfigure && <button className="primary" onClick={() => setDialog({ type: "add-choice" })}><Plus size={16} /> Add connection</button>}>
-                    {canConfigure ? "Add any MCP server or HTTP API. Once it passes a live test, its tools appear in Claude." : "An admin of this organization has not connected any apps yet."}
+                    {canConfigure ? "Add an MCP server or API to get started." : "An admin of this organization has not connected any apps yet."}
                   </Empty>
                 )}
               </section>
               <div className="info-row">
                 <LockKeyhole size={17} />
                 <p>
-                  Credentials are encrypted with AES-256-GCM on the server, bound to this
-                  workspace and connection, and never returned to the browser or to Claude.
-                  Only connections that pass a live test are exposed, and any change takes
-                  them offline until they are tested again.
+                  Credentials are encrypted and never shown to Claude.
                 </p>
               </div>
             </>
@@ -733,7 +730,7 @@ export function App() {
                       ))}
                     </tbody>
                   </table>
-                </div> : <Empty icon={Activity} title="No tool calls yet">Calls Claude makes through the gateway appear here. Arguments and responses are not stored.</Empty>}
+                </div> : <Empty icon={Activity} title="No tool calls yet">Tool calls from your agents appear here.</Empty>}
               </section>
               {s.apiCalls.length > 0 && (
                 <section className="panel">
@@ -942,7 +939,7 @@ export function App() {
                 }, "Token created", false);
               }}
             >
-              <Field label="Token name" hint="Where it will be used, so you can recognise and revoke it later.">
+              <Field label="Token name" hint="So you can recognise it later.">
                 <input name="name" required minLength={2} maxLength={80} autoFocus placeholder="e.g. Claude Code on my laptop" />
               </Field>
               <Field label="Expires after">
@@ -958,7 +955,7 @@ export function App() {
                   {toolModes.map(([v, label]) => <option key={v} value={v}>{label}</option>)}
                 </select>
               </Field>
-              <p className="muted">The token can list and call your connected tools. It cannot read credentials, change connections, or sign in to this console.</p>
+              <p className="muted">It can only list and call your tools.</p>
               <FormActions busy={busy} onCancel={close} label="Create token" />
             </form>
           )}
@@ -966,11 +963,10 @@ export function App() {
             <div className="form-body">
               <div className="info-row">
                 <LockKeyhole size={18} />
-                <p>Copy this token now. It is shown once and only its hash is stored. Treat it like a password.</p>
+                <p>Copy it now. It won’t be shown again.</p>
               </div>
               <textarea className="token" readOnly value={dialog.data!.token} rows={3} aria-label="Gateway token" />
               <button className="primary" onClick={() => copy(dialog.data!.token, "Token")}><Copy size={15} /> Copy token</button>
-              <p className="muted">It is also filled into the setup steps on this page until you leave it.</p>
               <div className="form-footer"><button className="secondary" onClick={close}>Done</button></div>
             </div>
           )}
@@ -986,23 +982,22 @@ export function App() {
           {dialog.type === "help" && (
             <div className="form-body help-content">
               <ol>
-                <li><strong>Connect apps.</strong> Add each MCP server or HTTP API once, with its credential. The server operator must allowlist its host in <code>OUTBOUND_HOSTS</code>.</li>
-                <li><strong>Test.</strong> A live test discovers the app's tools. Only tested, enabled connections are exposed.</li>
+                <li><strong>Connect apps.</strong> Add each app once, with its sign-in or key.</li>
+                <li><strong>Test.</strong> A test finds the app's tools.</li>
                 <li><strong>Choose tools.</strong> Turn off any tool Claude should not see.</li>
-                <li><strong>Connect agents.</strong> Create a token and add <code>{mcpUrl()}</code> to Claude, Codex, Cursor or any MCP client. They see every app's tools, named <code>app__tool</code>.</li>
+                <li><strong>Connect agents.</strong> Create a token and add <code>{mcpUrl()}</code> to Claude, Codex, Cursor or any MCP client. </li>
               </ol>
               <h3>What stays on the gateway</h3>
-              <p>App credentials never leave the server. Claude only holds a revocable gateway token that can list and call tools, nothing else. Calls are logged without their arguments or responses.</p>
+              <p>Your credentials never leave the server. Agents can only list and call tools.</p>
             </div>
           )}
           {dialog.type === "session" && (
             <div className="form-body">
               <p>Signed in as <strong>{s.identity.displayName || s.identity.user}</strong>{s.identity.email && <> ({s.identity.email})</>}.</p>
-              <p className="muted">Sessions expire after one hour of inactivity or eight hours from sign-in.</p>
-              <button className="secondary" onClick={() => act(() => api("/session/logout", {}), "Signed out")}>Sign out</button>
+                            <button className="secondary" onClick={() => act(() => api("/session/logout", {}), "Signed out")}>Sign out</button>
               {s.identity.authMethod === "email" && <button className="secondary" onClick={() => setDialog({ type: "password" })}>Change password</button>}
               <button className="text-button" onClick={() => act(() => api("/auth/logout-all", {}), "All sessions and gateway tokens revoked")}>Sign out everywhere</button>
-              <p className="muted">Signing out everywhere also revokes every gateway token, disconnecting Claude.</p>
+              <p className="muted">This also disconnects your agents.</p>
             </div>
           )}
           {dialog.type === "workspaces" && (
@@ -1036,7 +1031,7 @@ export function App() {
               <Field label="Organization name" hint="You become its first admin, and can make any member an admin.">
                 <input name="name" required minLength={2} maxLength={80} autoFocus placeholder="e.g. Acme Corp" />
               </Field>
-              <p className="muted">An organization has its own connections and credentials, separate from your personal workspace. Members share them through the gateway without ever seeing the credentials.</p>
+              <p className="muted">Share apps with your team without sharing credentials.</p>
               <FormActions busy={busy} onCancel={close} label="Create organization" />
             </form>
           )}
@@ -1081,7 +1076,7 @@ export function App() {
               )}
               <div className="info-row">
                 <LockKeyhole size={18} />
-                <p>{dialog.data!.emailed ? "This link is shown once and only its hash is stored." : "Copy this link now. It is shown once and only its hash is stored."} Anyone who opens it while signed in can join as {dialog.data!.role === "admin" ? "an admin" : "a member"}, once.</p>
+                <p>{dialog.data!.emailed ? "It won’t be shown again." : "Copy it now. It won’t be shown again."} Anyone who opens it while signed in can join as {dialog.data!.role === "admin" ? "an admin" : "a member"}, once.</p>
               </div>
               <CodeLine text={`${location.origin}/#invite=${dialog.data!.token}`} copy={copy} label="Invite link" />
               <div className="form-footer"><button className="primary" onClick={close}>Done</button></div>
@@ -1090,7 +1085,7 @@ export function App() {
           {dialog.type === "join" && (
             <div className="form-body">
               <p>You have been invited to join <strong>{dialog.data!.org}</strong> as {dialog.data!.role === "admin" ? "an admin" : "a member"}.</p>
-              <p className="muted">You will share its connected apps through the gateway. Your personal workspace stays separate, and you can switch between them any time.</p>
+              <p className="muted">Your personal workspace stays separate.</p>
               <div className="form-footer">
                 <button className="secondary" onClick={close}>Not now</button>
                 <button className="primary" disabled={busy} onClick={() => act(async () => { await api("/invites/accept", { token: dialog.data!.token }); forgetInvite(); location.hash = "#team"; }, `You joined ${dialog.data!.org}`)}>Join organization</button>
@@ -1216,7 +1211,7 @@ export function App() {
               <Field label="Current password"><input name="currentPassword" type="password" autoComplete="current-password" required maxLength={128} /></Field>
               <Field label="New password" hint="Use 12 to 128 characters and a unique password."><input name="newPassword" type="password" autoComplete="new-password" required minLength={12} maxLength={128} /></Field>
               <Field label="Confirm new password"><input name="confirmPassword" type="password" autoComplete="new-password" required minLength={12} maxLength={128} /></Field>
-              <p className="muted">Changing your password signs out your other devices and revokes all gateway tokens.</p>
+              <p className="muted">This signs out your other devices and agents.</p>
               <FormActions busy={busy} onCancel={close} label="Change password" />
             </form>
           )}
@@ -1714,16 +1709,16 @@ function InstantView({ state: s, search, setSearch, segment, setSegment }: any) 
       />
       <div className="info-row">
         <Zap size={17} />
-        <p>Ready to use: no account or key to connect. Agents find these with <code>orbytlink__instant_search</code> and call them with <code>orbytlink__instant_call</code>, also as workflow steps. Each call is paid from your credit at the price shown; failed calls are free. Tools named <code>best.*</code> try the providers of a job cheapest first and charge only for the answer.{s.instant?.configured ? "" : " Not switched on for this server yet."}</p>
+        <p>Ready to use, nothing to connect. Paid from your credit; failed calls are free.{s.instant?.configured ? "" : " Not available yet."}</p>
       </div>
       <section className="panel">
-        <div className="section-heading"><h2>Instant tools</h2>{data?.syncedAt && <span className="count">Prices from · updated {new Date(data.syncedAt).toLocaleDateString()}</span>}</div>
+        <div className="section-heading"><h2>Instant tools</h2>{data?.syncedAt && <span className="count">Updated {new Date(data.syncedAt).toLocaleDateString()}</span>}</div>
         {failed ? (
           <Empty icon={LayoutGrid} title="Instant tools could not be loaded">{failed}</Empty>
         ) : !data ? (
           <p className="muted models-loading"><LoaderCircle size={15} className="spin" /> Loading tools…</p>
         ) : !groups.length ? (
-          <Empty icon={LayoutGrid} title="The tool list is being prepared">It is refreshed once a day; check back in a few minutes.</Empty>
+          <Empty icon={LayoutGrid} title="The tool list is being prepared">Check back in a few minutes.</Empty>
         ) : shown.length ? (
           <div className="table-scroll">
             <table>
@@ -1758,18 +1753,18 @@ function ScraperView({ state: s }: any) {
         <h2>Scraper</h2>
         <span className="count">{stealth ? "On" : "Plain reads only"}</span>
       </div>
-      <p className="muted browser-note">Comes with OrbytLink, nothing to connect. Agents get <code>orbytlink__scrape</code> to read public pages and the contacts they publish (emails, phones, social profiles, contact pages, store platform){stealth ? <> and <code>orbytlink__scrape_maps</code> to find local businesses on Google Maps</> : null}. Both are workflow steps too. It tries a plain request first and switches to a stealth browser when a site blocks it or needs JavaScript. It obeys robots.txt, backs off from sites that push back, and reads public addresses only.</p>
+      <p className="muted browser-note">Agents can read public web pages and the contact details on them{stealth ? ", and search Google Maps for businesses" : ""}. Nothing to connect.</p>
       <div className="table-scroll">
         <table>
           <thead><tr><th>Today</th><th>Used</th><th>Daily allowance</th></tr></thead>
           <tbody>
             <tr><td>Pages read</td><td>{n(u.pages)}</td><td>{n(u.limits.pages)}</td></tr>
-            <tr><td>Pages that needed the browser</td><td>{stealth ? n(u.stealth) : "—"}</td><td>{stealth ? n(u.limits.stealth) : "Not running on this server"}</td></tr>
-            <tr><td>Google Maps searches</td><td>{stealth ? n(u.maps) : "—"}</td><td>{stealth ? n(u.limits.maps) : "Not running on this server"}</td></tr>
+            <tr><td>Pages that needed the browser</td><td>{stealth ? n(u.stealth) : "—"}</td><td>{stealth ? n(u.limits.stealth) : "Not available"}</td></tr>
+            <tr><td>Google Maps searches</td><td>{stealth ? n(u.maps) : "—"}</td><td>{stealth ? n(u.limits.maps) : "Not available"}</td></tr>
           </tbody>
         </table>
       </div>
-      <p className="muted browser-note">Free for this workspace. The allowance resets at midnight UTC.{stealth ? "" : " The operator starts the stealth scraper (SCRAPER_URL and SCRAPER_TOKEN) to read protected pages and Google Maps."}</p>
+      <p className="muted browser-note">Free. Resets daily at midnight UTC.</p>
     </section>
   );
 }
@@ -1783,19 +1778,19 @@ function BrowserView({ state: s }: any) {
         <h2>Browser</h2>
         <span className="count">{on ? "On" : "Not switched on"}</span>
       </div>
-      <p className="muted browser-note">For jobs that have no API or MCP server: reading a public web page, finding a price, filling a form. Agents get it as the tool <code>orbytlink__browse</code>, and it is a step type in workflows, so retries, reuse and run logs work the same way.</p>
+      <p className="muted browser-note">For tasks with no app to connect: reading a page, checking a price, filling a form.</p>
       {on ? (
         <div className="table-scroll">
           <table>
             <tbody>
               <tr><td>Price</td><td>${per.toFixed(2)} per page action, charged from your AI credit</td></tr>
-              <tr><td>Limits</td><td>Up to {s.browser.maxSteps} actions and about two minutes per run; public https pages only, no sign-in</td></tr>
-              <tr><td>Credit</td><td>${((s.ai?.balance || 0) / 1_000_000).toFixed(2)} available. The most a run can cost is held first, and unused credit is returned.</td></tr>
+              <tr><td>Limits</td><td>Up to {s.browser.maxSteps} actions per run, public pages only</td></tr>
+              <tr><td>Credit</td><td>${((s.ai?.balance || 0) / 1_000_000).toFixed(2)} available</td></tr>
             </tbody>
           </table>
         </div>
       ) : (
-        <Empty icon={LayoutGrid} title="The browser is not switched on for this server">The operator needs to start the browser service and set <code>BROWSER_URL</code> and <code>BROWSER_TOKEN</code>. Once it is on, it appears here, in the agents' tools and in the workflow step list.</Empty>
+        <Empty icon={LayoutGrid} title="The browser isn’t available yet">Check back later.</Empty>
       )}
     </section>
   );
@@ -1965,7 +1960,7 @@ function CatalogPage({ state: s, canConfigure, search, setSearch, onConnect, onA
       {soonGroups.length > 0 && (
         <section className="catalog-segment" aria-label={SOON}>
           <h2>{SOON} · not connectable yet</h2>
-          <p className="catalog-note">These apps are on our list but have no verified connection yet. You can still add any of them as a custom connection from Connections.</p>
+          <p className="catalog-note">Not verified yet. You can still add them as a custom connection.</p>
           <div className="catalog-grid">
             {soon.map((a) => (
               <div className="catalog-card soon" key={a.id} aria-label={`${a.name}, coming soon`}>
@@ -2184,7 +2179,7 @@ function ConnectionForm({ data: d, busy, onSave, onCancel, onOAuth, redirectUri,
         </div>
         <small>
           {kind === "auto"
-            ? "Testing tries MCP (Streamable HTTP, then SSE) and falls back to a plain HTTP API."
+            ? "MCP or plain HTTP is detected when you test."
             : kind === "mcp"
               ? "Tools are discovered from the server when you test."
               : "Name the API calls you want to expose below; each becomes a tool in Claude."}
@@ -2192,7 +2187,7 @@ function ConnectionForm({ data: d, busy, onSave, onCancel, onOAuth, redirectUri,
       </div>}
       <Field
         label="Endpoint"
-        hint="Its HTTPS base URL. The host must be allowlisted on the server; credentials and query parameters are not permitted in URLs."
+        hint="Its HTTPS base URL, without keys."
       >
         <input
           name="endpoint"
@@ -2291,7 +2286,7 @@ function ConnectionForm({ data: d, busy, onSave, onCancel, onOAuth, redirectUri,
           label={d?.hasSecret ? "Replace credential" : "Credential"}
           hint={
             d?.hasSecret
-              ? "A credential is saved. Leave blank to keep it. Saved values are never returned."
+              ? "Saved. Leave blank to keep it."
               : auth === "basic"
                 ? "Enter as user:password. Encrypted on the server."
                 : "Encrypted on the server. Never saved in browser storage."
@@ -2376,7 +2371,7 @@ function ConnectionForm({ data: d, busy, onSave, onCancel, onOAuth, redirectUri,
         <summary>Advanced</summary>
         <Field
           label="Extra headers"
-          hint="One per line, as Name: value. Not encrypted; keep credentials in the credential field."
+          hint="One per line, as Name: value. No secrets here."
         >
           <textarea
             name="headers"
@@ -2426,7 +2421,7 @@ const toolModes: [string, string][] = [
   ["search", "Search first"],
   ["all", "List all"],
 ];
-const toolModeHint = "Auto lists every tool while there are 30 or fewer, then switches to search first: the agent finds the tools it needs instead of loading all of them.";
+const toolModeHint = "Auto switches to search once there are more than 30 tools.";
 const toolModeSaved: Record<string, string> = {
   auto: "Auto: the agent searches once there are more than 30 tools. Start a new chat to apply.",
   search: "The agent now finds tools before calling them. Start a new chat to apply.",
@@ -2464,7 +2459,7 @@ function AgentsPage({ state: s, busy, copy, freshToken, onQuickCreate, onCreate,
       <header className="agents-hero">
         <BrandTile id="agent-mcp" name="MCP" />
         <h1>Connect any agent</h1>
-        <p>Paste this address into your agent. It opens OrbytLink for you to sign in and approve, so there’s no token to copy.</p>
+        <p>Paste this address into your agent and sign in. No token needed.</p>
         <span className="agents-field-label">Gateway address</span>
         <div className="hero-url">
           <code id="gateway-mcp-url">{url}</code>
@@ -2563,7 +2558,7 @@ function AgentsPage({ state: s, busy, copy, freshToken, onQuickCreate, onCreate,
               ))}
             </tbody>
           </table>
-        </div> : <Empty icon={LockKeyhole} title="No agents connected" action={<button className="primary" onClick={onCreate}><Plus size={16} /> Create token</button>}>Agents you approve by signing in appear here, along with any tokens you create. Revoke each one independently.</Empty>}
+        </div> : <Empty icon={LockKeyhole} title="No agents connected" action={<button className="primary" onClick={onCreate}><Plus size={16} /> Create token</button>}>Agents you connect appear here.</Empty>}
       </section>
     </div>
   );
@@ -2676,7 +2671,7 @@ function SettingsPage({ state: s, busy, canConfigure, appearance, copy, onDialog
               <SettingRow label="Email" hint={s.identity.email || "Not set"} />
             </SettingSection>
             <SettingSection heading="Security">
-              <SettingRow label="Password" hint="Changing it signs out your other devices and revokes your gateway tokens.">
+              <SettingRow label="Password" hint="Signs out your other devices and agents.">
                 <button className="secondary compact" onClick={() => onDialog({ type: "password" })}>Change</button>
               </SettingRow>
               <SettingRow label="This session" hint="Sessions end after an hour of inactivity, or eight hours after sign-in.">
@@ -2684,7 +2679,7 @@ function SettingsPage({ state: s, busy, canConfigure, appearance, copy, onDialog
               </SettingRow>
             </SettingSection>
             <SettingSection heading="Danger zone" danger>
-              <SettingRow label="Sign out everywhere" hint="Ends every session and revokes all your gateway tokens, disconnecting your agents.">
+              <SettingRow label="Sign out everywhere" hint="Signs out everywhere and disconnects your agents.">
                 <button className="danger compact" disabled={busy} onClick={onSignOutEverywhere}>Sign out everywhere</button>
               </SettingRow>
             </SettingSection>
@@ -2702,7 +2697,7 @@ function SettingsPage({ state: s, busy, canConfigure, appearance, copy, onDialog
             </SettingSection>
             <SettingSection heading="Danger zone" danger>
               {s.identity.role === "admin" ? (
-                <SettingRow label="Delete organization" hint="Destroys every connection and credential in it and removes all members.">
+                <SettingRow label="Delete organization" hint="Deletes its connections and removes all members.">
                   <button className="danger compact" onClick={() => onDialog({ type: "delete-org" })}>Delete</button>
                 </SettingRow>
               ) : (
@@ -2719,14 +2714,13 @@ function SettingsPage({ state: s, busy, canConfigure, appearance, copy, onDialog
               <SettingRow label="MCP URL" hint={<code>{mcpUrl()}</code>}>
                 <button className="icon-button" aria-label="Copy MCP URL" onClick={() => copy(mcpUrl(), "MCP URL")}><Copy size={15} /></button>
               </SettingRow>
-              <SettingRow label="OAuth redirect URI" hint={<><code>{s.oauthRedirectUri}</code><br />Register this with apps you connect through your own OAuth client.</>}>
+              <SettingRow label="OAuth redirect URI" hint={<><code>{s.oauthRedirectUri}</code><br />For apps connected with your own OAuth client.</>}>
                 <button className="icon-button" aria-label="Copy redirect URI" onClick={() => copy(s.oauthRedirectUri, "Redirect URI")}><Copy size={15} /></button>
               </SettingRow>
             </SettingSection>
             <SettingSection heading="Security">
-              <SettingRow label="Credential vault" hint="AES-256-GCM, bound to this workspace and each connection. Never sent to the browser or to agents." />
-              <SettingRow label="Outbound access" hint="Only HTTPS hosts allowed by the server’s OUTBOUND_HOSTS, never private addresses." />
-              <SettingRow label="Gateway tokens" hint={`${s.tokens.length} active · each can list and call tools, nothing else.`}>
+              <SettingRow label="Credential vault" hint="Encrypted. Never shown to the browser or agents." />
+              <SettingRow label="Gateway tokens" hint={`${s.tokens.length} active`}>
                 <a className="secondary compact button-link" href="#connect-agents">Manage</a>
               </SettingRow>
             </SettingSection>
@@ -2741,7 +2735,7 @@ function TeamPage({ state: s, busy, isAdmin, onDialog, onRole, onRevokeInvite, o
     return (
       <section className="panel">
         <Empty icon={Users} title="Create an organization" action={<button className="primary" onClick={() => onDialog({ type: "new-org" })}><Plus size={16} /> Create organization</button>}>
-          Share connections with teammates. Whoever creates an organization is its first admin and can make anyone else an admin.
+          Share apps with teammates. You’ll be its admin.
         </Empty>
       </section>
     );
@@ -2807,7 +2801,7 @@ function TeamPage({ state: s, busy, isAdmin, onDialog, onRole, onRevokeInvite, o
         <section className="panel">
           <div className="section-heading"><h2>Delete organization</h2></div>
           <div className="settings-body">
-            <p className="muted">Destroys every connection and credential in this organization and removes all members.</p>
+            <p className="muted">Deletes its connections and removes all members.</p>
             <button className="danger" onClick={() => onDialog({ type: "delete-org" })}><Trash2 size={15} /> Delete organization</button>
           </div>
         </section>
@@ -2891,7 +2885,7 @@ function SkillsPage({ state: s, busy, canConfigure, search, setSearch, onOpen, o
         )}
       </section>
       <p className="footnote">
-        Install counts are from skills.sh and stars from GitHub, as of {new Date(skills[0]?.signalsAsOf || Date.now()).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}. Skills are bundled from their repositories at a pinned commit and reach your agents only when turned on{canConfigure ? "" : "; an admin turns them on"}. Ask your agent for a skill and it can search skills.sh and add one here.
+        Install counts are from skills.sh and stars from GitHub, as of {new Date(skills[0]?.signalsAsOf || Date.now()).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}.
       </p>
     </>
   );
@@ -3098,7 +3092,6 @@ function WorkflowsPage({ state: s, busy, canConfigure, onEdit, onReviewFix, onTe
               <div className="wf-stat"><small>Tool calls made for agents</small><strong>{compact(saved.calls)}</strong></div>
               <div className="wf-stat"><small>Tokens kept out of agent context</small><strong>≈{compact(saved.tokens)}</strong></div>
             </div>
-            <p className="muted wf-saved-note">Counted from real runs: the arguments and results each step moved, which an agent would otherwise send and read call by call, minus what the workflow returned. Tokens are estimated at four characters each.</p>
           </div>
         </section>
       )}
@@ -3178,7 +3171,7 @@ function WorkflowsPage({ state: s, busy, canConfigure, onEdit, onReviewFix, onTe
       </section>
       <div className="info-row">
         <Workflow size={17} />
-        <p>The easiest way is to do a task with your agent first, then say <em>“save this as a workflow.”</em> It builds the workflow from the calls that actually ran (<code>orbytlink__save_workflow</code>), and the draft waits here for you to enable it. Next time it is one call.</p>
+        <p>Tip: do a task with your agent, then say <em>“save this as a workflow.”</em></p>
       </div>
       <section className="panel">
         <div className="section-heading"><h2>Recent runs</h2><span className="count">{runs.length}</span></div>
@@ -3201,7 +3194,7 @@ function WorkflowsPage({ state: s, busy, canConfigure, onEdit, onReviewFix, onTe
             </table>
           </div>
         ) : (
-          <Empty icon={Activity} title="No runs yet">Each run is recorded step by step, with a short, trimmed copy of what went in and came out for your latest runs.</Empty>
+          <Empty icon={Activity} title="No runs yet">Runs appear here.</Empty>
         )}
       </section>
     </>
@@ -3513,7 +3506,7 @@ function RunWorkflow({ workflow, onDone }: { workflow: Data; onDone: () => void 
         }
       }}
     >
-      {!workflow.enabled && <div className="info-row"><LockKeyhole size={17} /><p>This is a draft. Running it here is how you test it before enabling.</p></div>}
+      {!workflow.enabled && <div className="info-row"><LockKeyhole size={17} /><p>Draft. Run it here to test it.</p></div>}
       {workflow.description && <p className="muted">{workflow.description}</p>}
       <RunFields workflow={workflow} values={values} setValues={setValues} />
       {error && <div className="error">{error}</div>}
@@ -3674,7 +3667,6 @@ function ApiForm({ data: d, busy, onSave, onCancel }: any) {
             <div>
               <p>{preset.keyHint}</p>
               {preset.note && <p>{preset.note}</p>}
-              <p>The server must allow <code>{hostOf(preset.baseUrl)}</code> in <code>OUTBOUND_HOSTS</code>.</p>
             </div>
           </div>
         </div>
@@ -3683,7 +3675,7 @@ function ApiForm({ data: d, busy, onSave, onCancel }: any) {
         <Field label="Name"><input name="name" defaultValue={d?.name || ""} required minLength={2} maxLength={80} autoFocus={!preset} placeholder="e.g. Stripe, Billing API" /></Field>
         <Field label="What it’s for" hint="Optional. Agents see it."><input name="description" defaultValue={d?.description || ""} maxLength={300} placeholder="e.g. Invoices and customers" /></Field>
       </div>
-      <Field label="Base URL" hint={/[{}]/.test(baseUrl) ? "Replace the parts in {braces} with your account’s values." : "HTTPS. Requests can only go to paths under it. The host must be allowed in OUTBOUND_HOSTS."}>
+      <Field label="Base URL" hint={/[{}]/.test(baseUrl) ? "Replace the parts in {braces} with your account’s values." : "HTTPS. Requests stay under this address."}>
         <input type="url" value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} required placeholder="https://api.example.com/v1" className="code-input" />
       </Field>
       <div className="field">
@@ -3698,7 +3690,7 @@ function ApiForm({ data: d, busy, onSave, onCancel }: any) {
         ) : (
           <textarea name="docsText" rows={6} className="code-input" placeholder="Paste an OpenAPI spec (JSON or YAML) or the docs as text" />
         )}
-        <small>{docsMode === "url" ? "An OpenAPI spec (JSON or YAML) gives agents an endpoint index; any docs page works as text." : "For private APIs. Up to 200 KB."}</small>
+        <small>{docsMode === "url" ? "An OpenAPI spec works best; any docs page is fine." : "For private APIs. Up to 200 KB."}</small>
       </div>
       <div className="form-grid">
         <Field label="Authentication">
@@ -3743,7 +3735,7 @@ function ApiForm({ data: d, busy, onSave, onCancel }: any) {
       </div>
       <details className="advanced">
         <summary>Advanced{Object.keys(d?.headers || {}).length ? ` · ${Object.keys(d.headers).length} fixed ${Object.keys(d.headers).length === 1 ? "header" : "headers"}` : ""}{d?.bodyFormat === "form" ? " · form bodies" : ""}</summary>
-        <Field label="Fixed headers" hint="Non-secret headers sent with every request, one per line as Name: value. Keys belong in the key field.">
+        <Field label="Fixed headers" hint="One per line, as Name: value. No secrets here.">
           <textarea name="headers" rows={2} className="code-input" defaultValue={headerText} placeholder="Notion-Version: 2022-06-28" />
         </Field>
         <Field label="Request body format">
@@ -3838,7 +3830,7 @@ function ApiDetail({ api: a, busy, canConfigure, onEdit, onDelete, onRefreshDocs
               </div>
             </>
           ) : (
-            <p className="muted">No endpoint index. Add an OpenAPI spec as the docs to get one; agents can still read any docs as text.</p>
+            <p className="muted">Add an OpenAPI spec to list endpoints here.</p>
           )}
         </div>
       )}
@@ -3854,7 +3846,7 @@ function ApiDetail({ api: a, busy, canConfigure, onEdit, onDelete, onRefreshDocs
             <label className="field"><span>Query</span><textarea rows={3} className="code-input" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={"limit=10\nstatus=open"} /></label>
             <label className="field"><span>JSON body</span><textarea rows={3} className="code-input" value={body} onChange={(e) => setBody(e.target.value)} disabled={["GET", "HEAD"].includes(method)} placeholder={["GET", "HEAD"].includes(method) ? "Not sent with GET or HEAD" : '{ "amount": 500 }'} /></label>
           </div>
-          <p className="muted">Sent from OrbytLink’s server with the saved key attached. The key never reaches this browser.</p>
+          <p className="muted">Sent from the server with your saved key.</p>
           {error && <div className="error">{error}</div>}
           {result && (
             <div className="api-response">

@@ -218,7 +218,7 @@ export function StepOptions({ step, onChange, writes = false }: { step: Data; on
           <span />
           <div className="wf-arg-value">
             <label className="check-row"><input type="checkbox" checked={!!step.repeatable} onChange={(e) => set({ repeatable: e.target.checked || undefined })} /> Safe to repeat: running it twice does no harm</label>
-            <small>{step.repeatable ? "Retried after any error." : "This step changes things, so it is retried only when the app was busy or unreachable. After other errors it may already have happened, and a retry could do it twice."}</small>
+            <small>{step.repeatable ? "Retried after any error." : "It changes data, so it is only retried when the app was busy or unreachable."}</small>
           </div>
         </div>
       )}
@@ -369,7 +369,7 @@ export function WorkflowSettings({ wf, set, canConfigure }: { wf: Data; set: (pa
         )}
         <label className="check-row">
           <input type="checkbox" checked={wf.logData !== false} onChange={(e) => set({ logData: e.target.checked })} />
-          <span>Keep step data for debugging<small>The latest ten runs keep a short, trimmed copy of what went into and came out of each step, for 14 days, visible to whoever ran it and admins. Turn it off for workflows that handle sensitive data.</small></span>
+          <span>Keep step data for debugging<small>Keeps each step’s input and output for the last 10 runs. Turn off for sensitive data.</small></span>
         </label>
         <label className="check-row">
           <input type="checkbox" checked={!!wf.keepLastResult} onChange={(e) => set({ keepLastResult: e.target.checked })} />

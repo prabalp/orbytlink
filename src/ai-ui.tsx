@@ -73,7 +73,7 @@ export function ModelDetail({ model: m, ai, call, onSpent }: { model: ModelRow; 
               <select value={maxTokens} onChange={(e) => setMaxTokens(Number(e.target.value))}>
                 {[256, 512, 1024, 4096].map((n) => <option key={n} value={n}>{n.toLocaleString("en-US")} tokens</option>)}
               </select>
-              <small>Credit for the whole reply is held during the call; you pay only for what is used.</small>
+              <small>You pay only for what is used.</small>
             </label>
             {error && <div className="error">{error}</div>}
             {result && (
@@ -209,7 +209,7 @@ function BuyCredit({ call, canConfigure, onPaid }: { call: Call; canConfigure: b
           <div className="buy-head">
             <p className="muted ai-note">
               {data.providers?.[currency] === "dodo"
-                ? "Pay by card or wallet on Dodo Payments' secure page. Dodo is the merchant of record and adds sales tax where it applies."
+                ? "Pay by card on Dodo Payments' secure page. Tax added where it applies."
                 : "Pay with a card, UPI or net banking on Cashfree's secure page."}{" "}
               Credit is added as soon as the payment clears.
               {(data.providers?.[currency] === "dodo" ? data.testMode?.dodo : data.testMode?.cashfree) ? " Test mode: no real money moves." : ""}
@@ -296,7 +296,7 @@ export function AiCredit({ call, canConfigure, onSaved }: { call: Call; canConfi
           <div className="wf-stat"><small>Monthly limit</small><strong>{data.monthlyLimit === null ? "None" : dollars(data.monthlyLimit)}</strong></div>
         </div>
         <p className="muted ai-note">
-          {data.configured ? "Text models from Catalog → AI models are billed to this credit at the listed prices." : "AI models are not switched on for this OrbytLink server yet."}
+          {data.configured ? "Pays for AI models and paid tools." : "AI models are not switched on for this OrbytLink server yet."}
         </p>
       </section>
       <BuyCredit call={call} canConfigure={canConfigure} onPaid={() => { void load(); onSaved(); }} />
