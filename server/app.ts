@@ -22,6 +22,7 @@ import { MIN_INSTALLS, searchRegistry } from "./skill-registry.js";
 import { AI_TOOL, aiConfigured, aiSummary, generate, saveAiSettings } from "./ai.js";
 import { BROWSER_TOOL, browserConfigured, browserSummary } from "./browser.js";
 import { MAPS_TOOL, SCRAPE_TOOL, scraperConfigured, scraperSummary } from "./scraper.js";
+import { INSTANT_CALL, instantConfigured, instantPlatform, instantPlatforms } from "./instant.js";
 import { BUNDLES, cashfreeConfigured, cashfreeMode, createOrder, currenciesFor, dodoMode, dodoOrderFrom, listPayments, orderIdFrom, paymentsConfigured, providerFor, quote, settle, validSignature } from "./payments.js";
 import { alreadySaved, captureWorkflow, dismissSuggestion, keyFor, suggestionsFor } from "./capture.js";
 import { fromMarkdown, toMarkdown, workflowFileName } from "./workflow-md.js";
@@ -263,6 +264,7 @@ export function createApp(
         ai: aiSummary(store, i.workspace),
         browser: browserSummary(),
         scraper: scraperSummary(store, i.workspace),
+        instant: { configured: instantConfigured() },
         // Steps can also call stored APIs, AI models and other workflows, besides app tools.
         workflowStepTools: [
           ...(aiConfigured() ? [{ name: AI_TOOL, title: "Ask an AI model", app: "AI models", args: ["model", "prompt", "system", "maxTokens", "temperature", "json"] }] : []),
@@ -272,6 +274,7 @@ export function createApp(
             : []),
           { name: SCRAPE_TOOL, title: "Scrape web pages", app: "Scraper", args: ["url", "urls", "contacts", "mode", "select", "waitFor"] },
           ...(scraperConfigured() ? [{ name: MAPS_TOOL, title: "Search Google Maps", app: "Scraper", args: ["query", "location", "maxResults"] }] : []),
+          ...(instantConfigured() ? [{ name: INSTANT_CALL, title: "Call an instant tool", app: "Instant", args: ["id", "query", "body", "maxCost"] }] : []),
           ...visibleWorkflowTools(store, i).map((t) => ({ name: t.name, title: t.workflow.name, app: "Workflows", args: (t.workflow.inputs || []).map((x: { name: string }) => x.name) })),
         ],
         apis: store.list(i.workspace, "apis").map(publicApi),
@@ -512,6 +515,13 @@ export function createApp(
     const admin = i.permissions.includes("configure");
     const added = await addSkill(store, i.workspace, viewerFor(store, i), skill, enable && admin);
     res.json({ id: added.id, title: added.title, created: added.created, enabled: added.enabled });
+  });
+  // Instant tools: the catalog people browse in Catalog → Instant (prices include the markup).
+  app.get("/api/instant", permit("call"), (_req, res) => {
+    res.json(instantPlatforms(store));
+  });
+  app.get("/api/instant/:slug", permit("call"), (req, res) => {
+    res.json(instantPlatform(store, String(req.params.slug)));
   });
   // Skills people write or upload: private, shared with chosen people and organizations, or public.
   // Anyone who can call tools may write one; only its author may change or delete it.

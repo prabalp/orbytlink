@@ -14,6 +14,7 @@ import { MIN_INSTALLS, searchRegistry } from "./skill-registry.js";
 import { resumeWorkflow, runWorkflow, saveWorkflow, visibleTo, workflowInputSchema, workflowToolName, type RunOutcome } from "./workflows.js";
 import { AI_TOOL, aiConfigured, aiInputSchema, aiSummary, generate, usd } from "./ai.js";
 import { BROWSER_TOOL, browse, browseText, browserConfigured, browserInputSchema } from "./browser.js";
+import { INSTANT_CALL, INSTANT_GET, INSTANT_SEARCH, callInstant, instantCallSchema, instantConfigured, instantGetSchema, instantSearchSchema, instantTool, searchInstant } from "./instant.js";
 import { MAPS_TOOL, SCRAPE_TOOL, mapsInputSchema, scrape, scrapeInputSchema, scrapeMaps, scraperConfigured } from "./scraper.js";
 import { CONNECT_TOOL, connectApp, connectTool } from "./connect.js";
 import { alreadySaved, captureWorkflow, keyFor, noticeRepeat, recordCall } from "./capture.js";
@@ -168,7 +169,7 @@ export function gatewayServer(
 // Any tool by name: the gateway's own, a workflow, or an app tool, listed or not. What runs is
 // remembered briefly (capture.ts), so a task can be saved as a workflow from the calls that really
 // happened; a task done the same way three times is pointed out to the agent once.
-const recorded = (name: string) => !name.startsWith("orbytlink__") || [API_REQUEST_TOOL, AI_TOOL, BROWSER_TOOL, SCRAPE_TOOL, MAPS_TOOL].includes(name);
+const recorded = (name: string) => !name.startsWith("orbytlink__") || [API_REQUEST_TOOL, AI_TOOL, BROWSER_TOOL, SCRAPE_TOOL, MAPS_TOOL, INSTANT_CALL].includes(name);
 async function callTool(store: Store, services: ServiceAdapters, identity: Identity, name: string, args: Record<string, unknown>) {
   const result: any = await runTool(store, services, identity, name, args);
   if (!recorded(name)) return result;
@@ -542,6 +543,33 @@ function ownTools(store: Store, w: string, identity: Identity) {
       inputSchema: mapsInputSchema,
       annotations: { readOnlyHint: true, openWorldHint: true },
     });
+  // Instant tools: thousands of paid data APIs, found by job rather than listed one by one.
+  if (instantConfigured() && aiSummary(store, w).enabled)
+    tools.push(
+      {
+        name: INSTANT_SEARCH,
+        title: "Find an instant tool",
+        description:
+          "Search thousands of ready data tools that need no account or key: Google and other search results, web scraping, people and company data (work emails, phones, profiles), LinkedIn, Instagram, TikTok, X, Reddit, YouTube and other social data, SEO and keyword data, ads libraries, reviews, app stores, e-commerce and market data. Describe the job, not a vendor. Returns tools with their price per call and how often they work. Tools whose id starts with best. ask the providers of a job cheapest first and bill only the answer; prefer them for common jobs.",
+        inputSchema: instantSearchSchema,
+        annotations: { readOnlyHint: true },
+      },
+      {
+        name: INSTANT_GET,
+        title: "Read an instant tool",
+        description: "The inputs, price and an example call of one instant tool, with other providers of the same job, cheapest first.",
+        inputSchema: instantGetSchema,
+        annotations: { readOnlyHint: true },
+      },
+      {
+        name: INSTANT_CALL,
+        title: "Call an instant tool",
+        description:
+          "Call an instant tool by id with its query parameters and/or JSON body (read them with orbytlink__instant_get first). Each call is charged to this workspace's credit at the listed price; the most it may cost is held until it ends, and failed calls are free. A found email or phone is the provider's best match: verify it before anyone sends to it. Before a loop over many inputs, tell the user the expected total.",
+        inputSchema: instantCallSchema,
+        annotations: { openWorldHint: true },
+      },
+    );
   tools.push({
     name: "orbytlink__use_skill",
     title: "Load a skill",
@@ -585,7 +613,7 @@ function ownTools(store: Store, w: string, identity: Identity) {
     name: "orbytlink__create_workflow",
     title: "Draft a workflow",
     description:
-      "Draft a reusable workflow: a fixed, ordered list of tool calls that later runs the same way every time, with no model involved. A step's tool is an app tool (its exact app__tool name, as listed or found with orbytlink__find_tools), orbytlink__api_request (a stored API, e.g. an AI model API the user added; args api, method, path, query, body as JSON text), orbytlink__scrape (read public pages and the contacts they list; url or urls, contacts, select), orbytlink__scrape_maps (local businesses from Google Maps; query, location, maxResults) or another enabled workflow__*. Step arguments are strings that may contain {{input.<name>}} for a run input, {{steps.<id>.text}} for an earlier step's text result, or {{steps.<id>.json.<path>}} for a field of its JSON result. forEach (a placeholder that resolves to a JSON list) runs the step once per item, with {{item}} / {{item.<path>}}; when skips the step unless a condition holds; retries (0-3) and onError (stop|continue) handle failures. Also write ui, the run screen people will use: a field type per input, and how to show the result (output.view: table, list, cards, stats, text or json; output.from a step id, output.path into its JSON, columns for a table, title/subtitle/link keys for list or cards). The draft is saved disabled and private to the user; they review and enable it in OrbytLink. Use this when the user asks to automate a repeated task.",
+      "Draft a reusable workflow: a fixed, ordered list of tool calls that later runs the same way every time, with no model involved. A step's tool is an app tool (its exact app__tool name, as listed or found with orbytlink__find_tools), orbytlink__api_request (a stored API, e.g. an AI model API the user added; args api, method, path, query, body as JSON text), orbytlink__scrape (read public pages and the contacts they list; url or urls, contacts, select), orbytlink__scrape_maps (local businesses from Google Maps; query, location, maxResults), orbytlink__instant_call (a paid data tool found with orbytlink__instant_search; id, query, body) or another enabled workflow__*. Step arguments are strings that may contain {{input.<name>}} for a run input, {{steps.<id>.text}} for an earlier step's text result, or {{steps.<id>.json.<path>}} for a field of its JSON result. forEach (a placeholder that resolves to a JSON list) runs the step once per item, with {{item}} / {{item.<path>}}; when skips the step unless a condition holds; retries (0-3) and onError (stop|continue) handle failures. Also write ui, the run screen people will use: a field type per input, and how to show the result (output.view: table, list, cards, stats, text or json; output.from a step id, output.path into its JSON, columns for a table, title/subtitle/link keys for list or cards). The draft is saved disabled and private to the user; they review and enable it in OrbytLink. Use this when the user asks to automate a repeated task.",
     inputSchema: {
       type: "object",
       properties: {
@@ -715,6 +743,20 @@ async function callOwnTool(store: Store, services: ServiceAdapters, identity: Id
     const out = connectApp(store, w, canConfigure(identity), args);
     return toolText("error" in out ? (out.error as string) : JSON.stringify(out, null, 1), "error" in out);
   }
+  if (name === INSTANT_SEARCH || name === INSTANT_GET || name === INSTANT_CALL) {
+    try {
+      const out =
+        name === INSTANT_SEARCH
+          ? { tools: searchInstant(store, String(args.query || "")), next: `Read one with ${INSTANT_GET} {id}, then call it with ${INSTANT_CALL}.` }
+          : name === INSTANT_GET
+            ? instantTool(store, String(args.id || ""))
+            : await callInstant(store, identity, args, "agent");
+      return toolText(JSON.stringify(out, null, 1).slice(0, 100_000));
+    } catch (error) {
+      const issues = (error as any)?.issues as { path: (string | number)[]; message: string }[] | undefined;
+      return toolText(issues ? issues.map((i) => `${i.path.join(".")}: ${i.message}`).join("; ") : (error as any)?.safe ? (error as Error).message : "The instant tool failed.", true);
+    }
+  }
   if (name === SCRAPE_TOOL || name === MAPS_TOOL) {
     try {
       const out = name === SCRAPE_TOOL ? await scrape(store, w, args) : await scrapeMaps(store, w, args);
@@ -751,7 +793,7 @@ async function callOwnTool(store: Store, services: ServiceAdapters, identity: Id
   }
   if (name === "orbytlink__create_workflow") {
     try {
-      const known = new Set([...gatewayTools(store, w).map((t) => t.name), ...visibleWorkflowTools(store, identity).map((t) => t.name), ...(enabledApis(store, w).length ? [API_REQUEST_TOOL] : []), ...(aiConfigured() ? [AI_TOOL] : []), ...(browserConfigured() ? [BROWSER_TOOL] : []), SCRAPE_TOOL, ...(scraperConfigured() ? [MAPS_TOOL] : [])]);
+      const known = new Set([...gatewayTools(store, w).map((t) => t.name), ...visibleWorkflowTools(store, identity).map((t) => t.name), ...(enabledApis(store, w).length ? [API_REQUEST_TOOL] : []), ...(aiConfigured() ? [AI_TOOL] : []), ...(browserConfigured() ? [BROWSER_TOOL] : []), SCRAPE_TOOL, ...(scraperConfigured() ? [MAPS_TOOL] : []), ...(instantConfigured() ? [INSTANT_CALL] : [])]);
       const unknown = ((args.steps as any[]) || []).map((s) => s?.tool).filter((t) => !known.has(t));
       if (unknown.length) return toolText(`Unknown tools: ${unknown.join(", ")}. Use names exactly as listed by this server.`, true);
       const row = saveWorkflow(store, identity, { visibility: "private", ...args, enabled: false, schedule: null }, undefined, "agent");

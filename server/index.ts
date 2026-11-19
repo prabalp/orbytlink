@@ -1,10 +1,13 @@
 import { createApp } from "./app.js";
 import { adapters } from "./adapters.js";
 import { startScheduler } from "./workflows.js";
+import { startInstantSync } from "./instant.js";
 import { createServer as createHttpServer } from "node:http";
 const { app, store } = createApp();
 // Scheduled workflows: checked every 20 seconds, each due minute runs once.
 startScheduler(store, adapters);
+// The instant-tools catalog: copied from upstream once a day.
+startInstantSync(store);
 const http = createHttpServer(app);
 const serveFrontend = process.env.WORKSTATION_API_ONLY !== "true";
 if (serveFrontend && process.env.NODE_ENV !== "production") {

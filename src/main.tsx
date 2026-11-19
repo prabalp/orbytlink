@@ -509,7 +509,7 @@ export function App() {
     settings = s.settings[0],
     // Old links to #connect-claude still land on the renamed page.
     // Old links: #connect-claude is now Connect agents. #apis and #ai-models are Catalog views.
-    title = nav.find(([n]) => slug(n) === (page === "connect-claude" ? "connect-agents" : page === "apis" || page === "ai-models" || page === "browser" || page === "scraper" ? "catalog" : page))?.[0] || "Connections",
+    title = nav.find(([n]) => slug(n) === (page === "connect-claude" ? "connect-agents" : page === "apis" || page === "ai-models" || page === "browser" || page === "scraper" || page === "instant" ? "catalog" : page))?.[0] || "Connections",
     filtered = s.connections.filter((c: Data) =>
       `${c.name} ${c.description || ""} ${c.endpoint || ""}`
         .toLowerCase()
@@ -696,7 +696,7 @@ export function App() {
               onToolMode={(t: Data, toolMode: string) => act(() => api(`/tokens/${t.id}`, { toolMode }, "PUT"), toolModeSaved[toolMode] || "Saved", false)} />
           )}
           {title === "Catalog" && (
-            <CatalogPage key={page} initialView={page === "apis" ? "api" : page === "ai-models" ? "models" : page === "browser" ? "browser" : page === "scraper" ? "scraper" : "mcp"} state={s} canConfigure={canConfigure} search={search} setSearch={setSearch} onConnect={(p: Preset) => setDialog({ type: "connection", data: presetDraft(p) })} onApi={(p: ApiPreset) => setDialog({ type: "api", data: presetApiDraft(p) })} onModel={(m: ModelRow) => setDialog({ type: "model", data: m })} />
+            <CatalogPage key={page} initialView={page === "apis" ? "api" : page === "ai-models" ? "models" : page === "browser" ? "browser" : page === "scraper" ? "scraper" : page === "instant" ? "instant" : "mcp"} state={s} canConfigure={canConfigure} search={search} setSearch={setSearch} onConnect={(p: Preset) => setDialog({ type: "connection", data: presetDraft(p) })} onApi={(p: ApiPreset) => setDialog({ type: "api", data: presetApiDraft(p) })} onModel={(m: ModelRow) => setDialog({ type: "model", data: m })} />
           )}
           {title === "Skills" && (
             <SkillsPage state={s} busy={busy} canConfigure={canConfigure} search={search} setSearch={setSearch} onOpen={(skill: Data) => setDialog({ type: "skill", data: skill })} onToggle={(skill: Data, enabled: boolean) => act(() => api(`/skills/${skill.id}`, { enabled }, "PUT"), enabled ? `${skill.title} is on for your agents` : `${skill.title} is off`, false)} onChanged={() => void refresh()} notify={setToast} />
@@ -1636,8 +1636,117 @@ function presetDraft(p: Preset): Data {
   };
 }
 const SOON = "Coming soon";
-type CatalogView = "mcp" | "api" | "models" | "browser" | "scraper";
-const viewHash: Record<CatalogView, string> = { mcp: "#catalog", api: "#apis", models: "#ai-models", browser: "#browser", scraper: "#scraper" };
+type CatalogView = "mcp" | "api" | "models" | "browser" | "scraper" | "instant";
+const viewHash: Record<CatalogView, string> = { mcp: "#catalog", api: "#apis", models: "#ai-models", browser: "#browser", scraper: "#scraper", instant: "#instant" };
+const instantPrice = (v: number | null) => (v === null ? "Varies" : v === 0 ? "Free" : v < 0.01 ? `$${v.toPrecision(2)}` : `$${v.toFixed(v < 1 ? 3 : 2)}`);
+// Instant tools: ready data APIs with no account to connect, paid per call from the workspace's credit.
+function InstantView({ state: s, search, setSearch, segment, setSegment }: any) {
+  const [data, setData] = useState<Data | null>(null);
+  const [failed, setFailed] = useState("");
+  const [open, setOpen] = useState<Data | null>(null);
+  const [openQ, setOpenQ] = useState("");
+  useEffect(() => {
+    let live = true;
+    api("/instant").then((d) => live && setData(d), (e) => live && setFailed((e as Error).message));
+    return () => {
+      live = false;
+    };
+  }, []);
+  const show = async (slug: string) => {
+    setOpenQ("");
+    try {
+      setOpen(await api(`/instant/${slug}`));
+    } catch (e) {
+      setFailed((e as Error).message);
+    }
+  };
+  if (open) {
+    const q = openQ.toLowerCase();
+    const tools: Data[] = open.tools.filter((t: Data) => `${t.name} ${t.id} ${t.provider} ${t.summary} ${t.job}`.toLowerCase().includes(q));
+    return (
+      <>
+        <Toolbar search={openQ} setSearch={setOpenQ} placeholder={`Search ${open.platform.label}…`} count={`${tools.length} tools`} control={<button type="button" className="secondary" onClick={() => setOpen(null)}>All groups</button>} />
+        <section className="panel">
+          <div className="section-heading"><h2>{open.platform.label}</h2><span className="count">Price per call · USD</span></div>
+          {open.platform.summary && <p className="muted browser-note">{open.platform.summary}</p>}
+          <div className="table-scroll">
+            <table>
+              <thead><tr><th>Tool</th><th>Provider</th><th>Price</th><th>Works</th></tr></thead>
+              <tbody>
+                {tools.slice(0, 300).map((t: Data) => (
+                  <tr key={t.id}>
+                    <td><strong>{t.name}</strong><small><code>{t.id}</code>{t.summary ? ` · ${t.summary.slice(0, 140)}` : ""}</small></td>
+                    <td className="muted">{t.provider}</td>
+                    <td className="model-price">{instantPrice(t.price.usd)}{t.price.type === "per_result" && <small>per {t.price.per > 1 ? `${t.price.per} ` : ""}{t.price.unit}</small>}{t.price.type === "per_success" && <small>only when found</small>}</td>
+                    <td className="muted">{t.reliability ? `${Math.round(t.reliability.okRate * 100)}%` : "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            {tools.length > 300 && <small className="muted">Showing 300 of {tools.length}. Search to narrow it down.</small>}
+          </div>
+        </section>
+      </>
+    );
+  }
+  const groups: Data[] = data?.platforms || [];
+  const categories = [...new Set(groups.map((g) => g.category))].sort();
+  const q = search.toLowerCase();
+  const shown = groups.filter((g) => (segment === "All" || g.category === segment) && `${g.label} ${g.summary} ${g.category}`.toLowerCase().includes(q));
+  const total = groups.reduce((n, g) => n + g.tools, 0);
+  return (
+    <>
+      <Toolbar
+        search={search}
+        setSearch={setSearch}
+        placeholder="Search instant tools…"
+        count={data ? `${total.toLocaleString()} tools` : ""}
+        control={(
+          <div className="catalog-select-wrap">
+            <label className="sr-only" htmlFor="instant-category">Filter by kind</label>
+            <select id="instant-category" value={segment} onChange={(event) => setSegment(event.target.value)}>
+              <option value="All">All kinds</option>
+              {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <ChevronDown size={16} />
+          </div>
+        )}
+      />
+      <div className="info-row">
+        <Zap size={17} />
+        <p>Ready to use: no account or key to connect. Agents find these with <code>orbytlink__instant_search</code> and call them with <code>orbytlink__instant_call</code>, also as workflow steps. Each call is paid from your credit at the price shown; failed calls are free. Tools named <code>best.*</code> try the providers of a job cheapest first and charge only for the answer.{s.instant?.configured ? "" : " Not switched on for this server yet."}</p>
+      </div>
+      <section className="panel">
+        <div className="section-heading"><h2>Instant tools</h2>{data?.syncedAt && <span className="count">Prices from · updated {new Date(data.syncedAt).toLocaleDateString()}</span>}</div>
+        {failed ? (
+          <Empty icon={LayoutGrid} title="Instant tools could not be loaded">{failed}</Empty>
+        ) : !data ? (
+          <p className="muted models-loading"><LoaderCircle size={15} className="spin" /> Loading tools…</p>
+        ) : !groups.length ? (
+          <Empty icon={LayoutGrid} title="The tool list is being prepared">It is refreshed once a day; check back in a few minutes.</Empty>
+        ) : shown.length ? (
+          <div className="table-scroll">
+            <table>
+              <thead><tr><th>Group</th><th>Kind</th><th>Tools</th><th>From</th></tr></thead>
+              <tbody>
+                {shown.map((g) => (
+                  <tr key={g.slug}>
+                    <td><button type="button" className="model-open" onClick={() => void show(g.slug)} aria-label={`Open ${g.label}`}>{g.label}</button><small>{g.summary}</small></td>
+                    <td className="muted">{g.category}</td>
+                    <td className="muted">{g.tools}{g.providers > 1 ? ` · ${g.providers} providers` : ""}</td>
+                    <td className="model-price">{instantPrice(g.priceFrom)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <Empty icon={LayoutGrid} title="Nothing matches">Try another word or kind.</Empty>
+        )}
+      </section>
+    </>
+  );
+}
 // The scraper that comes with OrbytLink: nothing to connect, so this is its status page.
 function ScraperView({ state: s }: any) {
   const stealth = !!s.scraper?.stealth;
@@ -1703,7 +1812,7 @@ function CatalogPage({ state: s, canConfigure, search, setSearch, onConnect, onA
   };
   const viewSwitch = (
     <div className="segmented catalog-view" role="radiogroup" aria-label="Catalog">
-      {([["mcp", "MCP servers"], ["api", "APIs"], ["models", "AI models"], ["browser", "Browser"], ["scraper", "Scraper"]] as const).map(([v, label]) => (
+      {([["mcp", "MCP servers"], ["api", "APIs"], ["models", "AI models"], ["instant", "Instant"], ["browser", "Browser"], ["scraper", "Scraper"]] as const).map(([v, label]) => (
         <button type="button" role="radio" aria-checked={view === v} className={view === v ? "active" : ""} key={v} onClick={() => switchView(v)}>{label}</button>
       ))}
     </div>
@@ -1713,6 +1822,13 @@ function CatalogPage({ state: s, canConfigure, search, setSearch, onConnect, onA
       <>
         {viewSwitch}
         <BrowserView state={s} />
+      </>
+    );
+  if (view === "instant")
+    return (
+      <>
+        {viewSwitch}
+        <InstantView state={s} search={search} setSearch={setSearch} segment={segment} setSegment={setSegment} />
       </>
     );
   if (view === "scraper")

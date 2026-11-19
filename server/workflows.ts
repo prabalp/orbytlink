@@ -8,6 +8,7 @@ import { credentialFor } from "./oauth.js";
 import { identityFor } from "./orgs.js";
 import { AI_TOOL, aiInputSchema, generate } from "./ai.js";
 import { BROWSER_TOOL, browse, browseText, browserInputSchema } from "./browser.js";
+import { INSTANT_CALL, callInstant, instantCallSchema } from "./instant.js";
 import { MAPS_TOOL, SCRAPE_TOOL, mapsInputSchema, scrape, scrapeInputSchema, scrapeMaps } from "./scraper.js";
 import { cacheGet, cacheKey, cachePut, dropCheckpoint, ensure as ensureData, loadCheckpoint, loadState, logStep, pruneWorkflowData, saveCheckpoint, saveState, trimLogs } from "./workflow-data.js";
 
@@ -315,6 +316,10 @@ async function callStep(store: Store, services: ServiceAdapters, identity: Ident
   if (tool === AI_TOOL) return (await generate(store, identity, args, "workflow")).text;
   if (tool === SCRAPE_TOOL) return JSON.stringify(await scrape(store, w, args));
   if (tool === MAPS_TOOL) return JSON.stringify(await scrapeMaps(store, w, args));
+  if (tool === INSTANT_CALL) {
+    const r = await callInstant(store, identity, args, "workflow");
+    return JSON.stringify(r.result);
+  }
   if (tool === BROWSER_TOOL) {
     const r = await browse(store, identity, args, "workflow");
     if (r.status === "failed") throw new Error(browseText(r));
@@ -350,6 +355,7 @@ function schemaFor(store: Store, identity: Identity, tool: string): Record<strin
   if (tool === BROWSER_TOOL) return browserInputSchema.properties;
   if (tool === SCRAPE_TOOL) return scrapeInputSchema.properties;
   if (tool === MAPS_TOOL) return mapsInputSchema.properties;
+  if (tool === INSTANT_CALL) return instantCallSchema.properties;
   if (tool.startsWith("workflow__")) return {};
   return gatewayTools(store, identity.workspace).find((t) => t.name === tool)?.tool.inputSchema?.properties || {};
 }

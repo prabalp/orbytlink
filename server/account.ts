@@ -25,6 +25,55 @@ if (command === "skills") {
   console.log(ok ? `${id} is ${action === "block" ? "blocked: hidden from search and no longer loadable" : "back in the library"}.` : `No library skill with id ${id}.`);
   process.exit(ok ? 0 : 1);
 }
+// Instant tools (operator only; sources and margins never reach a workspace):
+//   npm run account -- instant status
+//   npm run account -- instant sync
+//   npm run account -- instant wallet <a|b|c|d|e> <usd>      a source without a balance API
+//   npm run account -- instant price <tool id> <usd>          one tool's quote
+//   npm run account -- instant prices > prices.csv            the whole list, to review or edit
+//   npm run account -- instant prices-import prices.csv       set quotes from tool,price_usd rows
+if (command === "instant") {
+  const [, action, a, b] = process.argv.slice(2);
+  const instant = await import("./instant.js");
+  const store = new Store();
+  try {
+    if (action === "status") {
+      for (const w of instant.walletReport(store))
+        console.log(`${w.source}  ${w.configured ? "on " : "off"}  ${w.wallet ? `$${(w.wallet.micro / 1_000_000).toFixed(4)} (${w.wallet.from}, ${w.wallet.checkedAt})` : "balance unknown"}${w.down ? "  resting after failures" : ""}`);
+      const c = instant.instantPlatforms(store);
+      console.log(`catalog: ${c.platforms.reduce((n: number, p: { tools: number }) => n + p.tools, 0)} tools in ${c.platforms.length} groups, synced ${c.syncedAt ?? "never"}`);
+    } else if (action === "sync") {
+      console.log(JSON.stringify(await instant.syncCatalog(store), null, 1));
+    } else if (action === "wallet" && a && Number.isFinite(Number(b))) {
+      instant.setWallet(store, a, Number(b));
+      console.log(`Source ${a} wallet set to $${Number(b).toFixed(2)}.`);
+    } else if (action === "price" && a && Number.isFinite(Number(b))) {
+      instant.setQuote(store, a, Number(b), "operator");
+      console.log(`${a} now costs $${Number(b)} per call.`);
+    } else if (action === "prices") {
+      console.log("tool,price_usd,cheapest_cost_usd,routes,set_by");
+      for (const r of instant.priceList(store)) console.log([r.tool, r.priceUsd ?? "", r.cheapestCostUsd ?? "", r.routes, r.setBy].join(","));
+    } else if (action === "prices-import" && a) {
+      let n = 0;
+      for (const line of readFileSync(a, "utf8").split(/\r?\n/).slice(1)) {
+        const [tool, price] = line.split(",");
+        if (!tool || price === undefined || price === "" || !Number.isFinite(Number(price))) continue;
+        instant.setQuote(store, tool.trim(), Number(price), "operator");
+        n++;
+      }
+      console.log(`Set ${n} prices.`);
+    } else {
+      console.error("Usage: npm run account -- instant status | sync | wallet <a|b|c|d|e> <usd> | price <tool> <usd> | prices | prices-import <file.csv>");
+      process.exitCode = 1;
+    }
+  } catch (error) {
+    console.error((error as Error).message);
+    process.exitCode = 1;
+  } finally {
+    store.db.close();
+  }
+  process.exit();
+}
 // AI credit, added by the operator until payments exist:
 //   npm run account -- credits <email or workspace id> <usd> [note]
 // An email adds to that person's own workspace; an organization takes its workspace id.
