@@ -88,6 +88,15 @@ it("quotes each tool once from its cheapest route plus the markup, and keeps the
   await syncCatalog(store);
   // $0.001 + 5% = $0.00105, rounded up to the next $0.0001: $0.0011.
   expect(instantTool(store, "serper.web.search").price.usd).toBe(0.0011);
+  // A new markup applies at once, with nothing to recompute: $0.001 + 20% = $0.0012.
+  process.env.INSTANT_MARKUP_PERCENT = "20";
+  expect(instantTool(store, "serper.web.search").price.usd).toBe(0.0012);
+  expect(priceList(store)[0]).toMatchObject({ priceUsd: 0.0012, setBy: "markup 20%" });
+  // A quote an earlier version saved for every tool doesn't pin the price.
+  store.put("_instant", "instant_prices", { id: "serper.web.search", micro: 1100, by: "default" });
+  rebuild(store);
+  expect(instantTool(store, "serper.web.search").price.usd).toBe(0.0012);
+  expect(store.list("_instant", "instant_prices")).toHaveLength(0);
   setQuote(store, "serper.web.search", 0.01, "operator");
   rebuild(store);
   expect(instantTool(store, "serper.web.search").price.usd).toBe(0.01);
@@ -174,6 +183,11 @@ it("scrubs every source's name", () => {
   expect(text).not.toMatch(/treg|composio|monid|orthogonal|o11|superdesign|registry/i);
   expect(scrub("_treg.domain_match")).toBe("_route.domain_match");
   expect(priceFromText("$0.007 per search")).toBe(0.007);
+  expect(priceFromText("$0.001 per 10 API calls")).toBeCloseTo(0.0001, 10);
+  expect(priceFromText("$5 per 1,000 calls")).toBeCloseTo(0.005, 10);
+  expect(priceFromText("$2 / 1k requests")).toBeCloseTo(0.002, 10);
+  expect(priceFromText("$0.001 per credit used; typically 5 credits ($0.005) per request")).toBe(0.005);
+  expect(priceFromText("From $0.5 per 1,000 requests; billed at actual cost")).toBeCloseTo(0.0005, 10);
   expect(priceFromText("Free during beta")).toBeNull();
 });
 

@@ -8,10 +8,16 @@ import { clean, readJson, scrub, send, slugify, type CallInput, type CallOutcome
 // Its terms forbid resale: it is a stopgap the operator turns off for the full rollout (unset INSTANT_E_TOKEN).
 const base = () => (process.env.INSTANT_E_URL || "https://backend.composio.dev/api/v3.1").replace(/\/+$/, "");
 const token = () => process.env.INSTANT_E_TOKEN || "";
-// The listed price is free text such as "$0.007 per search": the first dollar amount is taken.
+// The listed price is free text such as "$0.007 per search" or "$0.001 per 10 API calls": the first
+// dollar amount, divided by the count it covers when one is given (so the price is per call).
 export const priceFromText = (s: unknown) => {
-  const m = /\$\s*(\d+(?:\.\d+)?)/.exec(String(s ?? ""));
-  return m ? Number(m[1]) : null;
+  // "$0.001 per credit used; typically 5 credits ($0.005) per request": the typical request wins.
+  const typical = /\(\s*\$\s*(\d+(?:\.\d+)?)\s*\)\s*per\s+(?:successful\s+)?(?:api\s+)?(?:request|call)/i.exec(String(s ?? ""));
+  if (typical) return Number(typical[1]);
+  const m = /\$\s*(\d+(?:\.\d+)?)(?:\s*(?:per|\/)\s*(\d[\d,]*)(k)?\b)?/i.exec(String(s ?? ""));
+  if (!m) return null;
+  const per = m[2] ? Number(m[2].replace(/,/g, "")) * (m[3] ? 1000 : 1) : 1;
+  return per > 0 ? Number(m[1]) / per : null;
 };
 
 export const sourceE: Upstream = {
@@ -21,8 +27,15 @@ export const sourceE: Upstream = {
     if (!token()) throw new Error("not configured");
     const routes: Route[] = [];
     let cursor = "";
-    for (let page = 0; page < 40; page++) {
-      const r = await send(`${base()}/tools?toolkit_versions=latest&include_pricing=true&limit=1000${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`, { headers: { "x-api-key": token(), Accept: "application/json" }, timeoutMs: 60_000 });
+    // Its whole tool list (over 90,000 tools, 1,000 a page) is read to find the instant ones; a page
+    // that fails is retried, since it fails now and then.
+    for (let page = 0; page < 200; page++) {
+      const url = `${base()}/tools?toolkit_versions=latest&include_pricing=true&limit=1000${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`;
+      let r: Response | undefined;
+      for (let attempt = 0; attempt < 4 && !r?.ok; attempt++) {
+        if (attempt) await new Promise((res) => setTimeout(res, 3000 * attempt));
+        r = await send(url, { headers: { "x-api-key": token(), Accept: "application/json" }, timeoutMs: 90_000 });
+      }
       if (!r?.ok) throw new Error(`catalog: ${r ? `HTTP ${r.status}` : "unreachable"}`);
       const d: any = await r.json();
       for (const t of d.items || []) {

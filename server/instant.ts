@@ -138,18 +138,12 @@ export function rebuild(store: Store) {
     if (r.method !== "ANY" && r.path) byPath.set(pathOf(r.key), tool);
   }
   const tools = [...byKey.values()];
-  // A quote for every tool that has none: the cheapest route's cost plus the markup, rounded up to
-  // a tenth of a cent. A tool that no route prices can't be sold until the operator prices it.
-  const prices = new Map(store.list(GLOBAL, "instant_prices").map((p) => [p.id, p]));
-  for (const t of tools) {
-    if (prices.has(t.id)) continue;
-    const costs = t.routes.map((x) => x.costUsd).filter((v): v is number => v !== null);
-    if (!costs.length) continue;
-    // From the cheapest route: a dearer route is used only while its cost still fits under the quote.
-    const cheapest = Math.min(...costs);
-    const quote = cheapest === 0 ? 0 : Math.ceil(cheapest * (1 + instantMarkup() / 100) * 1_000_000 / 100) * 100;
-    prices.set(t.id, store.put(GLOBAL, "instant_prices", { id: t.id, micro: t.best ? Math.max(quote, 2000) : quote, by: "default" }));
-  }
+  // Quotes saved by earlier versions for every tool are dropped: a tool's price now follows the
+  // markup, and only the operator's own prices are stored.
+  for (const p of store.list(GLOBAL, "instant_prices")) if (p.by === "default") store.remove(GLOBAL, "instant_prices", p.id);
+  // A tool is sold when a route prices it or the operator has; the rest wait for a price.
+  const set = operatorQuotes(store);
+  const prices = new Set(tools.filter((t) => set.has(t.id) || autoQuote(t) !== undefined).map((t) => t.id));
   const sellable = tools.filter((t) => prices.has(t.id));
   const groupRows: InstantGroup[] = [...groups.values()]
     .map((g) => {
@@ -180,9 +174,35 @@ export function startInstantSync(store: Store) {
   setInterval(() => syncIfStale(store), 3600_000).unref();
 }
 
-// ── Quotes (the static price list) ───────────────────────────────────────────
-const quoteOf = (store: Store, id: string): number | undefined => store.list(GLOBAL, "instant_prices").find((p) => p.id === id)?.micro;
-const quotes = (store: Store) => new Map(store.list(GLOBAL, "instant_prices").map((p) => [p.id as string, p.micro as number]));
+// ── Quotes ───────────────────────────────────────────────────────────────────
+// A tool's price is the cheapest route's cost times (1 + INSTANT_MARKUP_PERCENT/100), rounded up to
+// $0.0001, worked out when asked so a new markup applies on restart. A price the operator sets for
+// a tool is stored and wins over it.
+function autoQuote(t: Pick<InstantTool, "routes" | "best">): number | undefined {
+  const costs = t.routes.map((x) => x.costUsd).filter((v): v is number => v !== null);
+  if (!costs.length) return undefined;
+  // From the cheapest route: a dearer route is used only while its cost still fits under the quote.
+  const cheapest = Math.min(...costs);
+  const quote = cheapest === 0 ? 0 : Math.ceil((cheapest * (1 + instantMarkup() / 100) * 1_000_000) / 100) * 100;
+  return t.best ? Math.max(quote, 2000) : quote;
+}
+const operatorQuotes = (store: Store) =>
+  new Map(store.list(GLOBAL, "instant_prices").filter((p) => p.by !== "default").map((p) => [p.id as string, p.micro as number]));
+const quoteOf = (store: Store, id: string): number | undefined => {
+  const set = operatorQuotes(store).get(id);
+  if (set !== undefined) return set;
+  const t = loadCatalog(store).byId.get(id);
+  return t ? autoQuote(t) : undefined;
+};
+const quotes = (store: Store) => {
+  const set = operatorQuotes(store);
+  const out = new Map<string, number>();
+  for (const t of loadCatalog(store).tools) {
+    const q = set.get(t.id) ?? autoQuote(t);
+    if (q !== undefined) out.set(t.id, q);
+  }
+  return out;
+};
 // The operator sets a tool's price (npm run account -- instant price <tool> <usd>).
 export function setQuote(store: Store, id: string, priceUsd: number, by: string) {
   const unpriced: string[] = store.list(GLOBAL, "instant_meta").find((r) => r.id === "catalog")?.unpriced || [];
@@ -194,11 +214,13 @@ export function setQuote(store: Store, id: string, priceUsd: number, by: string)
 
 // The whole list, for the operator to review or edit (CSV: tool,price_usd,cheapest_cost_usd,routes,set_by).
 export function priceList(store: Store) {
-  const q = new Map(store.list(GLOBAL, "instant_prices").map((p) => [p.id as string, p]));
+  const q = new Map(store.list(GLOBAL, "instant_prices").filter((p) => p.by !== "default").map((p) => [p.id as string, p]));
   return loadCatalog(store).tools.map((t) => {
     const costs = t.routes.map((r) => r.costUsd).filter((v): v is number => v !== null);
     const p = q.get(t.id);
-    return { tool: t.id, priceUsd: p ? p.micro / 1_000_000 : null, cheapestCostUsd: costs.length ? Math.min(...costs) : null, routes: t.routes.map((r) => r.upstream).join(""), setBy: p?.by ?? "" };
+    const auto = autoQuote(t);
+    const priceUsd = p ? p.micro / 1_000_000 : auto === undefined ? null : auto / 1_000_000;
+    return { tool: t.id, priceUsd, cheapestCostUsd: costs.length ? Math.min(...costs) : null, routes: t.routes.map((r) => r.upstream).join(""), setBy: p?.by ?? (auto === undefined ? "" : `markup ${instantMarkup()}%`) };
   }).concat(
     ((store.list(GLOBAL, "instant_meta").find((r) => r.id === "catalog")?.unpriced || []) as string[]).map((tool) => ({ tool, priceUsd: null, cheapestCostUsd: null, routes: "", setBy: "unpriced" })),
   );
