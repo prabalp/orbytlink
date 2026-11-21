@@ -1531,19 +1531,28 @@ function OrbitLogo() {
 // The app's own mark on a white tile (readable in both themes); a coloured monogram when
 // there is no mark; the generic link/API glyph for connections that are not in the catalog.
 // An app's own mark on a white tile (readable in both themes), or a coloured monogram.
+// Near-black marks get a class that turns them white in dark mode, where their tile is not white.
+// Only neutral black/grey marks: dark brand colours (navy, purple, teal) keep their colour.
+const inkClass = (hex: string) => {
+  const c = [0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  const [r, g, b] = c.map((v) => v / 255).map((v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4));
+  return Math.max(...c) - Math.min(...c) < 32 && 0.2126 * r + 0.7152 * g + 0.0722 * b < 0.06 ? "logo-ink" : undefined;
+};
+// Logo files drawn in a single near-black colour; inverted to white in dark mode.
+const inkFiles = new Set(["html-css-to-image", "lusha", "openalex", "parallel", "strale"]);
 function BrandTile({ id, name }: { id: string; name: string }) {
   const brand = brands[id];
   if (!brand && logoFiles[id])
     return (
       <div className="app-icon logo" title={name}>
-        <img src={logoFiles[id]} width="22" height="22" alt={`${name} logo`} />
+        <img className={inkFiles.has(id) ? "logo-ink" : undefined} src={logoFiles[id]} width="22" height="22" alt={`${name} logo`} />
       </div>
     );
   if (brand)
     return (
       <div className="app-icon logo" title={name}>
         <svg viewBox="0 0 24 24" width="22" height="22" role="img" aria-label={`${name} logo`}>
-          <path fill={`#${brand.hex}`} d={brand.path} />
+          <path className={inkClass(brand.hex)} fill={`#${brand.hex}`} d={brand.path} />
         </svg>
       </div>
     );
@@ -1558,7 +1567,7 @@ function ListedTile({ app }: { app: ListedApp }) {
     return (
       <div className="app-icon logo" title={app.name}>
         <svg viewBox="0 0 24 24" width="22" height="22" role="img" aria-label={`${app.name} logo`}>
-          <path fill={`#${app.logo.hex}`} d={app.logo.path} />
+          <path className={inkClass(app.logo.hex)} fill={`#${app.logo.hex}`} d={app.logo.path} />
         </svg>
       </div>
     );
@@ -1805,16 +1814,16 @@ function SocialLogo({ id, name }: { id: string; name: string }) {
   if (!logo) return <BrandTile id={`social-${id}`} name={name} />;
   return (
     <div className="app-icon logo" title={name}>
-      <svg viewBox="0 0 24 24" width="22" height="22" role="img" aria-label={`${name} logo`}><path fill={`#${logo.hex}`} d={logo.path} /></svg>
+      <svg viewBox="0 0 24 24" width="22" height="22" role="img" aria-label={`${name} logo`}><path className={inkClass(logo.hex)} fill={`#${logo.hex}`} d={logo.path} /></svg>
     </div>
   );
 }
-// Sign-ins that are one platform show as one card; clicking it opens the choices.
+// Sign-ins that are one platform show as one card; its popup offers the choices.
 const socialGroups: Record<string, { name: string; options: Record<string, string> }> = {
   linkedin: { name: "LinkedIn", options: { linkedin: "Personal profile", "linkedin-page": "Company page" } },
 };
 const socialGroupOf = (id: string) => Object.keys(socialGroups).find((g) => id in socialGroups[g].options);
-// The social platforms, as a group in Catalog → APIs: each card opens that platform's sign-in.
+// The social platforms in Catalog → APIs: just logo and name; clicking opens a small popup with the rest.
 function SocialView({ channels, canConfigure, heading }: { channels: Data[]; canConfigure: boolean; heading: boolean }) {
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
@@ -1829,61 +1838,60 @@ function SocialView({ channels, canConfigure, heading }: { channels: Data[]; can
       setBusy("");
     }
   };
-  const status = (c: Data) => (busy === c.id ? "Opening sign-in…" : !c.configured ? "Not available yet" : c.accounts ? `${c.accounts} connected · add another` : "Connect");
-  const blocked = (c: Data) => !c.configured || !canConfigure || !!busy;
-  const why = (c: Data) => (!c.configured ? "Not available yet" : !canConfigure ? "Only admins can connect accounts" : c.note);
-  type Card = { group: string; members: Data[] };
+  type Card = { group: string; name: string; members: Data[] };
   const cards: Card[] = [];
   for (const c of channels) {
-    const g = socialGroupOf(c.id) || c.id;
-    const card = cards.find((x) => x.group === g);
-    if (card && g in socialGroups) card.members.push(c);
-    else cards.push({ group: g, members: [c] });
+    const g = socialGroupOf(c.id);
+    const card = g && cards.find((x) => x.group === g);
+    if (card) card.members.push(c);
+    else cards.push({ group: g || c.id, name: g ? socialGroups[g].name : c.name, members: [c] });
   }
+  const card = cards.find((c) => c.group === open);
+  const close = () => {
+    setOpen("");
+    setError("");
+  };
   return (
     <section className="catalog-segment" aria-label="Social">
       {heading && <h2>Social</h2>}
-      {error && <div className="error">{error}</div>}
       <div className="catalog-grid">
-        {cards.map((card) => {
-          if (!(card.group in socialGroups) || card.members.length === 1) {
-            const c = card.members[0];
-            return (
-              <button type="button" className="catalog-card" key={c.id} disabled={blocked(c)} title={why(c)} aria-label={`Connect ${c.name}`} onClick={() => connect(c.id)}>
-                <SocialLogo id={c.id} name={c.name} />
-                <span className="catalog-body">
-                  <span className="catalog-name">{c.name}</span>
-                  <small>{status(c)}</small>
-                </span>
-              </button>
-            );
-          }
-          const g = socialGroups[card.group];
-          const isOpen = open === card.group;
-          const accounts = card.members.reduce((n: number, c: Data) => n + (c.accounts || 0), 0);
-          const available = card.members.some((c: Data) => c.configured);
-          return (
-            <div className={`catalog-card social-group${isOpen ? " open" : ""}`} key={card.group}>
-              <button type="button" className="social-group-toggle" aria-expanded={isOpen} disabled={!available || !canConfigure} title={!available ? "Not available yet" : !canConfigure ? "Only admins can connect accounts" : undefined} onClick={() => setOpen(isOpen ? "" : card.group)}>
-                <SocialLogo id={card.members[0].id} name={g.name} />
-                <span className="catalog-body">
-                  <span className="catalog-name">{g.name}</span>
-                  {!isOpen && <small>{!available ? "Not available yet" : accounts ? `${accounts} connected` : "Connect"}</small>}
-                </span>
-              </button>
-              {isOpen && (
-                <span className="social-options">
-                  {card.members.map((c: Data) => (
-                    <button type="button" className="secondary" key={c.id} disabled={blocked(c)} title={why(c)} onClick={() => connect(c.id)}>
-                      {busy === c.id ? "Opening…" : g.options[c.id]}
-                    </button>
-                  ))}
-                </span>
-              )}
-            </div>
-          );
-        })}
+        {cards.map((c) => (
+          <button type="button" className="catalog-card" key={c.group} aria-label={c.name} onClick={() => setOpen(c.group)}>
+            <SocialLogo id={c.members[0].id} name={c.name} />
+            <span className="catalog-body">
+              <span className="catalog-name">{c.name}</span>
+            </span>
+          </button>
+        ))}
       </div>
+      {card && (
+        <Modal title={card.name} onClose={close}>
+          <div className="form-body social-popup">
+            {error && <div className="error">{error}</div>}
+            {card.members.map((c: Data) => {
+              const label = socialGroups[card.group]?.options[c.id];
+              return (
+                <div className="social-option" key={c.id}>
+                  <div>
+                    {label && <strong>{label}</strong>}
+                    <p>{c.note}</p>
+                    {c.accounts > 0 && <small>{c.accounts} connected</small>}
+                  </div>
+                  {!c.configured ? (
+                    <small className="muted">Not available yet</small>
+                  ) : !canConfigure ? (
+                    <small className="muted">Only admins can connect</small>
+                  ) : (
+                    <button type="button" className="primary" disabled={!!busy} onClick={() => connect(c.id)}>
+                      {busy === c.id ? "Opening…" : c.accounts ? "Add another" : "Connect"}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </Modal>
+      )}
     </section>
   );
 }
