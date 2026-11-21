@@ -396,13 +396,13 @@ export function App() {
   }, [state]);
   // Links from orbytlink__connect_app (#connect=mcp:<id> or #connect=api:<id>) open that app's
   // connect form, filled in, on the Connections page.
-  const deepLinked = useRef(false);
+  // Checked on load and whenever the address changes, so a link pasted into an open tab works too;
+  // each link is cleared from the address once handled, so it runs once.
   useEffect(() => {
-    if (!state || deepLinked.current) return;
+    if (!state) return;
     // #social=<platform>: straight to that platform's sign-in page.
     const social = location.hash.match(/^#social=([a-z-]+)$/);
     if (social) {
-      deepLinked.current = true;
       history.replaceState(null, "", "#apis");
       setPage("apis");
       if (!state.identity.permissions.includes("configure")) return setError("Only an admin of this workspace can connect accounts. Send them the link you were given.");
@@ -411,7 +411,6 @@ export function App() {
     }
     const m = location.hash.match(/^#connect=(mcp|api):([a-z0-9-]+)$/);
     if (!m) return;
-    deepLinked.current = true;
     history.replaceState(null, "", "#connections");
     setPage("connections");
     if (!state.identity.permissions.includes("configure")) return setError("Only an admin of this workspace can connect apps. Send them the link you were given.");
@@ -420,7 +419,7 @@ export function App() {
     if (preset) setDialog({ type: "connection", data: presetDraft(preset) });
     else if (apiPreset) setDialog({ type: "api", data: presetApiDraft(apiPreset) });
     else setError("That connect link is out of date. Find the app in the Catalog instead.");
-  }, [state]);
+  }, [state, page]);
   const oauthHandled = useRef(false);
   useEffect(() => {
     if (!state || oauthHandled.current) return;
@@ -1802,7 +1801,7 @@ function ScraperView({ state: s }: any) {
 const startChannel = async (provider: string): Promise<string> => (await api(`/channels/${provider}/start`, {})).url;
 const socialLogo: Record<string, string> = { linkedin: "linkedin", "linkedin-page": "linkedin", facebook: "facebook", instagram: "instagram", threads: "threads", youtube: "youtube", tiktok: "tiktok", reddit: "reddit", pinterest: "pinterest", x: "x-twitter" };
 function SocialLogo({ id, name }: { id: string; name: string }) {
-  const logo = moreApps.find((a) => a.id === socialLogo[id])?.logo || brands[socialLogo[id]];
+  const logo = brands[socialLogo[id]] || moreApps.find((a) => a.id === socialLogo[id])?.logo;
   if (!logo) return <BrandTile id={`social-${id}`} name={name} />;
   return (
     <div className="app-icon logo" title={name}>
@@ -1810,10 +1809,16 @@ function SocialLogo({ id, name }: { id: string; name: string }) {
     </div>
   );
 }
+// Sign-ins that are one platform show as one card; clicking it opens the choices.
+const socialGroups: Record<string, { name: string; options: Record<string, string> }> = {
+  linkedin: { name: "LinkedIn", options: { linkedin: "Personal profile", "linkedin-page": "Company page" } },
+};
+const socialGroupOf = (id: string) => Object.keys(socialGroups).find((g) => id in socialGroups[g].options);
 // The social platforms, as a group in Catalog → APIs: each card opens that platform's sign-in.
 function SocialView({ channels, canConfigure, heading }: { channels: Data[]; canConfigure: boolean; heading: boolean }) {
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
+  const [open, setOpen] = useState("");
   const connect = async (id: string) => {
     setBusy(id);
     setError("");
@@ -1824,28 +1829,60 @@ function SocialView({ channels, canConfigure, heading }: { channels: Data[]; can
       setBusy("");
     }
   };
+  const status = (c: Data) => (busy === c.id ? "Opening sign-in…" : !c.configured ? "Not available yet" : c.accounts ? `${c.accounts} connected · add another` : "Connect");
+  const blocked = (c: Data) => !c.configured || !canConfigure || !!busy;
+  const why = (c: Data) => (!c.configured ? "Not available yet" : !canConfigure ? "Only admins can connect accounts" : c.note);
+  type Card = { group: string; members: Data[] };
+  const cards: Card[] = [];
+  for (const c of channels) {
+    const g = socialGroupOf(c.id) || c.id;
+    const card = cards.find((x) => x.group === g);
+    if (card && g in socialGroups) card.members.push(c);
+    else cards.push({ group: g, members: [c] });
+  }
   return (
     <section className="catalog-segment" aria-label="Social">
       {heading && <h2>Social</h2>}
       {error && <div className="error">{error}</div>}
       <div className="catalog-grid">
-        {channels.map((c) => (
-          <button
-            type="button"
-            className="catalog-card"
-            key={c.id}
-            disabled={!c.configured || !canConfigure || !!busy}
-            title={!c.configured ? "Not available yet" : !canConfigure ? "Only admins can connect accounts" : c.note}
-            aria-label={`Connect ${c.name}`}
-            onClick={() => connect(c.id)}
-          >
-            <SocialLogo id={c.id} name={c.name} />
-            <span className="catalog-body">
-              <span className="catalog-name">{c.name}</span>
-              <small>{busy === c.id ? "Opening sign-in…" : !c.configured ? "Not available yet" : c.accounts ? `${c.accounts} connected · add another` : "Connect"}</small>
-            </span>
-          </button>
-        ))}
+        {cards.map((card) => {
+          if (!(card.group in socialGroups) || card.members.length === 1) {
+            const c = card.members[0];
+            return (
+              <button type="button" className="catalog-card" key={c.id} disabled={blocked(c)} title={why(c)} aria-label={`Connect ${c.name}`} onClick={() => connect(c.id)}>
+                <SocialLogo id={c.id} name={c.name} />
+                <span className="catalog-body">
+                  <span className="catalog-name">{c.name}</span>
+                  <small>{status(c)}</small>
+                </span>
+              </button>
+            );
+          }
+          const g = socialGroups[card.group];
+          const isOpen = open === card.group;
+          const accounts = card.members.reduce((n: number, c: Data) => n + (c.accounts || 0), 0);
+          const available = card.members.some((c: Data) => c.configured);
+          return (
+            <div className={`catalog-card social-group${isOpen ? " open" : ""}`} key={card.group}>
+              <button type="button" className="social-group-toggle" aria-expanded={isOpen} disabled={!available || !canConfigure} title={!available ? "Not available yet" : !canConfigure ? "Only admins can connect accounts" : undefined} onClick={() => setOpen(isOpen ? "" : card.group)}>
+                <SocialLogo id={card.members[0].id} name={g.name} />
+                <span className="catalog-body">
+                  <span className="catalog-name">{g.name}</span>
+                  {!isOpen && <small>{!available ? "Not available yet" : accounts ? `${accounts} connected` : "Connect"}</small>}
+                </span>
+              </button>
+              {isOpen && (
+                <span className="social-options">
+                  {card.members.map((c: Data) => (
+                    <button type="button" className="secondary" key={c.id} disabled={blocked(c)} title={why(c)} onClick={() => connect(c.id)}>
+                      {busy === c.id ? "Opening…" : g.options[c.id]}
+                    </button>
+                  ))}
+                </span>
+              )}
+            </div>
+          );
+        })}
       </div>
     </section>
   );
@@ -3679,6 +3716,7 @@ const presetForApi = (a: Data) => {
 };
 // Brand mark first, then the logo fetched from the API's site, then a monogram.
 function ApiLogo({ a }: { a: Data }) {
+  if (a.channel) return <SocialLogo id={a.channel.provider} name={a.name} />;
   const preset = presetForApi(a);
   if (preset && brands[`api-${preset.id}`]) return <BrandTile id={`api-${preset.id}`} name={a.name} />;
   if (a.logo)
