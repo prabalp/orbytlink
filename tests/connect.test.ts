@@ -50,8 +50,12 @@ it("sends the agent a link and the app's own steps when an app is not connected"
   expect(stripe[1].steps.join(" ")).toMatch(/Paste your API key/);
   const exa = (await ask(client, "exa")).results[0];
   expect(exa.steps.join(" ")).toMatch(/paste your Exa key/);
+  const airbnb = (await ask(client, "airbnb")).results[0];
+  expect(airbnb).toMatchObject({ app: "Airbnb", status: "No ready-made connection yet" });
+  expect(airbnb.link).toBeUndefined();
+  // A social platform connects by signing in; without the server's app for it, it says so.
   const reddit = (await ask(client, "reddit")).results[0];
-  expect(reddit).toMatchObject({ app: "Reddit", status: "No ready-made connection yet" });
+  expect(reddit).toMatchObject({ app: "Reddit", status: "Reddit isn't available on this server yet" });
   expect(reddit.link).toBeUndefined();
   const none = await ask(client, "zzqx internal tool");
   expect(none.results).toEqual([]);

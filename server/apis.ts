@@ -3,6 +3,7 @@ import { z } from "zod";
 import { load as loadYaml } from "js-yaml";
 import type { Store, Row } from "./store.js";
 import { safeEndpoint, boundedText } from "./adapters.js";
+import { channelHosts, freshChannel } from "./social.js";
 
 // APIs: a base URL, its documentation and a key, kept in the vault. OrbytLink makes every
 // request from its own server and attaches the key itself, so agents (and the browser) can
@@ -247,7 +248,9 @@ export async function apiCall(store: Store, workspace: string, api: Row, input: 
   if (!api.enabled) throw Object.assign(new Error(`${api.name} is turned off.`), { status: 409 });
   if (!allowedMethods(api).includes(req.method))
     throw Object.assign(new Error(`${api.name} allows read requests only (GET, HEAD). An admin can allow writes.`), { status: 403 });
-  const base = await safeEndpoint(api.baseUrl);
+  // A social account renews its sign-in first, and may always reach its platform's API host.
+  if (api.channel) await freshChannel(store, workspace, api);
+  const base = await safeEndpoint(api.baseUrl, channelHosts(api));
   const url = new URL(base.href.replace(/\/$/, "") + req.path);
   // Requests stay on the API's own origin and under its base path.
   if (url.origin !== base.origin || !url.pathname.startsWith(base.pathname.replace(/\/$/, "")))

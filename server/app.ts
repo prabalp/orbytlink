@@ -29,6 +29,7 @@ import { fromMarkdown, toMarkdown, workflowFileName } from "./workflow-md.js";
 import { clearCache, forgetState, forgetWorkflowData, listState, stepLogs } from "./workflow-data.js";
 import { continueRun, forgetResults, initializeWorkflows, lastResult, listedFor, manageable, resumeWorkflow, runWorkflow, saveWorkflow, unschedule, visibleTo } from "./workflows.js";
 import { apiCall, apiSchema, fetchDocs, fetchLogo, ingestDocs, publicApi } from "./apis.js";
+import { channelSummary } from "./social.js";
 import {
   connectionSchema,
   settingsSchema,
@@ -279,6 +280,7 @@ export function createApp(
         ],
         apis: store.list(i.workspace, "apis").map(publicApi),
         apiCalls: store.list(i.workspace, "api_calls").slice(0, 50),
+        channels: channelSummary(store, i.workspace),
         ...describe(store, (req.user as any)?.id, i),
         gatewayTools: gatewayTools(store, i.workspace).map((t) => ({
           name: t.name,
@@ -667,6 +669,14 @@ export function createApp(
     const i = identity(res),
       w = i.workspace;
     const existing = req.params.id ? store.get(w, "apis", String(req.params.id)) : undefined;
+    // A social account is set up by its sign-in: only its name, access and on/off change here.
+    if (existing?.channel) {
+      const patch = z.object({ name: z.string().trim().min(2).max(80).optional(), access: z.enum(["read", "write"]).optional(), enabled: z.boolean().optional() }).parse(req.body);
+      const row = store.put(w, "apis", { ...existing, ...Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== undefined)) });
+      store.audit(w, i.user, "api.updated", row.name);
+      res.json(publicApi(row));
+      return;
+    }
     const { key, docsText, ...data } = apiSchema.parse(req.body);
     // A saved key only ever goes to the host it was saved for: moving the API elsewhere drops it.
     const moved = !!existing && new URL(existing.baseUrl).origin !== new URL(data.baseUrl).origin;

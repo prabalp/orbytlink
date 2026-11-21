@@ -47,7 +47,8 @@ export function hostAllowed(hostname: string, list = process.env.OUTBOUND_HOSTS 
       (rule.startsWith("*.") && host.endsWith(rule.slice(1)) && host.length > rule.length - 1),
     );
 }
-export async function safeEndpoint(value: string) {
+// `alsoAllowed`: hosts trusted by the server itself (a social platform's API), whatever OUTBOUND_HOSTS says.
+export async function safeEndpoint(value: string, alsoAllowed: string[] = []) {
   const u = new URL(value);
   if (
     u.protocol !== "https:" ||
@@ -55,7 +56,7 @@ export async function safeEndpoint(value: string) {
     u.password ||
     u.search ||
     u.hash ||
-    !hostAllowed(u.hostname)
+    !(hostAllowed(u.hostname) || alsoAllowed.includes(u.hostname.toLowerCase()))
   )
     throw new Error(
       "Use an HTTPS endpoint without credentials or query parameters, on an OUTBOUND_HOSTS allowlisted host",

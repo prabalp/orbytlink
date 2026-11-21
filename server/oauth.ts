@@ -4,6 +4,7 @@ import type { Store, Row } from "./store.js";
 import { safeEndpoint, boundedText } from "./adapters.js";
 import { roleIn } from "./orgs.js";
 import { oauthSchema, type Identity } from "./schema.js";
+import { authorizeUrl, finishChannel, providerById, providerConfigured } from "./social.js";
 
 // OAuth sign-in to upstream apps (Google, Slack, Notion, Linear…): authorization code with
 // PKCE. Tokens are encrypted in the vault next to the connection's other credentials and
@@ -293,7 +294,7 @@ export function configureOAuthCallback(app: Express, store: Store, key: string, 
     const expected = payload ? sign(key, payload) : "";
     if (!payload || !mac || mac.length !== expected.length || !timingSafeEqual(Buffer.from(mac), Buffer.from(expected)))
       return fail("oauth-failed");
-    let flow: { state: string; verifier: string; w: string; id: string; account: string; exp: number };
+    let flow: { state: string; verifier: string; w: string; id: string; account: string; exp: number; channel?: string };
     try {
       flow = JSON.parse(Buffer.from(payload, "base64url").toString());
     } catch {
@@ -305,6 +306,18 @@ export function configureOAuthCallback(app: Express, store: Store, key: string, 
     if (typeof req.query.code !== "string") return fail("oauth-failed");
     // The person who started this must still be an admin of the workspace.
     if (roleIn(store, flow.account, flow.w) !== "admin") return fail("oauth-forbidden");
+    // A social account (same callback, so the operator registers one redirect URI everywhere).
+    if (flow.channel) {
+      try {
+        const rows = await finishChannel(store, flow.w, flow.channel, req.query.code, redirectUri(), flow.verifier);
+        for (const r of rows) store.audit(flow.w, r.name, "channel.connected", r.name);
+        res.clearCookie(COOKIE, { path: "/api/oauth" });
+        return res.redirect(`/#channel-connected=${encodeURIComponent(flow.channel)}~${rows.length}`);
+      } catch (error) {
+        console.warn(`[social] ${flow.channel} sign-in failed: ${(error as Error).message} ${(error as any).oauthError || ""}`);
+        return fail(/No Facebook Pages|no YouTube channel/.test((error as Error).message) ? "channel-empty" : "oauth-failed");
+      }
+    }
     try {
       const c = store.get(flow.w, "connections", flow.id);
       const resolved = c.oauthState?.resolved as Resolved | undefined;
@@ -378,6 +391,27 @@ export function configureOAuthRoutes(app: Express, store: Store, key: string, pe
     for (const [k, v] of Object.entries(params)) url.searchParams.set(k, v);
     store.audit(w, identity.user, "connection.authorize-started", c.name);
     res.json({ url: url.toString() });
+  });
+
+  // Connect a social account: the platform's sign-in page, with the operator's app.
+  app.post("/api/channels/:provider/start", permit("configure"), (req, res) => {
+    const { identity, account } = caller(req);
+    const p = providerById(String(req.params.provider));
+    if (!p) throw Object.assign(new Error("Unknown platform."), { status: 404 });
+    if (!providerConfigured(p)) throw conflict(`${p.name} isn't available on this server yet.`);
+    const flow = {
+      state: b64(randomBytes(32)),
+      verifier: b64(randomBytes(48)),
+      w: identity.workspace,
+      id: "",
+      account,
+      channel: p.id,
+      exp: Date.now() + LIFETIME,
+    };
+    const payload = b64(Buffer.from(JSON.stringify(flow)));
+    res.cookie(COOKIE, `${payload}.${sign(key, payload)}`, { httpOnly: true, secure: production, sameSite: "lax", maxAge: LIFETIME, path: "/api/oauth" });
+    store.audit(identity.workspace, identity.user, "channel.connect-started", p.name);
+    res.json({ url: authorizeUrl(p, redirectUri(), flow.state, b64(createHash("sha256").update(flow.verifier).digest())) });
   });
 
   app.post("/api/connections/:id/oauth/disconnect", permit("configure"), (req, res) => {

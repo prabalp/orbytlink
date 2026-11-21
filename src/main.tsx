@@ -399,6 +399,16 @@ export function App() {
   const deepLinked = useRef(false);
   useEffect(() => {
     if (!state || deepLinked.current) return;
+    // #social=<platform>: straight to that platform's sign-in page.
+    const social = location.hash.match(/^#social=([a-z-]+)$/);
+    if (social) {
+      deepLinked.current = true;
+      history.replaceState(null, "", "#apis");
+      setPage("apis");
+      if (!state.identity.permissions.includes("configure")) return setError("Only an admin of this workspace can connect accounts. Send them the link you were given.");
+      startChannel(social[1]).then((url) => (location.href = url), (e) => setError((e as Error).message));
+      return;
+    }
     const m = location.hash.match(/^#connect=(mcp|api):([a-z0-9-]+)$/);
     if (!m) return;
     deepLinked.current = true;
@@ -416,6 +426,15 @@ export function App() {
     if (!state || oauthHandled.current) return;
     const done = location.hash.match(/^#oauth-connected=([A-Za-z0-9-]+)$/);
     const failed = location.hash.match(/^#oauth-error=([a-z-]+)$/);
+    const channel = location.hash.match(/^#channel-connected=([a-z-]+)~(\d+)$/);
+    if (channel) {
+      oauthHandled.current = true;
+      history.replaceState(null, "", "#connections");
+      setPage("connections");
+      const name = state.channels?.find((c: Data) => c.id === channel[1])?.name || "Account";
+      setToast(Number(channel[2]) > 1 ? `${channel[2]} ${name} accounts connected.` : `${name} connected.`);
+      return;
+    }
     if (!done && !failed) return;
     oauthHandled.current = true;
     history.replaceState(null, "", "#connections");
@@ -465,6 +484,15 @@ export function App() {
       "Redirecting to sign in…",
       false,
     );
+  // A social account: the platform's own sign-in page, then back to Connections.
+  const reconnect = (provider: string) =>
+    act(
+      async () => {
+        location.href = await startChannel(provider);
+      },
+      "Redirecting to sign in…",
+      false,
+    );
   const copy = (text: string, label: string) =>
     void navigator.clipboard.writeText(text).then(() => setToast(`${label} copied`));
   if (auth)
@@ -509,7 +537,7 @@ export function App() {
     settings = s.settings[0],
     // Old links to #connect-claude still land on the renamed page.
     // Old links: #connect-claude is now Connect agents. #apis and #ai-models are Catalog views.
-    title = nav.find(([n]) => slug(n) === (page === "connect-claude" ? "connect-agents" : page === "apis" || page === "ai-models" || page === "browser" || page === "scraper" || page === "instant" ? "catalog" : page))?.[0] || "Connections",
+    title = nav.find(([n]) => slug(n) === (page === "connect-claude" ? "connect-agents" : page === "apis" || page === "ai-models" || page === "browser" || page === "scraper" || page === "instant" || page === "social" ? "catalog" : page))?.[0] || "Connections",
     filtered = s.connections.filter((c: Data) =>
       `${c.name} ${c.description || ""} ${c.endpoint || ""}`
         .toLowerCase()
@@ -647,7 +675,7 @@ export function App() {
                           <td><div className="table-name"><ApiLogo a={a} /><div><strong>{a.name}</strong><small>API</small></div></div></td>
                           <td>
                             <span className="conn-url" title={a.baseUrl}>{a.baseUrl.replace(/^https?:\/\//, "")}</span>
-                            <small>{a.auth === "none" ? "No key needed" : a.hasKey ? "Key stored" : "Key missing"}</small>
+                            <small>{a.channel ? (a.channel.error ? "Reconnect needed" : `Signed in${a.channel.handle ? ` as ${a.channel.handle}` : ""}`) : a.auth === "none" ? "No key needed" : a.hasKey ? "Key stored" : "Key missing"}</small>
                           </td>
                           <td><Status value={a.enabled ? "Enabled" : "Disabled"} /><small>{a.access === "write" ? "Read and write" : "Read only"}</small></td>
                           <td>
@@ -657,7 +685,7 @@ export function App() {
                           <td>
                             {canConfigure ? <div className="row-actions">
                               <button className="secondary compact" onClick={() => setDialog({ type: "api-detail", data: a })}>Open</button>
-                              <button className="secondary compact" onClick={() => setDialog({ type: "api", data: a })}>Configure</button>
+                              {a.channel ? <button className={`${a.channel.error ? "primary" : "secondary"} compact`} disabled={busy} onClick={() => reconnect(a.channel.provider)}>Reconnect</button> : <button className="secondary compact" onClick={() => setDialog({ type: "api", data: a })}>Configure</button>}
                               <button className="icon-button" aria-label={`Remove ${a.name}`} onClick={() => setDialog({ type: "delete-api", data: a })}><Trash2 size={15} /></button>
                             </div> : <button className="secondary compact" onClick={() => setDialog({ type: "api-detail", data: a })}>Open</button>}
                           </td>
@@ -693,7 +721,7 @@ export function App() {
               onToolMode={(t: Data, toolMode: string) => act(() => api(`/tokens/${t.id}`, { toolMode }, "PUT"), toolModeSaved[toolMode] || "Saved", false)} />
           )}
           {title === "Catalog" && (
-            <CatalogPage key={page} initialView={page === "apis" ? "api" : page === "ai-models" ? "models" : page === "browser" ? "browser" : page === "scraper" ? "scraper" : page === "instant" ? "instant" : "mcp"} state={s} canConfigure={canConfigure} search={search} setSearch={setSearch} onConnect={(p: Preset) => setDialog({ type: "connection", data: presetDraft(p) })} onApi={(p: ApiPreset) => setDialog({ type: "api", data: presetApiDraft(p) })} onModel={(m: ModelRow) => setDialog({ type: "model", data: m })} />
+            <CatalogPage key={page} initialView={page === "apis" ? "api" : page === "ai-models" ? "models" : page === "browser" || page === "scraper" ? "scraper" : page === "instant" ? "instant" : page === "social" ? "api" : "mcp"} state={s} canConfigure={canConfigure} search={search} setSearch={setSearch} onConnect={(p: Preset) => setDialog({ type: "connection", data: presetDraft(p) })} onApi={(p: ApiPreset) => setDialog({ type: "api", data: presetApiDraft(p) })} onModel={(m: ModelRow) => setDialog({ type: "model", data: m })} />
           )}
           {title === "Skills" && (
             <SkillsPage state={s} busy={busy} canConfigure={canConfigure} search={search} setSearch={setSearch} onOpen={(skill: Data) => setDialog({ type: "skill", data: skill })} onToggle={(skill: Data, enabled: boolean) => act(() => api(`/skills/${skill.id}`, { enabled }, "PUT"), enabled ? `${skill.title} is on for your agents` : `${skill.title} is off`, false)} onChanged={() => void refresh()} notify={setToast} />
@@ -1139,6 +1167,7 @@ export function App() {
               busy={busy}
               canConfigure={canConfigure}
               onEdit={() => setDialog({ type: "api", data: s.apis.find((a: Data) => a.id === dialog.data!.id) || dialog.data })}
+              onReconnect={reconnect}
               onDelete={() => setDialog({ type: "delete-api", data: dialog.data })}
               onRefreshDocs={() => act(() => api(`/apis/${dialog.data!.id}/docs`, {}), "Docs refreshed", false)}
             />
@@ -1224,6 +1253,7 @@ const oauthErrors: Record<string, string> = {
   "oauth-cancelled": "Sign-in was cancelled. The app is not connected.",
   "oauth-forbidden": "Only organization admins can connect apps.",
   "oauth-failed": "Sign-in could not be completed. Try Connect again.",
+  "channel-empty": "Nothing was shared. Connect again and choose at least one Page or channel.",
 };
 const googleErrors: Record<string, string> = {
   "google-not-configured": "Google sign-in is not set up on this server yet. Use email and password.",
@@ -1631,8 +1661,8 @@ function presetDraft(p: Preset): Data {
   };
 }
 const SOON = "Coming soon";
-type CatalogView = "mcp" | "api" | "models" | "browser" | "scraper" | "instant";
-const viewHash: Record<CatalogView, string> = { mcp: "#catalog", api: "#apis", models: "#ai-models", browser: "#browser", scraper: "#scraper", instant: "#instant" };
+type CatalogView = "mcp" | "api" | "models" | "scraper" | "instant";
+const viewHash: Record<CatalogView, string> = { mcp: "#catalog", api: "#apis", models: "#ai-models", scraper: "#scraper", instant: "#instant" };
 const instantPrice = (v: number | null) => (v === null ? "Varies" : v === 0 ? "Free" : v < 0.01 ? `$${v.toPrecision(2)}` : `$${v.toFixed(v < 1 ? 3 : 2)}`);
 // Instant tools: ready data APIs with no account to connect, paid per call from the workspace's credit.
 function InstantView({ state: s, search, setSearch, segment, setSegment }: any) {
@@ -1768,6 +1798,58 @@ function ScraperView({ state: s }: any) {
     </section>
   );
 }
+// Social accounts, connected by signing in on the platform (the operator registers the app once).
+const startChannel = async (provider: string): Promise<string> => (await api(`/channels/${provider}/start`, {})).url;
+const socialLogo: Record<string, string> = { linkedin: "linkedin", "linkedin-page": "linkedin", facebook: "facebook", instagram: "instagram", threads: "threads", youtube: "youtube", tiktok: "tiktok", reddit: "reddit", pinterest: "pinterest", x: "x-twitter" };
+function SocialLogo({ id, name }: { id: string; name: string }) {
+  const logo = moreApps.find((a) => a.id === socialLogo[id])?.logo || brands[socialLogo[id]];
+  if (!logo) return <BrandTile id={`social-${id}`} name={name} />;
+  return (
+    <div className="app-icon logo" title={name}>
+      <svg viewBox="0 0 24 24" width="22" height="22" role="img" aria-label={`${name} logo`}><path fill={`#${logo.hex}`} d={logo.path} /></svg>
+    </div>
+  );
+}
+// The social platforms, as a group in Catalog → APIs: each card opens that platform's sign-in.
+function SocialView({ channels, canConfigure, heading }: { channels: Data[]; canConfigure: boolean; heading: boolean }) {
+  const [busy, setBusy] = useState("");
+  const [error, setError] = useState("");
+  const connect = async (id: string) => {
+    setBusy(id);
+    setError("");
+    try {
+      location.href = await startChannel(id);
+    } catch (e) {
+      setError((e as Error).message);
+      setBusy("");
+    }
+  };
+  return (
+    <section className="catalog-segment" aria-label="Social">
+      {heading && <h2>Social</h2>}
+      {error && <div className="error">{error}</div>}
+      <div className="catalog-grid">
+        {channels.map((c) => (
+          <button
+            type="button"
+            className="catalog-card"
+            key={c.id}
+            disabled={!c.configured || !canConfigure || !!busy}
+            title={!c.configured ? "Not available yet" : !canConfigure ? "Only admins can connect accounts" : c.note}
+            aria-label={`Connect ${c.name}`}
+            onClick={() => connect(c.id)}
+          >
+            <SocialLogo id={c.id} name={c.name} />
+            <span className="catalog-body">
+              <span className="catalog-name">{c.name}</span>
+              <small>{busy === c.id ? "Opening sign-in…" : !c.configured ? "Not available yet" : c.accounts ? `${c.accounts} connected · add another` : "Connect"}</small>
+            </span>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
 // A real browser for tasks with no API or MCP server. It is a tool, not a connection, so this is its status page.
 function BrowserView({ state: s }: any) {
   const on = !!s.browser?.configured;
@@ -1807,18 +1889,11 @@ function CatalogPage({ state: s, canConfigure, search, setSearch, onConnect, onA
   };
   const viewSwitch = (
     <div className="segmented catalog-view" role="radiogroup" aria-label="Catalog">
-      {([["mcp", "MCP servers"], ["api", "APIs"], ["models", "AI models"], ["instant", "Instant"], ["browser", "Browser"], ["scraper", "Scraper"]] as const).map(([v, label]) => (
+      {([["mcp", "MCP servers"], ["api", "APIs"], ["models", "AI models"], ["instant", "Instant"], ["scraper", "Scraper"]] as const).map(([v, label]) => (
         <button type="button" role="radio" aria-checked={view === v} className={view === v ? "active" : ""} key={v} onClick={() => switchView(v)}>{label}</button>
       ))}
     </div>
   );
-  if (view === "browser")
-    return (
-      <>
-        {viewSwitch}
-        <BrowserView state={s} />
-      </>
-    );
   if (view === "instant")
     return (
       <>
@@ -1831,6 +1906,7 @@ function CatalogPage({ state: s, canConfigure, search, setSearch, onConnect, onA
       <>
         {viewSwitch}
         <ScraperView state={s} />
+        <BrowserView state={s} />
       </>
     );
   if (view === "models")
@@ -1843,6 +1919,7 @@ function CatalogPage({ state: s, canConfigure, search, setSearch, onConnect, onA
   if (view === "api") {
     const apisShown = apiPresets.filter((p) => (segment === "All" || p.category === segment) && `${p.name} ${p.description} ${p.category}`.toLowerCase().includes(q));
     const added = (p: ApiPreset) => s.apis.some((a: Data) => presetForApi(a)?.id === p.id);
+    const socialShown: Data[] = (s.channels || []).filter((c: Data) => (segment === "All" || segment === "Social") && `${c.name} social ${c.note}`.toLowerCase().includes(q));
     return (
       <>
         {viewSwitch}
@@ -1850,18 +1927,20 @@ function CatalogPage({ state: s, canConfigure, search, setSearch, onConnect, onA
           search={search}
           setSearch={setSearch}
           placeholder="Search APIs…"
-          count={`${apisShown.length} APIs`}
+          count={`${apisShown.length + socialShown.length} APIs`}
           control={(
             <div className="catalog-select-wrap">
               <label className="sr-only" htmlFor="api-category">Filter APIs by category</label>
               <select id="api-category" value={segment} onChange={(event) => setSegment(event.target.value)}>
                 <option value="All">All APIs</option>
+                <option value="Social">Social</option>
                 {apiCategories.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
               <ChevronDown size={16} />
             </div>
           )}
         />
+        {socialShown.length > 0 && <SocialView channels={socialShown} canConfigure={canConfigure} heading={segment === "All"} />}
         {apiCategories.map((cat) => {
           const items = apisShown.filter((p) => p.category === cat);
           if (!items.length) return null;
@@ -1890,7 +1969,7 @@ function CatalogPage({ state: s, canConfigure, search, setSearch, onConnect, onA
             </section>
           );
         })}
-        {!apisShown.length && <section className="panel"><Empty icon={LayoutGrid} title="No APIs found">Try another search, or add any HTTPS API yourself from Connections.</Empty></section>}
+        {!apisShown.length && !socialShown.length && <section className="panel"><Empty icon={LayoutGrid} title="No APIs found">Try another search, or add any HTTPS API yourself from Connections.</Empty></section>}
       </>
     );
   }
@@ -1900,7 +1979,7 @@ function CatalogPage({ state: s, canConfigure, search, setSearch, onConnect, onA
   );
   const present = segments.filter((seg) => listed.some((p) => p.segment === seg));
   // Apps we know about but cannot connect yet. Shown last, never as a connect action.
-  const soon = segment === "All" || segment === SOON ? moreApps.filter((a) => `${a.name} ${a.segment}`.toLowerCase().includes(q)) : [];
+  const soon = segment === "All" || segment === SOON ? moreApps.filter((a) => !Object.values(socialLogo).includes(a.id || "") && `${a.name} ${a.segment}`.toLowerCase().includes(q)) : [];
   const soonGroups = [...new Set(soon.map((a) => a.segment))].sort();
   const existing = (p: Preset) => (p.endpoint ? s.connections.find((c: Data) => c.endpoint === p.endpoint) : undefined);
   return (
@@ -3751,7 +3830,7 @@ function ApiForm({ data: d, busy, onSave, onCancel }: any) {
     </form>
   );
 }
-function ApiDetail({ api: a, busy, canConfigure, onEdit, onDelete, onRefreshDocs }: any) {
+function ApiDetail({ api: a, busy, canConfigure, onEdit, onDelete, onRefreshDocs, onReconnect }: any) {
   const [tab, setTab] = useState(a.endpointCount ? "endpoints" : "try");
   const [docs, setDocs] = useState<Data | null>(null);
   const [filter, setFilter] = useState("");
@@ -3797,13 +3876,15 @@ function ApiDetail({ api: a, busy, canConfigure, onEdit, onDelete, onRefreshDocs
       <div className="skill-facts">
         <ApiLogo a={a} />
         <div><small>Base URL</small><code>{a.baseUrl}</code></div>
-        <div><small>Key</small><span>{authLabels[a.auth]} · <KeyState a={a} /></span></div>
+        <div><small>{a.channel ? "Account" : "Key"}</small><span>{a.channel ? (a.channel.error ? "Reconnect needed" : a.channel.handle || a.channel.account) : <>{authLabels[a.auth]} · <KeyState a={a} /></>}</span></div>
         <div><small>Agents</small><span>{a.enabled ? (a.access === "write" ? "Read and write" : "Read only") : "Off"}</span></div>
         <div><small>Docs</small><span>{a.docsFormat ? `${a.docsFormat}${a.docsFetchedAt ? ` · ${when(a.docsFetchedAt)}` : ""}` : "None"}</span></div>
         {canConfigure && (
           <div className="api-actions">
-            {a.docsUrl && <button className="secondary compact" disabled={busy} onClick={onRefreshDocs}>Refresh docs</button>}
-            <button className="secondary compact" onClick={onEdit}>Edit</button>
+            {a.channel ? <button className="secondary compact" disabled={busy} onClick={() => onReconnect(a.channel.provider)}>Reconnect</button> : <>
+              {a.docsUrl && <button className="secondary compact" disabled={busy} onClick={onRefreshDocs}>Refresh docs</button>}
+              <button className="secondary compact" onClick={onEdit}>Edit</button>
+            </>}
             <button className="icon-button" aria-label={`Remove ${a.name}`} onClick={onDelete}><Trash2 size={15} /></button>
           </div>
         )}

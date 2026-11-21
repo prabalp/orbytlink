@@ -1,0 +1,168 @@
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
+vi.mock("node:dns/promises", () => ({ lookup: vi.fn(async () => [{ address: "93.184.216.34", family: 4 }]) }));
+import { createApp } from "../server/app";
+import { Store } from "../server/store";
+import type { ServiceAdapters } from "../server/adapters";
+import { connectApp } from "../server/connect";
+import { authorizeUrl, providerById } from "../server/social";
+import { inject } from "./inject";
+
+let store: Store, app: ReturnType<typeof createApp>["app"], cookie: string, workspace: string;
+const services: ServiceAdapters = { test: vi.fn(), call: vi.fn() };
+const request = (url: string, body?: unknown, method = body ? "POST" : "GET") => inject(app, { url, body, method, headers: { Cookie: cookie } });
+const cookieOf = (r: any, name: string) => ([] as string[]).concat(r.headers["set-cookie"] || []).map((c) => c.split(";")[0]).find((c) => c.startsWith(`${name}=`))!;
+const ENV = ["LINKEDIN", "FACEBOOK", "X"];
+
+let calls: { url: string; method: string; body: string; headers: Headers }[];
+let reply: (url: string, init: RequestInit) => Response | undefined;
+beforeEach(async () => {
+  // Social hosts are trusted by the server: they work even with no OUTBOUND_HOSTS at all.
+  delete process.env.OUTBOUND_HOSTS;
+  for (const e of ENV) Object.assign(process.env, { [`${e}_CLIENT_ID`]: `${e.toLowerCase()}-id`, [`${e}_CLIENT_SECRET`]: `${e.toLowerCase()}-secret` });
+  store = new Store(":memory:");
+  app = createApp(store, services).app;
+  const r = await inject(app, { url: "/api/auth/register", method: "POST", body: { name: "Alice", email: "alice@example.invalid", password: "Correct-horse-ship-2026" } });
+  cookie = String(r.headers["set-cookie"]).split(";")[0];
+  workspace = (await request("/api/state")).data.identity.workspace;
+  calls = [];
+  reply = () => undefined;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: string | URL, init: RequestInit = {}) => {
+      const url = String(input);
+      calls.push({ url, method: init.method || "GET", body: typeof init.body === "string" ? init.body : "", headers: new Headers(init.headers) });
+      return reply(url, init) ?? new Response("not found", { status: 404 });
+    }),
+  );
+});
+afterEach(() => {
+  vi.unstubAllGlobals();
+  for (const e of ENV) for (const k of ["CLIENT_ID", "CLIENT_SECRET"]) delete process.env[`${e}_${k}`];
+});
+async function connect(provider: string) {
+  const start = await request(`/api/channels/${provider}/start`, {});
+  expect(start.status).toBe(200);
+  const url = new URL(start.data.url);
+  const done = await inject(app, { url: `/api/oauth/callback?code=the-code&state=${url.searchParams.get("state")}`, headers: { Cookie: cookieOf(start, "orbyt_oauth") } });
+  return { url, done };
+}
+
+it("builds each platform's sign-in link the way that platform wants it", () => {
+  const li = new URL(authorizeUrl(providerById("linkedin")!, "https://app.example/api/oauth/callback", "s", "c"));
+  expect(li.searchParams.get("client_id")).toBe("linkedin-id");
+  expect(li.searchParams.get("scope")).toBe("openid profile email w_member_social");
+  expect(li.searchParams.has("code_challenge")).toBe(false);
+  process.env.TIKTOK_CLIENT_ID = "tt";
+  const tt = new URL(authorizeUrl(providerById("tiktok")!, "https://app.example/cb", "s", "c"));
+  expect(tt.searchParams.get("client_key")).toBe("tt");
+  expect(tt.searchParams.get("scope")).toContain("video.publish,");
+  delete process.env.TIKTOK_CLIENT_ID;
+  const x = new URL(authorizeUrl(providerById("x")!, "https://app.example/cb", "s", "c"));
+  expect(x.searchParams.get("code_challenge")).toBe("c");
+  expect(new URL(authorizeUrl(providerById("reddit")!, "https://a.example/cb", "s", "c")).searchParams.get("duration")).toBe("permanent");
+});
+
+it("connects a LinkedIn account in one sign-in and calls its API with the token, which no one sees", async () => {
+  reply = (url) => {
+    if (url === "https://www.linkedin.com/oauth/v2/accessToken") return Response.json({ access_token: "li-token", expires_in: 5184000, scope: "openid,profile,w_member_social" });
+    if (url === "https://api.linkedin.com/v2/userinfo") return Response.json({ sub: "abc123", name: "Alice Doe", email: "alice@example.invalid" });
+    if (url === "https://api.linkedin.com/rest/posts") return new Response(null, { status: 201 });
+  };
+  const { url, done } = await connect("linkedin");
+  expect(url.origin + url.pathname).toBe("https://www.linkedin.com/oauth/v2/authorization");
+  expect(done.headers.location).toBe("/#channel-connected=linkedin~1");
+  const exchange = calls.find((c) => c.url.endsWith("/accessToken"))!;
+  expect(new URLSearchParams(exchange.body).get("client_secret")).toBe("linkedin-secret");
+  expect(new URLSearchParams(exchange.body).has("code_verifier")).toBe(false);
+
+  const state = (await request("/api/state")).data;
+  const a = state.apis[0];
+  expect(a).toMatchObject({ name: "LinkedIn · Alice Doe", baseUrl: "https://api.linkedin.com", access: "write", hasKey: true, channel: { provider: "linkedin", accountId: "abc123" } });
+  expect(a.description).toContain("urn:li:person:abc123");
+  expect(JSON.stringify(state)).not.toContain("li-token");
+  expect(state.channels.find((c: any) => c.id === "linkedin")).toMatchObject({ configured: true, accounts: 1 });
+
+  const post = await request(`/api/apis/${a.id}/request`, { method: "POST", path: "/rest/posts", body: { author: "urn:li:person:abc123", commentary: "Hi" } });
+  expect(post.data.status).toBe(201);
+  const sent = calls.find((c) => c.url === "https://api.linkedin.com/rest/posts")!;
+  expect(sent.headers.get("authorization")).toBe("Bearer li-token");
+  expect(sent.headers.get("linkedin-version")).toMatch(/^\d{6}$/);
+
+  // Signing in again updates the same account instead of adding another.
+  await connect("linkedin");
+  expect((await request("/api/state")).data.apis).toHaveLength(1);
+});
+
+it("turns a Facebook sign-in into one account per Page, each with its own Page token", async () => {
+  reply = (url) => {
+    if (url.startsWith("https://graph.facebook.com/v23.0/oauth/access_token?")) {
+      const q = new URL(url).searchParams;
+      return Response.json(q.get("grant_type") === "fb_exchange_token" ? { access_token: "user-long", expires_in: 5184000 } : { access_token: "user-short", expires_in: 3600 });
+    }
+    if (url.startsWith("https://graph.facebook.com/v23.0/me/accounts")) return Response.json({ data: [{ id: "111", name: "Cafe", access_token: "page-1" }, { id: "222", name: "Shop", access_token: "page-2" }] });
+    if (url.startsWith("https://graph.facebook.com/v23.0/222/feed")) return Response.json({ id: "222_9" });
+  };
+  const { done } = await connect("facebook");
+  expect(done.headers.location).toBe("/#channel-connected=facebook~2");
+  expect(calls.some((c) => c.url.includes("fb_exchange_token=user-short"))).toBe(true);
+  const apis = (await request("/api/state")).data.apis;
+  expect(apis.map((a: any) => a.name).sort()).toEqual(["Facebook Pages · Cafe", "Facebook Pages · Shop"]);
+  const shop = apis.find((a: any) => a.name.endsWith("Shop"));
+  expect(shop.channel.expiresAt).toBeNull();
+  const r = await request(`/api/apis/${shop.id}/request`, { method: "POST", path: "/222/feed", body: { message: "Open today" } });
+  expect(r.data.body).toEqual({ id: "222_9" });
+  const sent = calls.find((c) => c.url.startsWith("https://graph.facebook.com/v23.0/222/feed"))!;
+  expect(new URL(sent.url).searchParams.get("access_token")).toBe("page-2");
+  expect(sent.body).toBe("message=Open+today");
+});
+
+it("renews a lapsing token before a call, and asks for a reconnect once the grant is revoked", async () => {
+  let refreshes = 0;
+  reply = (url, init) => {
+    if (url === "https://api.x.com/2/oauth2/token") {
+      const body = new URLSearchParams(String(init.body));
+      if (body.get("grant_type") === "authorization_code") return Response.json({ access_token: "x-1", refresh_token: "r-1", expires_in: 60 });
+      refreshes++;
+      return refreshes === 1 ? Response.json({ access_token: "x-2", refresh_token: "r-2", expires_in: 60 }) : Response.json({ error: "invalid_grant" }, { status: 400 });
+    }
+    if (url === "https://api.x.com/2/users/me") return Response.json({ data: { id: "42", name: "Alice", username: "alice" } });
+    if (url === "https://api.x.com/2/tweets") return Response.json({ data: { id: "1" } }, { status: 201 });
+  };
+  const { url } = await connect("x");
+  expect(url.searchParams.get("code_challenge_method")).toBe("S256");
+  const exchange = calls.find((c) => c.url === "https://api.x.com/2/oauth2/token")!;
+  expect(exchange.headers.get("authorization")).toBe(`Basic ${Buffer.from("x-id:x-secret").toString("base64")}`);
+  expect(new URLSearchParams(exchange.body).get("code_verifier")).toBeTruthy();
+  const a = (await request("/api/state")).data.apis[0];
+
+  // The token has under 5 minutes left, so it's renewed first.
+  await request(`/api/apis/${a.id}/request`, { method: "POST", path: "/tweets", body: { text: "hi" } });
+  expect(calls.filter((c) => c.url === "https://api.x.com/2/tweets").at(-1)!.headers.get("authorization")).toBe("Bearer x-2");
+  expect(store.secret(workspace, `${a.id}:oauth-refresh`)).toBe("r-2");
+
+  const revoked = await request(`/api/apis/${a.id}/request`, { method: "POST", path: "/tweets", body: { text: "again" } });
+  expect(revoked.status).toBe(409);
+  expect(revoked.data.error).toMatch(/reconnected/);
+  const after = (await request("/api/state")).data.apis[0];
+  expect(after).toMatchObject({ hasKey: false, channel: { error: "Reconnect this account." } });
+});
+
+it("lets only the name, access and on/off of a social account change; the rest comes from its sign-in", async () => {
+  reply = (url) => {
+    if (url.endsWith("/accessToken")) return Response.json({ access_token: "t", expires_in: 3600 });
+    if (url.endsWith("/v2/userinfo")) return Response.json({ sub: "s1", name: "A" });
+  };
+  await connect("linkedin");
+  const a = (await request("/api/state")).data.apis[0];
+  const r = await request(`/api/apis/${a.id}`, { access: "read", baseUrl: "https://evil.example" }, "PUT");
+  expect(r.data).toMatchObject({ access: "read", baseUrl: "https://api.linkedin.com" });
+});
+
+it("refuses a platform the server hasn't set up, and connect_app hands agents a one-click link", async () => {
+  const r = await request("/api/channels/pinterest/start", {});
+  expect(r.status).toBe(409);
+  const out: any = connectApp(store, workspace, true, { app: "LinkedIn" });
+  expect(out.results[0]).toMatchObject({ app: "LinkedIn", status: "Not connected", link: "http://127.0.0.1:3100/#social=linkedin" });
+  expect((connectApp(store, workspace, true, { app: "Pinterest" }) as any).results[0].status).toMatch(/isn't available/);
+  expect((connectApp(store, workspace, true, { app: "twitter" }) as any).results[0].app).toBe("X");
+});

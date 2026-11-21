@@ -1,6 +1,7 @@
 import type { Store } from "./store.js";
 import { connectIndex, type ConnectEntry } from "./connect-index.js";
 import { ToolIndex } from "./tool-search.js";
+import { providers, providerConfigured } from "./social.js";
 
 // When an agent needs an app this workspace has not connected, orbytlink__connect_app finds it in
 // the catalog and answers with a link that opens the right form in the console, already filled in,
@@ -54,10 +55,45 @@ function steps(e: ConnectEntry): string[] {
   return [`Open the link and paste your ${e.name} key.`, "Click Save connection, then Test.", ...(e.notes || [])];
 }
 
+// Social platforms connect by signing in with the server's own app: one click, no keys or forms.
+const socialAliases: Record<string, string[]> = { linkedin: ["linkedin", "linkedin profile"], "linkedin-page": ["linkedin page", "linkedin company", "linkedin company page"], facebook: ["facebook", "facebook page", "fb", "meta"], instagram: ["instagram", "insta", "ig"], threads: ["threads"], youtube: ["youtube"], tiktok: ["tiktok", "tik tok"], reddit: ["reddit"], pinterest: ["pinterest"], x: ["x", "twitter", "x twitter"] };
+function socialMatch(query: string) {
+  const q = query.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
+  return providers.filter((p) => (socialAliases[p.id] || [p.id]).some((a) => q === a || q === `${a} account`)).slice(0, 2);
+}
+function socialResults(store: Store, workspace: string, canConfigure: boolean, query: string) {
+  const rows = store.list(workspace, "apis").filter((r) => r.channel);
+  return socialMatch(query).map((p) => {
+    const mine = rows.filter((r) => r.channel.provider === p.id);
+    if (!providerConfigured(p)) return { app: p.name, status: `${p.name} isn't available on this server yet`, steps: [`The server operator has to register an app with ${p.name} first.`] };
+    const link = `${origin()}/#social=${p.id}`;
+    if (mine.length)
+      return {
+        app: p.name,
+        type: "Social account",
+        status: mine.some((r) => r.channel.error) ? "Connected, but needs to be reconnected" : "Already connected",
+        accounts: mine.map((r) => `${r.name}${r.channel.error ? " (reconnect needed)" : ""}`),
+        steps: mine.some((r) => r.channel.error)
+          ? [canConfigure ? `Open ${link} to sign in to ${p.name} again.` : `Ask an admin to open ${link} and sign in again.`]
+          : ["Use orbytlink__api_docs and orbytlink__api_request with this account's API to read or post.", `To add another ${p.name} account, open ${link}.`],
+      };
+    return {
+      app: p.name,
+      type: "Social account",
+      what: p.note,
+      status: "Not connected",
+      link,
+      steps: canConfigure ? [`Open the link: it goes straight to ${p.name}'s sign-in page.`, `Sign in and click Allow. You come back to OrbytLink with the account connected.`] : [`Only an admin of this workspace can connect accounts. Send them this link: ${link}`],
+    };
+  });
+}
+
 export function connectApp(store: Store, workspace: string, canConfigure: boolean, args: Record<string, unknown>) {
   const query = typeof args.app === "string" ? args.app.trim().slice(0, 120) : "";
   if (!query) return { error: "Name the app, e.g. Apollo or Google Sheets." };
   const custom = `${origin()}/#connections`;
+  const social = socialResults(store, workspace, canConfigure, query);
+  if (social.length) return { query, results: social, next: "Show the user the link and the steps in plain words. Once connected, use orbytlink__api_docs and orbytlink__api_request with the account's API." };
   const found = findInCatalog(query);
   const connections = store.list(workspace, "connections");
   const apis = store.list(workspace, "apis");
