@@ -10,9 +10,10 @@
     <polygon points="14,14 23.19,4.81 27,14 23.19,23.19 14,27 4.81,23.19 1,14 4.81,4.81 14,1" fill="#edf2f5" fill-opacity=".72"/>
   </g>
   <text x="154" y="111" fill="#202122" font-family="Manrope,Arial,sans-serif" font-size="30" font-weight="600">OrbytLink</text>
-  <text x="82" y="280" fill="#202122" font-family="Manrope,Arial,sans-serif" font-size="62" font-weight="600" letter-spacing="-2">Do the work once.</text>
-  <text x="82" y="356" fill="#202122" font-family="Manrope,Arial,sans-serif" font-size="62" font-weight="600" letter-spacing="-2">Build on it every time.</text>
-  <text x="84" y="430" fill="#505256" font-family="Manrope,Arial,sans-serif" font-size="24">The workhub for AI agents</text>
+  <text x="82" y="250" fill="#202122" font-family="Manrope,Arial,sans-serif" font-size="58" font-weight="600" letter-spacing="-2">The self optimizing</text>
+  <text x="82" y="322" fill="#202122" font-family="Manrope,Arial,sans-serif" font-size="58" font-weight="600" letter-spacing="-2">workspace for</text>
+  <text x="82" y="394" fill="#202122" font-family="Manrope,Arial,sans-serif" font-size="58" font-weight="600" letter-spacing="-2">AI agents.</text>
+  <text x="84" y="456" fill="#505256" font-family="Manrope,Arial,sans-serif" font-size="24">Connect your tools once. Repeated work becomes automation.</text>
   <text x="84" y="570" fill="#606268" font-family="Manrope,Arial,sans-serif" font-size="18">orbytlink.com</text>
   <g fill="none" stroke="#76588f" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
     <path d="M932 315h162M1015 232v166"/>
