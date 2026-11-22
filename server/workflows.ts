@@ -1,3 +1,5 @@
+import { checkService, chargeService } from "./service-charges.js";
+import { MCP_CALL } from "./catalog.js";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import type { Store, Row } from "./store.js";
@@ -344,7 +346,9 @@ async function callStep(store: Store, services: ServiceAdapters, identity: Ident
   // Resolved against current configuration: a disabled tool or connection stops the run.
   const entry = gatewayTools(store, w).find((t) => t.name === tool);
   if (!entry) throw new Error(`Tool ${tool} is not available. Check that its connection is enabled and tested`);
+  const price = checkService(store, w, MCP_CALL);
   const result = await services.call(entry.connection, entry.tool.name, args, await credentialFor(store, w, entry.connection));
+  chargeService(store, identity, MCP_CALL, price, "workflow", `${entry.connection.name} · ${entry.tool.name}`);
   const safe = store.redact(w, result);
   if (safe?.isError) throw new Error(`${entry.connection.name} returned an error: ${textOf(safe).slice(0, 300)}`);
   return textOf(safe).slice(0, 100_000);

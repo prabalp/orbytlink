@@ -1,3 +1,5 @@
+import { checkService, chargeService } from "./service-charges.js";
+import { API_CALL, MCP_CALL } from "./catalog.js";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import {
   CallToolRequestSchema,
@@ -197,9 +199,17 @@ async function runTool(store: Store, services: ServiceAdapters, identity: Identi
   if (!entry) return toolText(`Unknown or disabled tool: ${name.slice(0, 80)}. Use orbytlink__find_tools to find the right name.`, true);
   const { connection, tool } = entry;
   const target = `${connection.name} · ${tool.name}`;
+  // A price per MCP tool call, if the operator set one: refused up front when the workspace can't pay.
+  let price = 0;
+  try {
+    price = checkService(store, w, MCP_CALL);
+  } catch (error) {
+    return toolText((error as Error).message, true);
+  }
   const started = Date.now();
   try {
     const result = await services.call(connection, tool.name, args, await credentialFor(store, w, connection));
+    chargeService(store, identity, MCP_CALL, price, "agent", target);
     store.audit(w, identity.user, "tool.called", target);
     log(store, w, identity, connection, tool.name, "ok", Date.now() - started);
     // Never let an upstream echo a stored credential back to the client.
@@ -369,7 +379,10 @@ export async function callStoredApi(store: Store, identity: Identity, args: Reco
   const match = enabledApis(store, w).find((a) => a.slug === args.api);
   if (!match) return toolText("Unknown or disabled API.", true);
   try {
+    // A price per API request, if the operator set one; charged once the request went through.
+    const price = checkService(store, w, API_CALL);
     const out = await apiCall(store, w, match.api, { method: args.method, path: args.path, query: args.query, body: args.body });
+    chargeService(store, identity, API_CALL, price, "agent", `${match.api.name} · ${args.method} ${args.path}`);
     store.audit(w, identity.user, "api.request", `${match.api.name} · ${args.method} ${args.path} · ${out.status}`);
     const body = typeof out.body === "string" ? out.body : JSON.stringify(out.body, null, 2);
     return toolText(`HTTP ${out.status}${out.truncated ? " (response truncated)" : ""}\n\n${body.slice(0, 100_000)}`, !out.ok);
@@ -506,7 +519,7 @@ function ownTools(store: Store, w: string, identity: Identity) {
     );
   }
   // AI models, billed to the workspace's credit; listed only when they can actually be used.
-  if (aiConfigured() && aiSummary(store, w).enabled)
+  if (aiConfigured(store) && aiSummary(store, w).enabled)
     tools.push({
       name: AI_TOOL,
       title: "Ask an AI model",
@@ -516,12 +529,12 @@ function ownTools(store: Store, w: string, identity: Identity) {
       annotations: { openWorldHint: true },
     });
   // A real browser for web tasks no app or API covers; billed per page action from the same credit.
-  if (browserConfigured() && aiSummary(store, w).enabled)
+  if (browserConfigured(store) && aiSummary(store, w).enabled)
     tools.push({
       name: BROWSER_TOOL,
       title: "Use a web browser",
       description:
-        "Open a public website in a real browser and carry out a task there (find information, fill a form, click through pages), then get what it found. Use it only when no connected app, API or MCP tool can do the job. Give a start url and a specific goal. Each page action is charged to this workspace's credit; the most it may cost is held until the run ends. It cannot log in to sites and opens public pages only.",
+        "Open a public website in a real browser and carry out a task there (search, fill a form, click through pages), then get back the final page to read the answer from. Use it only when no connected app, API or MCP tool can do the job. Give a start url, a specific goal, and in values every piece of text it may need to type (search terms, form entries): it can type only those. Each step is charged to this workspace's credit. It cannot log in to sites and opens public pages only.",
       inputSchema: browserInputSchema,
       annotations: { openWorldHint: true },
     });
@@ -793,7 +806,7 @@ async function callOwnTool(store: Store, services: ServiceAdapters, identity: Id
   }
   if (name === "orbytlink__create_workflow") {
     try {
-      const known = new Set([...gatewayTools(store, w).map((t) => t.name), ...visibleWorkflowTools(store, identity).map((t) => t.name), ...(enabledApis(store, w).length ? [API_REQUEST_TOOL] : []), ...(aiConfigured() ? [AI_TOOL] : []), ...(browserConfigured() ? [BROWSER_TOOL] : []), SCRAPE_TOOL, ...(scraperConfigured() ? [MAPS_TOOL] : []), ...(instantConfigured() ? [INSTANT_CALL] : [])]);
+      const known = new Set([...gatewayTools(store, w).map((t) => t.name), ...visibleWorkflowTools(store, identity).map((t) => t.name), ...(enabledApis(store, w).length ? [API_REQUEST_TOOL] : []), ...(aiConfigured(store) ? [AI_TOOL] : []), ...(browserConfigured(store) ? [BROWSER_TOOL] : []), SCRAPE_TOOL, ...(scraperConfigured() ? [MAPS_TOOL] : []), ...(instantConfigured() ? [INSTANT_CALL] : [])]);
       const unknown = ((args.steps as any[]) || []).map((s) => s?.tool).filter((t) => !known.has(t));
       if (unknown.length) return toolText(`Unknown tools: ${unknown.join(", ")}. Use names exactly as listed by this server.`, true);
       const row = saveWorkflow(store, identity, { visibility: "private", ...args, enabled: false, schedule: null }, undefined, "agent");

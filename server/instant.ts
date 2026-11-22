@@ -5,6 +5,8 @@ import type { Identity } from "./schema.js";
 import { addBalance, addMonth, aiSummary, usd } from "./ai.js";
 import { clean, safeFail as fail, scrub, slugify, type Route, type Upstream } from "./instant/upstream.js";
 import { sources } from "./instant/sources.js";
+import { recordCall } from "./ledger.js";
+import { defaultMarkup } from "./catalog.js";
 export { scrub } from "./instant/upstream.js";
 
 // Instant tools: thousands of data APIs (search results, scraping, people and company data, social
@@ -29,6 +31,8 @@ const BALANCE_EVERY = 5 * 60_000;
 const live = (): Upstream[] => sources().filter((s) => s.configured());
 export const instantConfigured = () => live().length > 0;
 export function instantMarkup() {
+  const stored = defaultMarkup("instant");
+  if (stored !== null) return stored;
   const n = Number(process.env.INSTANT_MARKUP_PERCENT ?? 5);
   return Number.isFinite(n) && n >= 0 && n <= 1000 ? n : 5;
 }
@@ -212,6 +216,11 @@ export function setQuote(store: Store, id: string, priceUsd: number, by: string)
   memo = undefined;
 }
 
+// Back to the markup: drop the operator's price for a tool.
+export function clearQuote(store: Store, id: string) {
+  if (store.list(GLOBAL, "instant_prices").some((p) => p.id === id)) store.remove(GLOBAL, "instant_prices", id);
+  memo = undefined;
+}
 // The whole list, for the operator to review or edit (CSV: tool,price_usd,cheapest_cost_usd,routes,set_by).
 export function priceList(store: Store) {
   const q = new Map(store.list(GLOBAL, "instant_prices").filter((p) => p.by !== "default").map((p) => [p.id as string, p]));
@@ -436,12 +445,9 @@ export async function callInstant(store: Store, identity: Identity, input: unkno
       if (out.refusal) throw fail(out.refusal, 400);
       if (out.status < 200 || (out.status >= 300 && out.status !== 202)) throw fail(`The provider answered HTTP ${out.status}: ${scrub(out.text).slice(0, 400)}`, 400);
       charged = quote;
-      store.put(w, "ai_usage", { model: `instant:${t.id}`, inputTokens: 0, outputTokens: 0, micro: charged, user: identity.user, via, createdAt: new Date().toISOString() });
-      store.trim(w, "ai_usage", 2000);
       store.audit(w, identity.user, "instant.call", `${t.id} · ${out.status} · $${usd(charged).toFixed(6)}`);
-      // The internal side of the sale, for the operator's margins (never shown to the workspace).
-      store.put(GLOBAL, "instant_ledger", { tool: t.id, source: source.id, workspace: w, costMicro: out.costMicro, priceMicro: quote, at: new Date().toISOString() });
-      store.trim(GLOBAL, "instant_ledger", 20_000);
+      // Both sides of the sale in the ledger: what the source charged OrbytLink, and what the workspace paid.
+      recordCall(store, { workspace: w, user: identity.user, via, item: `instant:${t.id}`, kind: "instant", source: source.id, ref: r.ref, status: "ok", unitsIn: 1, costMicro: out.costMicro, costBasis: "reported", chargedMicro: charged });
       return { id: t.id, status: out.status, costUsd: usd(charged), ...(out.servedBy && !route.best ? {} : out.servedBy ? { servedBy: out.servedBy } : {}), ...(out.pending ? { pending: true } : {}), result: out.json === undefined ? scrub(out.text) : clean(out.json) };
     }
     throw fail("This tool is briefly unavailable. No credit was used; try again later or pick another tool.", 503);

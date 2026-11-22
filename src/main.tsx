@@ -1,4 +1,6 @@
 import React, {
+  Suspense,
+  lazy,
   useEffect,
   useState,
   useRef,
@@ -39,6 +41,7 @@ import {
   X,
   Zap,
   Sparkles,
+  ShieldCheck,
 } from "./icons";
 import { catalog, segments, type Preset } from "./catalog";
 import { logoFiles } from "./brand-logos";
@@ -53,6 +56,8 @@ import { LibraryView } from "./library-ui";
 import { SkillEditor } from "./skill-editor";
 import { apiCategories, apiPresets, type ApiPreset } from "./api-presets";
 import "./styles.css";
+// The operator's admin portal, loaded only when an operator opens /admin.
+const AdminApp = lazy(() => import("./admin-ui").then((m) => ({ default: m.AdminApp })));
 type Data = Record<string, any>;
 const nav = [
   ["Connections", Link2],
@@ -66,7 +71,7 @@ const nav = [
 ] as const;
 const slug = (s: string) => s.toLowerCase().replace(/ /g, "-");
 const mcpUrl = () => `${location.origin}/mcp`;
-async function api(
+export async function api(
   path: string,
   body?: unknown,
   method = body ? "POST" : "GET",
@@ -134,7 +139,7 @@ function Status({ value }: { value: string }) {
     </span>
   );
 }
-function Empty({
+export function Empty({
   icon: Icon = Folder,
   title,
   children,
@@ -156,7 +161,7 @@ function Empty({
     </div>
   );
 }
-function Modal({
+export function Modal({
   title,
   subtitle,
   children,
@@ -532,6 +537,16 @@ export function App() {
         onSignOut={() => act(() => api("/session/logout", {}), "Signed out")}
       />
     );
+  // /admin is the operator's portal; anyone else is sent back to the console.
+  if (location.pathname.startsWith("/admin")) {
+    if (state.operator)
+      return (
+        <Suspense fallback={<div className="loading"><LoaderCircle className="spin" /> Loading admin…</div>}>
+          <AdminApp state={state} />
+        </Suspense>
+      );
+    history.replaceState(null, "", `/${location.hash}`);
+  }
   const s = state,
     settings = s.settings[0],
     // Old links to #connect-claude still land on the renamed page.
@@ -594,6 +609,7 @@ export function App() {
           </div>
         )}
         <div className="sidebar-bottom">
+          {s.operator && <a className="sidebar-help" href="/admin" title={open ? undefined : "Admin"} aria-label="Admin"><ShieldCheck size={16} />{open && <span>Admin</span>}</a>}
           <button className="sidebar-help" title={open ? undefined : "How the gateway works"} aria-label="How the gateway works" onClick={() => setDialog({ type: "help" })}><CircleHelp size={16} />{open && <> How the gateway works <ArrowUpRight size={14} /></>}</button>
           <button className="account-button" title={open ? undefined : "Account"} aria-label="Account" onClick={() => setDialog({ type: "session" })}><span className="avatar">{initial}</span>{open && <><span><strong>{s.identity.displayName || s.identity.user}</strong><small>{s.identity.email || s.identity.workspaceName}</small></span><Ellipsis size={18} /></>}</button>
         </div>
@@ -1515,7 +1531,7 @@ function AuthInput({
     </div>
   );
 }
-function OrbitLogo() {
+export function OrbitLogo() {
   return (
     <img
       className="product-logo"
@@ -1590,7 +1606,7 @@ function connectorType(c: Data) {
     : "Auto-detect · MCP or HTTP API";
 }
 
-function Toolbar({
+export function Toolbar({
   search,
   setSearch,
   placeholder,
@@ -1898,7 +1914,8 @@ function SocialView({ channels, canConfigure, heading }: { channels: Data[]; can
 // A real browser for tasks with no API or MCP server. It is a tool, not a connection, so this is its status page.
 function BrowserView({ state: s }: any) {
   const on = !!s.browser?.configured;
-  const per = (s.browser?.microPerStep || 0) / 1_000_000;
+  // About one page action: the browser's own fee plus one decision by the first decision model.
+  const per = ((s.browser?.microPerStep || 0) + (s.browser?.microPerDecision || 0)) / 1_000_000;
   return (
     <section className="panel">
       <div className="section-heading">
@@ -1910,7 +1927,8 @@ function BrowserView({ state: s }: any) {
         <div className="table-scroll">
           <table>
             <tbody>
-              <tr><td>Price</td><td>${per.toFixed(2)} per page action, charged from your AI credit</td></tr>
+              <tr><td>Price</td><td>About ${per.toFixed(4)} per page action, charged from your AI credit</td></tr>
+              {s.browser.models?.length > 0 && <tr><td>Decision model</td><td>{s.browser.models.map((m: Data) => m.name).join(", then ")}</td></tr>}
               <tr><td>Limits</td><td>Up to {s.browser.maxSteps} actions per run, public pages only</td></tr>
               <tr><td>Credit</td><td>${((s.ai?.balance || 0) / 1_000_000).toFixed(2)} available</td></tr>
             </tbody>
@@ -1958,7 +1976,7 @@ function CatalogPage({ state: s, canConfigure, search, setSearch, onConnect, onA
     return (
       <>
         {viewSwitch}
-        <ModelsView search={search} setSearch={setSearch} segment={segment} setSegment={setSegment} onOpen={onModel} scale={s.ai?.priceScale || 1} />
+        <ModelsView search={search} setSearch={setSearch} segment={segment} setSegment={setSegment} onOpen={onModel} />
       </>
     );
   if (view === "api") {
@@ -2101,16 +2119,16 @@ function CatalogPage({ state: s, canConfigure, search, setSearch, onConnect, onA
     </>
   );
 }
-// AI models and their prices, from the same dated snapshot as orbytlink.com. The list (about 9 KB
-// gzipped) is fetched only when this view opens.
-const modelPrice = (r: [string, string] | null, from?: boolean, scale = 1) =>
-  r ? <><span>{from ? "From " : ""}${(Number(r[0]) * scale).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 6 })}</span><small>/ {r[1]}</small></> : <span className="muted">—</span>;
-function ModelsView({ search, setSearch, segment, setSegment, onOpen, scale = 1 }: any) {
+// AI models and their prices, from the server's model catalog (a database the operator keeps).
+// The list is fetched only when this view opens.
+const modelPrice = (r: [string, string] | null, from?: boolean) =>
+  r ? <><span>{from ? "From " : ""}${Number(r[0]).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 6 })}</span><small>/ {r[1]}</small></> : <span className="muted">—</span>;
+function ModelsView({ search, setSearch, segment, setSegment, onOpen }: any) {
   const [data, setData] = useState<{ updatedAt: string; models: ModelRow[] } | null>(null);
   const [failed, setFailed] = useState(false);
   useEffect(() => {
     let live = true;
-    import("./model-catalog.json").then((m) => live && setData(m.default as any), () => live && setFailed(true));
+    api("/models").then((m) => live && setData(m), () => live && setFailed(true));
     return () => {
       live = false;
     };
@@ -2155,12 +2173,12 @@ function ModelsView({ search, setSearch, segment, setSegment, onOpen, scale = 1 
                   <tr key={m.id}>
                     <td>
                       <button type="button" className="model-open" onClick={() => onOpen(m)} aria-label={`Open ${m.name}`}>{m.name}</button>
-                      <small><code>{m.id}</code>{callable(m) ? "" : " · price list only"}</small>
+                      <small><code>{m.id}</code>{m.decision ? " · decision model" : callable(m) ? "" : " · price list only"}</small>
                     </td>
                     <td className="muted">{m.category}</td>
                     <td className="muted">{m.context ? `${m.context.toLocaleString("en-US")} tokens` : "—"}</td>
-                    <td className="model-price">{modelPrice(m.input, m.from, scale)}</td>
-                    <td className="model-price">{modelPrice(m.output, m.from, scale)}</td>
+                    <td className="model-price">{modelPrice(m.input, m.from)}</td>
+                    <td className="model-price">{modelPrice(m.output, m.from)}</td>
                   </tr>
                 ))}
               </tbody>

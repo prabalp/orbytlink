@@ -366,3 +366,25 @@ export function Bolt(p: IconProps) {
     </Glyph>
   );
 }
+// Admin portal sections.
+export function ChartLine(p: IconProps) {
+  return <Glyph {...p}><path d="M3 3v18h18" /><path d="m7 15 4-4 3 3 5-6" /></Glyph>;
+}
+export function Tag(p: IconProps) {
+  return <Glyph {...p}><path d="M12.6 2.6 21.4 11.4a2 2 0 0 1 0 2.8l-7.2 7.2a2 2 0 0 1-2.8 0L2.6 12.6A2 2 0 0 1 2 11.2V4a2 2 0 0 1 2-2h7.2a2 2 0 0 1 1.4.6z" /><circle cx="7.5" cy="7.5" r="1.5" /></Glyph>;
+}
+export function Server(p: IconProps) {
+  return <Glyph {...p}><rect x="3" y="3" width="18" height="7" rx="2" /><rect x="3" y="14" width="18" height="7" rx="2" /><path d="M7 6.5h.01M7 17.5h.01" /></Glyph>;
+}
+export function Building(p: IconProps) {
+  return <Glyph {...p}><rect x="4" y="2" width="16" height="20" rx="2" /><path d="M9 22v-4h6v4M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01" /></Glyph>;
+}
+export function ScrollText(p: IconProps) {
+  return <Glyph {...p}><path d="M8 21h11a2 2 0 0 0 2-2v-2H10v2a2 2 0 0 1-4 0V5a2 2 0 0 0-2-2 2 2 0 0 0-2 2v3h4" /><path d="M19 17V5a2 2 0 0 0-2-2H4M15 8h-5M15 12h-5" /></Glyph>;
+}
+export function Upload(p: IconProps) {
+  return <Glyph {...p}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" /></Glyph>;
+}
+export function ArrowLeft(p: IconProps) {
+  return <Glyph {...p}><path d="M19 12H5M12 19l-7-7 7-7" /></Glyph>;
+}

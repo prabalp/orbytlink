@@ -5,11 +5,14 @@ import type { Express } from "express";
 import { createApp } from "../server/app";
 import { Store } from "../server/store";
 import { grantCredits } from "../server/ai";
-import { modelPrices } from "../server/model-prices";
+import { seedModels } from "../server/model-seed";
 import type { ServiceAdapters } from "../server/adapters";
 import { inject } from "./inject";
 
 const MODEL = "anthropic/claude-haiku-4.5";
+// The catalog keeps cost prices; what's shown and charged is cost × (1 + markup), 5% unless set.
+const seed = seedModels.find((m) => m.id === MODEL)!;
+const priced = (percent: number) => [seed.input!, seed.output!].map((v) => Math.round(v * (1 + percent / 100) * 1e9) / 1e9);
 let app: Express, store: Store, cookie: string, workspace: string, services: ServiceAdapters;
 let gateway: { body: any; auth: string | null }[], reply: (body: any) => Response;
 const api = (url: string, body?: unknown, method = body ? "POST" : "GET", c = cookie) => inject(app, { url, method, headers: { Cookie: c }, body });
@@ -59,13 +62,17 @@ afterEach(() => {
 
 it("follows AI_MARKUP_PERCENT for both the price shown and the amount charged", async () => {
   grantCredits(store, workspace, 10_000_000, "operator");
-  const [inPrice, outPrice] = modelPrices[MODEL]; // stored with the 5% the catalog was built with
-  const cost = (percent: number) => Math.ceil((1000 * inPrice + 500 * outPrice) * ((1 + percent / 100) / 1.05));
+  const cost = (percent: number) => {
+    const [inPrice, outPrice] = priced(percent);
+    return Math.ceil(1000 * inPrice + 500 * outPrice);
+  };
   for (const [setting, percent] of [["0", 0], ["20", 20], ["nonsense", 5], ["-3", 5]] as const) {
     process.env.AI_MARKUP_PERCENT = setting;
     const r = (await api("/api/ai/try", { model: MODEL, prompt: "hi", maxTokens: 600 })).data;
     expect(r.costMicro, `AI_MARKUP_PERCENT=${setting}`).toBe(cost(percent));
-    expect((await api("/api/ai")).data.priceScale).toBeCloseTo((1 + percent / 100) / 1.05, 10);
+    expect((await api("/api/ai")).data.markupPercent).toBe(percent);
+    const shown = (await api("/api/models")).data.models.find((m: any) => m.id === MODEL);
+    expect(Number(shown.input[0])).toBeCloseTo(priced(percent)[0], 9);
   }
   delete process.env.AI_MARKUP_PERCENT;
   expect((await api("/api/ai/try", { model: MODEL, prompt: "hi", maxTokens: 600 })).data.costMicro).toBe(cost(5));
@@ -76,7 +83,7 @@ it("charges the listed price for the tokens used, with the operator's key, and r
   expect(gateway).toHaveLength(0);
   grantCredits(store, workspace, 1_000_000, "operator");
   const r = (await api("/api/ai/try", { model: MODEL, prompt: "hi", maxTokens: 600 })).data;
-  const [inPrice, outPrice] = modelPrices[MODEL];
+  const [inPrice, outPrice] = priced(5);
   const expected = Math.ceil(1000 * inPrice + 500 * outPrice);
   expect(r).toMatchObject({ text: "echo: hi", inputTokens: 1000, outputTokens: 500, costMicro: expected });
   expect(gateway[0]).toMatchObject({ auth: "Bearer vck_operator_key_123456", body: { model: MODEL, max_tokens: 600 } });

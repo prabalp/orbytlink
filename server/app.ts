@@ -21,6 +21,9 @@ import { authoredDetail, createAuthored, deleteAuthored, initializeLibrary, libr
 import { MIN_INSTALLS, searchRegistry } from "./skill-registry.js";
 import { AI_TOOL, aiConfigured, aiSummary, generate, saveAiSettings } from "./ai.js";
 import { BROWSER_TOOL, browserConfigured, browserSummary } from "./browser.js";
+import { catalogUpdatedAt, ensureCatalog, publicModels } from "./catalog.js";
+import { workspaceUsage } from "./ledger.js";
+import { configureAdmin, isOperator } from "./admin.js";
 import { MAPS_TOOL, SCRAPE_TOOL, scraperConfigured, scraperSummary } from "./scraper.js";
 import { INSTANT_CALL, instantConfigured, instantPlatform, instantPlatforms } from "./instant.js";
 import { BUNDLES, cashfreeConfigured, cashfreeMode, createOrder, currenciesFor, dodoMode, dodoOrderFrom, listPayments, orderIdFrom, paymentsConfigured, providerFor, quote, settle, validSignature } from "./payments.js";
@@ -120,6 +123,7 @@ export function createApp(
   // Agents sign in to /mcp with OAuth; registered before the session check below on purpose.
   const mcpOAuth = configureMcpOAuth(app, store);
   initializeLibrary(store);
+  ensureCatalog(store);
   initializeWorkflows(store);
   const oauthKey = derive(store, "orbytlink:oauth:v1");
   configureOAuthCallback(
@@ -234,6 +238,8 @@ export function createApp(
   });
   app.post("/api/oauth/requests/:id", mcpOAuth.answer);
   configureOrgs(app, store);
+  // The operator's admin portal (/admin); a 404 to everyone else.
+  configureAdmin(app, store);
   const identity = (res: Response) => res.locals.identity as Identity;
   const permit =
     (permission: string) =>
@@ -263,13 +269,15 @@ export function createApp(
           .filter((r) => r.user === i.user || listedFor(store, i).some((wf) => wf.id === r.workflowId && visibleTo(wf, i)))
           .slice(0, 50),
         ai: aiSummary(store, i.workspace),
-        browser: browserSummary(),
+        browser: browserSummary(store),
+        // Only the server's operators see the admin portal link.
+        ...(isOperator(store, i) ? { operator: true } : {}),
         scraper: scraperSummary(store, i.workspace),
         instant: { configured: instantConfigured() },
         // Steps can also call stored APIs, AI models and other workflows, besides app tools.
         workflowStepTools: [
-          ...(aiConfigured() ? [{ name: AI_TOOL, title: "Ask an AI model", app: "AI models", args: ["model", "prompt", "system", "maxTokens", "temperature", "json"] }] : []),
-          ...(browserConfigured() ? [{ name: BROWSER_TOOL, title: "Use a web browser", app: "Browser", args: ["url", "goal", "maxSteps"] }] : []),
+          ...(aiConfigured(store) ? [{ name: AI_TOOL, title: "Ask an AI model", app: "AI models", args: ["model", "prompt", "system", "maxTokens", "temperature", "json"] }] : []),
+          ...(browserConfigured(store) ? [{ name: BROWSER_TOOL, title: "Use a web browser", app: "Browser", args: ["url", "goal", "values", "maxSteps"] }] : []),
           ...(enabledApis(store, i.workspace).length
             ? [{ name: API_REQUEST_TOOL, title: "Call a stored API", app: "APIs", args: ["api", "method", "path", "query", "body"], apis: enabledApis(store, i.workspace).map((a) => a.slug) }]
             : []),
@@ -548,10 +556,14 @@ export function createApp(
     store.audit(i.workspace, i.user, "skill.deleted", String(req.params.id));
     res.json({ ok: true });
   });
+  // The model catalog, from the database: names and prices only.
+  app.get("/api/models", permit("read"), (_req, res) => {
+    res.json({ updatedAt: catalogUpdatedAt(store), models: publicModels(store) });
+  });
   // AI models: credit, this month's spend, limits and recent usage.
   app.get("/api/ai", permit("read"), (_req, res) => {
     const w = identity(res).workspace;
-    res.json({ ...aiSummary(store, w), usage: store.list(w, "ai_usage").slice(0, 100), ledger: store.list(w, "ai_ledger").slice(0, 50) });
+    res.json({ ...aiSummary(store, w), usage: workspaceUsage(store, w, 100), ledger: store.list(w, "ai_ledger").slice(0, 50) });
   });
   // Buying credit: prices, a new order (an admin's action), and a check on an order after returning from Cashfree.
   // Behind Cloudflare, cf-ipcountry says where the visitor is: India pays in rupees, others in dollars.

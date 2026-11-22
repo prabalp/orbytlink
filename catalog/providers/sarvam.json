@@ -1,0 +1,39 @@
+{
+  "_about": "Sarvam Token Factory (https://www.sarvam.ai/token-factory). OpenAI-compatible chat at https://api.sarvam.ai/v2/chat/completions; the key goes in the api-subscription-key header (SARVAM_API_KEY in .env). Prices from https://docs.sarvam.ai/api/getting-started/pricing on 2026-11-22, in rupees per 1M tokens excluding GST; imported as dollars at USD_INR_RATE. sarvam-105b and deepseekv4.1-flash-1017 are introductory prices through the end of 2026. Gemma 4 is left out: Sarvam charges more for it than its list price. Sarvam Prism (a decision model) uses Sarvam's own /v2/systemone API, not /decisions, so it isn't added yet. Load with: npm run account -- catalog import catalog/providers/sarvam.json",
+  "items": [
+    {
+      "id": "sarvam/sarvam-105b",
+      "kind": "chat",
+      "name": "Sarvam 105B",
+      "provider": "sarvam",
+      "category": "Text & reasoning",
+      "info_url": "https://www.sarvam.ai/token-factory",
+      "list_in_inr": 10,
+      "list_out_inr": 25,
+      "routes": [{ "source": "sarvam", "protocol": "openai-chat", "endpoint": "https://api.sarvam.ai/v2/chat/completions", "ref": "sarvam-105b", "key_env": "SARVAM_API_KEY", "auth_header": "api-subscription-key", "cost_in_inr": 10, "cost_out_inr": 25 }]
+    },
+    {
+      "id": "sarvam/sarvam-105b-conversations",
+      "kind": "chat",
+      "name": "Sarvam 105B Conversations",
+      "provider": "sarvam",
+      "category": "Text & reasoning",
+      "info_url": "https://www.sarvam.ai/token-factory",
+      "list_in_inr": 10,
+      "list_out_inr": 25,
+      "routes": [{ "source": "sarvam", "protocol": "openai-chat", "endpoint": "https://api.sarvam.ai/v2/chat/completions", "ref": "sarvam-105b-conversations", "key_env": "SARVAM_API_KEY", "auth_header": "api-subscription-key", "cost_in_inr": 10, "cost_out_inr": 25 }]
+    },
+    {
+      "id": "deepseek/deepseek-v4.1-flash-1017",
+      "routes": [{ "source": "sarvam", "protocol": "openai-chat", "endpoint": "https://api.sarvam.ai/v2/chat/completions", "ref": "deepseekv4.1-flash-1017", "key_env": "SARVAM_API_KEY", "auth_header": "api-subscription-key", "cost_in_inr": 14, "cost_out_inr": 55 }]
+    },
+    {
+      "id": "zai/glm-5.3",
+      "routes": [{ "source": "sarvam", "protocol": "openai-chat", "endpoint": "https://api.sarvam.ai/v2/chat/completions", "ref": "glm5.3", "key_env": "SARVAM_API_KEY", "auth_header": "api-subscription-key", "cost_in_inr": 126, "cost_out_inr": 390 }]
+    },
+    {
+      "id": "zai/glm-5.3-flash",
+      "routes": [{ "source": "sarvam", "protocol": "openai-chat", "endpoint": "https://api.sarvam.ai/v2/chat/completions", "ref": "glm5.3-flash", "key_env": "SARVAM_API_KEY", "auth_header": "api-subscription-key", "cost_in_inr": 13.5, "cost_out_inr": 45 }]
+    }
+  ]
+}
