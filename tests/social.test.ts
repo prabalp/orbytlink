@@ -166,3 +166,45 @@ it("refuses a platform the server hasn't set up, and connect_app hands agents a 
   expect((connectApp(store, workspace, true, { app: "Pinterest" }) as any).results[0].status).toMatch(/isn't available/);
   expect((connectApp(store, workspace, true, { app: "twitter" }) as any).results[0].app).toBe("X");
 });
+
+it("connects Instagram through Facebook Login with the Facebook app's keys, one account per linked Page", async () => {
+  // No INSTAGRAM_* keys: Instagram borrows the Facebook app's.
+  expect(process.env.INSTAGRAM_CLIENT_ID).toBeUndefined();
+  reply = (url) => {
+    if (url.startsWith("https://graph.facebook.com/v23.0/oauth/access_token?")) {
+      const q = new URL(url).searchParams;
+      return Response.json(q.get("grant_type") === "fb_exchange_token" ? { access_token: "user-long", expires_in: 5184000 } : { access_token: "user-short", expires_in: 3600 });
+    }
+    if (url.startsWith("https://graph.facebook.com/v23.0/me/accounts")) {
+      expect(new URL(url).searchParams.get("fields")).toContain("instagram_business_account{id,username,name}");
+      return Response.json({
+        data: [
+          { id: "111", name: "Cafe", access_token: "page-1", instagram_business_account: { id: "17841", username: "cafe.ig", name: "Cafe IG" } },
+          { id: "222", name: "No Instagram", access_token: "page-2" },
+        ],
+      });
+    }
+    if (url.startsWith("https://graph.facebook.com/v23.0/17841/media")) return Response.json({ id: "container-1" });
+  };
+  const { url, done } = await connect("instagram");
+  expect(url.origin + url.pathname).toBe("https://www.facebook.com/v23.0/dialog/oauth");
+  expect(url.searchParams.get("client_id")).toBe("facebook-id");
+  expect(url.searchParams.get("scope")).toContain("instagram_content_publish");
+  expect(done.headers.location).toBe("/#channel-connected=instagram~1");
+  const apis = (await request("/api/state")).data.apis;
+  expect(apis).toHaveLength(1);
+  expect(apis[0]).toMatchObject({ name: "Instagram · Cafe IG", baseUrl: "https://graph.facebook.com/v23.0", channel: { provider: "instagram", accountId: "17841", handle: "@cafe.ig", expiresAt: null } });
+  const r = await request(`/api/apis/${apis[0].id}/request`, { method: "POST", path: "/17841/media", body: { image_url: "https://public.example/p.jpg", caption: "Hi" } });
+  expect(r.data.body).toEqual({ id: "container-1" });
+  const sent = calls.find((c) => c.url.startsWith("https://graph.facebook.com/v23.0/17841/media"))!;
+  expect(new URL(sent.url).searchParams.get("access_token")).toBe("page-1");
+});
+
+it("says what to do when no Page with a linked Instagram account was shared", async () => {
+  reply = (url) => {
+    if (url.startsWith("https://graph.facebook.com/v23.0/oauth/access_token?")) return Response.json({ access_token: "t", expires_in: 3600 });
+    if (url.startsWith("https://graph.facebook.com/v23.0/me/accounts")) return Response.json({ data: [{ id: "222", name: "Plain Page", access_token: "p" }] });
+  };
+  const { done } = await connect("instagram");
+  expect(done.headers.location).toBe("/#oauth-error=channel-empty");
+});

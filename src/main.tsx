@@ -1268,7 +1268,7 @@ const oauthErrors: Record<string, string> = {
   "oauth-cancelled": "Sign-in was cancelled. The app is not connected.",
   "oauth-forbidden": "Only organization admins can connect apps.",
   "oauth-failed": "Sign-in could not be completed. Try Connect again.",
-  "channel-empty": "Nothing was shared. Connect again and choose at least one Page or channel.",
+  "channel-empty": "Nothing was shared. Connect again and choose at least one Page or channel. For Instagram, choose the Page your Instagram account is linked to.",
 };
 const googleErrors: Record<string, string> = {
   "google-not-configured": "Google sign-in is not set up on this server yet. Use email and password.",

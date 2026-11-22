@@ -315,7 +315,7 @@ export function configureOAuthCallback(app: Express, store: Store, key: string, 
         return res.redirect(`/#channel-connected=${encodeURIComponent(flow.channel)}~${rows.length}`);
       } catch (error) {
         console.warn(`[social] ${flow.channel} sign-in failed: ${(error as Error).message} ${(error as any).oauthError || ""}`);
-        return fail(/No Facebook Pages|no YouTube channel/.test((error as Error).message) ? "channel-empty" : "oauth-failed");
+        return fail(/No Facebook Pages|no YouTube channel|No Instagram account/.test((error as Error).message) ? "channel-empty" : "oauth-failed");
       }
     }
     try {

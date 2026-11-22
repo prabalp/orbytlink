@@ -17,6 +17,8 @@ export type Provider = {
   name: string;
   // .env names: <ENV>_CLIENT_ID and <ENV>_CLIENT_SECRET.
   env: string;
+  // Keys to fall back on when this platform's own aren't set (Instagram signs in with the Facebook app).
+  envFallback?: string;
   authorizeUrl: string;
   tokenUrl: string;
   tokenMethod?: "POST" | "GET";
@@ -50,8 +52,8 @@ const linkedinVersion = () => {
   return `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 };
 
-export const clientId = (p: Provider) => process.env[`${p.env}_CLIENT_ID`] || "";
-const clientSecret = (p: Provider) => process.env[`${p.env}_CLIENT_SECRET`] || "";
+export const clientId = (p: Provider) => process.env[`${p.env}_CLIENT_ID`] || (p.envFallback ? process.env[`${p.envFallback}_CLIENT_ID`] : "") || "";
+const clientSecret = (p: Provider) => process.env[`${p.env}_CLIENT_SECRET`] || (p.envFallback ? process.env[`${p.envFallback}_CLIENT_SECRET`] : "") || "";
 export const providerConfigured = (p: Provider) => !!clientId(p) && !!clientSecret(p);
 
 const fail = (message: string, status = 409) => Object.assign(new Error(message), { status });
@@ -239,31 +241,40 @@ Comments: GET /<post-id>/comments; reply with POST /<post-id or comment-id>/comm
 Insights: GET /<page-id>/insights with metric (e.g. page_post_engagements) and period=day.`,
   },
   {
+    // Instagram through Facebook Login (Meta's "Instagram API with Facebook Login"): one Facebook
+    // sign-in, with the Facebook app's keys, reaches every Instagram professional account linked to a
+    // Page the person manages. Each linked account connects on its own and is called with its Page's
+    // token, which doesn't expire.
     id: "instagram",
     name: "Instagram",
     env: "INSTAGRAM",
-    authorizeUrl: "https://www.instagram.com/oauth/authorize",
-    tokenUrl: "https://api.instagram.com/oauth/access_token",
+    envFallback: "FACEBOOK",
+    authorizeUrl: `https://www.facebook.com/${graph}/dialog/oauth`,
+    tokenUrl: `https://graph.facebook.com/${graph}/oauth/access_token`,
+    tokenMethod: "GET",
     tokenAuth: "body",
-    scopes: ["instagram_business_basic", "instagram_business_content_publish", "instagram_business_manage_comments", "instagram_business_manage_insights"],
+    scopes: ["instagram_basic", "instagram_content_publish", "instagram_manage_comments", "instagram_manage_insights", "pages_show_list", "pages_read_engagement", "business_management"],
     scopeSep: ",",
     pkce: false,
-    hosts: ["www.instagram.com", "api.instagram.com", "graph.instagram.com"],
-    api: { baseUrl: `https://graph.instagram.com/${graph}`, auth: "query", authName: "access_token", bodyFormat: "form" },
+    hosts: ["www.facebook.com", "graph.facebook.com"],
+    api: { baseUrl: `https://graph.facebook.com/${graph}`, auth: "query", authName: "access_token", bodyFormat: "form" },
     async longLived(t, p) {
-      const j = await getJson(p, `https://graph.instagram.com/access_token?grant_type=ig_exchange_token&client_secret=${encodeURIComponent(clientSecret(p))}&access_token=${encodeURIComponent(t.access)}`);
-      return { ...readTokens(j), extra: t.extra };
+      return tokenRequest(p, { grant_type: "fb_exchange_token", fb_exchange_token: t.access });
     },
-    refresh: "instagram",
+    refresh: "none",
     async accounts(t) {
-      const me = await getJson(this, `https://graph.instagram.com/${graph}/me?fields=user_id,username,name&access_token=${encodeURIComponent(t.access)}`);
-      const id = String(me.user_id || me.id);
-      return [{ id, name: String(me.name || me.username || "Instagram account"), handle: me.username ? `@${me.username}` : undefined, note: `Your Instagram user id is ${id}; use it in paths such as /${id}/media.` }];
+      const r = await getJson(this, `https://graph.facebook.com/${graph}/me/accounts?fields=id,name,access_token,instagram_business_account%7Bid,username,name%7D&limit=100&access_token=${encodeURIComponent(t.access)}`);
+      return (r.data || [])
+        .filter((pg: any) => pg?.access_token && pg?.instagram_business_account?.id)
+        .map((pg: any) => {
+          const ig = pg.instagram_business_account;
+          return { id: String(ig.id), name: String(ig.name || ig.username || "Instagram account"), handle: ig.username ? `@${ig.username}` : undefined, token: String(pg.access_token), expiresAt: null, note: `Instagram user id ${ig.id}, linked to the Page "${pg.name}"; use it in paths such as /${ig.id}/media.` };
+        });
     },
-    docsUrl: "https://developers.facebook.com/docs/instagram-platform/content-publishing",
-    note: "Needs a professional (business or creator) account. Publish photos, reels and carousels, reply to comments and read insights.",
+    docsUrl: "https://developers.facebook.com/docs/instagram-platform/instagram-api-with-facebook-login/content-publishing",
+    note: "A professional (business or creator) account linked to a Facebook Page you manage. Publish photos, reels and carousels, reply to comments and read insights.",
     endpoints: [
-      { method: "GET", path: "/me", summary: "Your account (fields=user_id,username,name,followers_count,media_count)" },
+      { method: "GET", path: "/{ig-user-id}", summary: "Your account (fields=username,name,followers_count,media_count)" },
       { method: "POST", path: "/{ig-user-id}/media", summary: "Create a media container (image_url or video_url, caption)" },
       { method: "POST", path: "/{ig-user-id}/media_publish", summary: "Publish a container (creation_id)" },
       { method: "GET", path: "/{container-id}", summary: "Container status (fields=status_code)" },
@@ -272,7 +283,7 @@ Insights: GET /<page-id>/insights with metric (e.g. page_post_engagements) and p
       { method: "POST", path: "/{comment-id}/replies", summary: "Reply to a comment (message)" },
       { method: "GET", path: "/{media-id}/insights", summary: "Post insights (metric=reach,likes,comments,saved,shares)" },
     ],
-    guide: `Publishing is two calls. Bodies are form fields; media must be at a public URL.
+    guide: `Publishing is two calls. Bodies are form fields; media must be at a public URL. Use your Instagram user id (in this account's description), not /me.
 1. POST /<ig-user-id>/media with {"image_url":"https://public.example/photo.jpg","caption":"Text #tags"}. For a reel: {"media_type":"REELS","video_url":"https://...mp4","caption":"..."}.
 2. For video, poll GET /<container-id> with fields=status_code until FINISHED.
 3. POST /<ig-user-id>/media_publish with {"creation_id":"<container id>"}.
@@ -516,7 +527,14 @@ export async function finishChannel(store: Store, w: string, providerId: string,
   let t = await tokenRequest(p, { grant_type: "authorization_code", code, redirect_uri: redirect, ...(p.pkce ? { code_verifier: verifier } : {}) });
   if (p.longLived) t = await p.longLived(t, p);
   const accounts = await p.accounts.call(p, t);
-  if (!accounts.length) throw fail(p.id === "facebook" ? "No Facebook Pages were shared. Reconnect and choose at least one Page." : `${p.name} returned no account.`);
+  if (!accounts.length)
+    throw fail(
+      p.id === "facebook"
+        ? "No Facebook Pages were shared. Reconnect and choose at least one Page."
+        : p.id === "instagram"
+          ? "No Instagram account linked to a Facebook Page was shared. Link the Instagram account to a Page you manage, then reconnect and choose that Page."
+          : `${p.name} returned no account.`,
+    );
   return accounts.map((a) => saveChannel(store, w, p, a, t));
 }
 
