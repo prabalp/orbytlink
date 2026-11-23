@@ -49,7 +49,7 @@ else {
   if (dry) console.log("(dry run: nothing committed)");
   else {
     git("add", "--", ...BLOG_PATHS);
-    const posts = git("diff", "--cached", "--name-only", "--", "landing/blog-src").split("\n").filter(Boolean).map((f) => f.replace(/^landing\/blog-src\//, "").replace(/\.md$/, ""));
+    const posts = git("diff", "--cached", "--name-only", "--", "landing/blog-src").split("\n").filter((f) => /^landing\/blog-src\/[^/]+\.md$/.test(f)).map((f) => f.replace(/^landing\/blog-src\//, "").replace(/\.md$/, ""));
     git("commit", "-m", posts.length ? `Blog: ${posts.join(", ")}` : "Blog: rebuild");
   }
 }
