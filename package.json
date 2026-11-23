@@ -16,7 +16,9 @@
     "test:e2e": "playwright test",
     "account": "node --env-file-if-exists=.env --import tsx server/account.ts",
     "account:production": "NODE_ENV=production node --env-file-if-exists=.env build/server/account.js",
-    "extension": "node scripts/pack-extension.mjs"
+    "extension": "node scripts/pack-extension.mjs",
+    "blog": "node scripts/build-blog.mjs",
+    "blog:publish": "node scripts/publish-blog.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.2",
