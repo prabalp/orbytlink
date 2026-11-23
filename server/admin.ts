@@ -274,7 +274,23 @@ function overview(store: Store, days: number) {
     creditHeld: credit.micro,
     providers,
     instant,
+    signups: signups(store, days),
     alerts,
+  };
+}
+// New accounts, with where they came from (see signup-source.ts). Accounts made before the source
+// was recorded count as "not recorded".
+function signups(store: Store, days: number) {
+  const from = Date.now() - days * 86_400_000;
+  const rows = (sql: string) => store.db.prepare(sql).all(from) as { key: string; n: number }[];
+  const total = (store.db.prepare("SELECT COUNT(*) AS n FROM accounts").get() as { n: number }).n;
+  const inRange = (store.db.prepare("SELECT COUNT(*) AS n FROM accounts WHERE created_at >= ?").get(from) as { n: number }).n;
+  return {
+    total,
+    inRange,
+    byDay: rows("SELECT strftime('%Y-%m-%d', created_at/1000, 'unixepoch') AS key, COUNT(*) AS n FROM accounts WHERE created_at >= ? GROUP BY key ORDER BY key DESC"),
+    byPage: rows("SELECT COALESCE(json_extract(signup_source,'$.lp'), 'Not recorded') AS key, COUNT(*) AS n FROM accounts WHERE created_at >= ? GROUP BY key ORDER BY n DESC, key LIMIT 25"),
+    byChannel: rows("SELECT COALESCE(json_extract(signup_source,'$.source'), json_extract(signup_source,'$.ref'), CASE WHEN signup_source IS NULL THEN 'Not recorded' ELSE 'Direct' END) AS key, COUNT(*) AS n FROM accounts WHERE created_at >= ? GROUP BY key ORDER BY n DESC, key LIMIT 25"),
   };
 }
 function workspaces(store: Store, q: string) {

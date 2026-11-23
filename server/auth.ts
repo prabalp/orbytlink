@@ -17,6 +17,7 @@ import { gatewayPermissions, type Identity } from "./schema.js";
 import { identityFor, initializeOrgTables } from "./orgs.js";
 import type { ToolMode } from "./gateway.js";
 import { configureGoogleAuth, googleConfigured } from "./google.js";
+import { cleanSource } from "./signup-source.js";
 const scryptAsync = (password: string, salt: string) =>
   new Promise<Buffer>((resolve, reject) =>
     scrypt(
@@ -91,6 +92,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS tokens_id ON access_tokens(id);`);
   const accountColumns = (
     store.db.prepare("PRAGMA table_info(accounts)").all() as { name: string }[]
   ).map((c) => c.name);
+  if (!accountColumns.includes("signup_source")) store.db.exec("ALTER TABLE accounts ADD COLUMN signup_source TEXT");
   if (!accountColumns.includes("google_sub"))
     store.db.exec(`ALTER TABLE accounts ADD COLUMN google_sub TEXT;
 CREATE UNIQUE INDEX IF NOT EXISTS accounts_google ON accounts(google_sub) WHERE google_sub IS NOT NULL;`);
@@ -110,7 +112,7 @@ ALTER TABLE access_tokens ADD COLUMN access_expires INTEGER;
 CREATE UNIQUE INDEX IF NOT EXISTS tokens_refresh ON access_tokens(refresh_hash) WHERE refresh_hash IS NOT NULL;`);
   initializeOrgTables(store);
 }
-export async function createAccount(store: Store, input: unknown) {
+export async function createAccount(store: Store, input: unknown, source: string | null = null) {
   const data = signupSchema.parse(input),
     hash = await passwordHash(data.password),
     id = randomUUID(),
@@ -118,9 +120,9 @@ export async function createAccount(store: Store, input: unknown) {
   return store.transaction(() => {
     store.db
       .prepare(
-        "INSERT INTO accounts(id,email,name,workspace,password_hash,created_at) VALUES(?,?,?,?,?,?)",
+        "INSERT INTO accounts(id,email,name,workspace,password_hash,created_at,signup_source) VALUES(?,?,?,?,?,?,?)",
       )
-      .run(id, data.email, data.name, workspace, hash, Date.now());
+      .run(id, data.email, data.name, workspace, hash, Date.now(), source);
     store.seed(workspace);
     store.audit(workspace, data.email, "account.created", id);
     return store.db
@@ -402,7 +404,7 @@ export function configureEmailAuth(app: Express, store: Store) {
         return;
       }
       try {
-        const account = await createAccount(store, result.data);
+        const account = await createAccount(store, result.data, cleanSource(req.body?.source));
         finishLogin(req, res, next, { id: account.id });
       } catch {
         res.status(400).json({

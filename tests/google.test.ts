@@ -24,18 +24,18 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-async function start() {
-  const r = await inject(app, { url: "/api/auth/google" });
+async function start(url = "/api/auth/google") {
+  const r = await inject(app, { url });
   const location = new URL(String(r.headers.location));
   return { r, location, cookie: cookieOf(r, "orbyt_google")! };
 }
 
 // One signing key for the whole file: the gateway caches Google's key set, as it should.
 const keys = generateKeyPair("RS256");
-async function finish(claims: Record<string, unknown>, tamper = false) {
+async function finish(claims: Record<string, unknown>, tamper = false, startUrl?: string) {
   const { privateKey, publicKey } = await keys;
   const jwk = { ...(await exportJWK(publicKey)), kid: "k1", alg: "RS256" };
-  const { location, cookie } = await start();
+  const { location, cookie } = await start(startUrl);
   const idToken = await new SignJWT({ nonce: location.searchParams.get("nonce"), ...claims })
     .setProtectedHeader({ alg: "RS256", kid: "k1" })
     .setIssuer("https://accounts.google.com")
@@ -108,4 +108,15 @@ it("rejects unverified emails, forged state, and closed registration", async () 
   } finally {
     delete process.env.ALLOW_SIGNUP;
   }
+});
+
+it("records where a new Google account came from, and ignores a source that isn't clean", async () => {
+  const src = encodeURIComponent(JSON.stringify({ lp: "/blog/claude-mcp-sales-prospecting-one-endpoint/", ref: "google.com", source: "<script>x</script>" }));
+  const done = await finish({ sub: "g-1", email: "new@example.invalid", email_verified: true, name: "New Person" }, false, `/api/auth/google?src=${src}`);
+  expect(done.headers.location).toBe("/#connections");
+  const row = store.db.prepare("SELECT signup_source FROM accounts WHERE email=?").get("new@example.invalid") as { signup_source: string };
+  expect(JSON.parse(row.signup_source)).toEqual({ lp: "/blog/claude-mcp-sales-prospecting-one-endpoint/", ref: "google.com" });
+  const none = await finish({ sub: "g-2", email: "plain@example.invalid", email_verified: true, name: "Plain" }, false, "/api/auth/google?src=not-json");
+  expect(none.headers.location).toBe("/#connections");
+  expect((store.db.prepare("SELECT signup_source FROM accounts WHERE email=?").get("plain@example.invalid") as any).signup_source).toBeNull();
 });

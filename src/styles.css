@@ -982,6 +982,7 @@ a.secondary { border: 1px solid var(--input); color: var(--foreground); backgrou
 a.secondary:hover { background: var(--accent); }
 .admin-who { padding: 4px 10px 0; color: var(--muted-foreground); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .admin-stats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.admin-stats-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .admin-stat { display: flex; flex-direction: column; gap: 6px; padding: 16px; border-right: 1px solid var(--border); min-width: 0; }
 .admin-stat:last-child { border-right: 0; }
 .admin-stat small { color: var(--muted-foreground); font-size: 12px; }

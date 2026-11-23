@@ -3,6 +3,7 @@ import { createRemoteJWKSet, jwtVerify } from "jose";
 import type { Express, Request, Response, RequestHandler } from "express";
 import type { Store } from "./store.js";
 import type { Account } from "./auth.js";
+import { cleanSource } from "./signup-source.js";
 
 // Google sign-in (OpenID Connect, authorization code + PKCE). The session cookie is
 // SameSite=Strict, so it is not sent when Google redirects back; the flow's state,
@@ -40,9 +41,17 @@ export function configureGoogleAuth(
     res.redirect(`/#auth-error=${code}`);
   };
 
-  app.get("/api/auth/google", limit, (_req, res) => {
+  app.get("/api/auth/google", limit, (req, res) => {
     if (!googleConfigured()) return fail(res, "google-not-configured");
+    // Where this person came from (the page that sent them), carried through Google's redirect in the signed cookie.
+    let src: string | null = null;
+    try {
+      src = typeof req.query.src === "string" ? cleanSource(JSON.parse(req.query.src.slice(0, 1000))) : null;
+    } catch {
+      // not valid JSON: no source
+    }
     const flow = {
+      src,
       state: b64(randomBytes(32)),
       nonce: b64(randomBytes(32)),
       verifier: b64(randomBytes(48)),
@@ -79,7 +88,7 @@ export function configureGoogleAuth(
     if (!payload || !mac || mac.length !== expected.length || !timingSafeEqual(Buffer.from(mac), Buffer.from(expected)))
       return fail(res, "google-failed");
     const flow = JSON.parse(Buffer.from(payload, "base64url").toString()) as {
-      state: string; nonce: string; verifier: string; exp: number;
+      state: string; nonce: string; verifier: string; exp: number; src?: string | null;
     };
     if (flow.exp < Date.now() || req.query.state !== flow.state || typeof req.query.code !== "string")
       return fail(res, req.query.error === "access_denied" ? "google-cancelled" : "google-failed");
@@ -111,7 +120,7 @@ export function configureGoogleAuth(
         sub: claims.sub,
         email: claims.email.trim().toLowerCase(),
         name: typeof claims.name === "string" ? claims.name : "",
-      });
+      }, flow.src ?? null);
       if (typeof account === "string") return fail(res, account);
       res.clearCookie(COOKIE, { path: "/api/auth/google" });
       login(req, res, account.id, (error) => {
@@ -125,7 +134,7 @@ export function configureGoogleAuth(
 }
 
 // Google accounts are matched by their stable subject; a verified email links an existing account once.
-function findOrCreate(store: Store, profile: { sub: string; email: string; name: string }): Account | string {
+function findOrCreate(store: Store, profile: { sub: string; email: string; name: string }, source: string | null = null): Account | string {
   return store.transaction(() => {
     const bySub = store.db.prepare("SELECT * FROM accounts WHERE google_sub=?").get(profile.sub) as Account | undefined;
     if (bySub) return bySub.disabled ? "account-disabled" : bySub;
@@ -146,9 +155,9 @@ function findOrCreate(store: Store, profile: { sub: string; email: string; name:
     // No usable password: the hash has no scrypt parameters, so password sign-in always fails.
     store.db
       .prepare(
-        "INSERT INTO accounts(id,email,name,workspace,password_hash,created_at,google_sub) VALUES(?,?,?,?,?,?,?)",
+        "INSERT INTO accounts(id,email,name,workspace,password_hash,created_at,google_sub,signup_source) VALUES(?,?,?,?,?,?,?,?)",
       )
-      .run(id, profile.email, name, workspace, `oauth:${b64(randomBytes(32))}`, Date.now(), profile.sub);
+      .run(id, profile.email, name, workspace, `oauth:${b64(randomBytes(32))}`, Date.now(), profile.sub, source);
     store.seed(workspace);
     store.audit(workspace, profile.email, "account.created", "google");
     return store.db.prepare("SELECT * FROM accounts WHERE id=?").get(id) as Account;

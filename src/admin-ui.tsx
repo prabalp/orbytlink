@@ -187,6 +187,7 @@ function OverviewPage({ subtitle }: { subtitle: string }) {
             <Stat label="Failed attempts" value={t.failed.toLocaleString()} note="moved to another provider or refunded" />
             <Stat label="Credit held" value={money(data.creditHeld)} note="workspace balances, owed in service" />
           </section>
+          {data.signups && <SignupsPanel signups={data.signups} days={days} />}
           {data.alerts.length > 0 && (
             <section className="panel">
               <div className="section-heading"><h2>Needs attention</h2><span className="count">{data.alerts.length}</span></div>
@@ -202,6 +203,35 @@ function OverviewPage({ subtitle }: { subtitle: string }) {
           <ProviderBalances providers={data.providers} instant={data.instant || []} />
         </>
       )}
+    </>
+  );
+}
+// New accounts, and which landing page or channel they came from (accounts made before this was recorded show as "Not recorded").
+function SignupsPanel({ signups, days }: { signups: Data; days: number }) {
+  const table = (title: string, label: string, rows: { key: string; n: number }[]) => (
+    <section className="panel">
+      <div className="section-heading"><h2>{title}</h2><span className="count">{rows.length}</span></div>
+      {rows.length ? (
+        <div className="table-scroll">
+          <table>
+            <thead><tr><th>{label}</th><th>Signups</th></tr></thead>
+            <tbody>{rows.map((r) => <tr key={r.key}><td><strong className="admin-key">{r.key}</strong></td><td>{r.n.toLocaleString()}</td></tr>)}</tbody>
+          </table>
+        </div>
+      ) : <Empty icon={ChartLine} title="No signups in this period">New accounts appear here.</Empty>}
+    </section>
+  );
+  return (
+    <>
+      <section className="panel admin-stats admin-stats-2">
+        <Stat label={`Signups, ${days} days`} value={signups.inRange.toLocaleString()} note="new accounts" />
+        <Stat label="All time" value={signups.total.toLocaleString()} note="accounts" />
+      </section>
+      <div className="admin-grid">
+        {table("Signups by day", "Day", signups.byDay)}
+        {table("Signups by landing page", "Page", signups.byPage)}
+      </div>
+      {table("Signups by channel", "Channel", signups.byChannel)}
     </>
   );
 }

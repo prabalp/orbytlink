@@ -54,6 +54,7 @@ import { argSource, describeSchedule, ResultView, RunFields, StepOptions, stepCh
 import { AiCredit, callable, ModelDetail, type ModelRow } from "./ai-ui";
 import { LibraryView } from "./library-ui";
 import { SkillEditor } from "./skill-editor";
+import { googleSignInUrl, signupSource } from "./signup-source";
 import { apiCategories, apiPresets, type ApiPreset } from "./api-presets";
 import "./styles.css";
 // The operator's admin portal, loaded only when an operator opens /admin.
@@ -523,7 +524,7 @@ export function App() {
         error={error}
         onSubmit={(data, register) =>
           act(
-            () => api(register ? "/auth/register" : "/auth/login", data),
+            () => api(register ? "/auth/register" : "/auth/login", register ? { ...data, source: signupSource() } : data),
             register ? "Your gateway is ready" : "Signed in",
           )
         }
@@ -1426,7 +1427,7 @@ function EmailLogin({
             )
           )}
           <div className="auth-divider"><span>Or</span></div>
-          <a className="auth-social" href="/api/auth/google" aria-label="Continue with Google">
+          <a className="auth-social" href={googleSignInUrl()} aria-label="Continue with Google">
             <GoogleIcon />
             <span>Continue with Google</span>
           </a>
