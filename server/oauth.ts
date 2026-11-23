@@ -4,7 +4,7 @@ import type { Store, Row } from "./store.js";
 import { safeEndpoint, boundedText } from "./adapters.js";
 import { roleIn } from "./orgs.js";
 import { oauthSchema, type Identity } from "./schema.js";
-import { authorizeUrl, finishChannel, providerById, providerConfigured } from "./social.js";
+import { authorizeUrl, channelChoices, finishChannel, providerById, providerConfigured, saveChosen } from "./social.js";
 
 // OAuth sign-in to upstream apps (Google, Slack, Notion, Linear…): authorization code with
 // PKCE. Tokens are encrypted in the vault next to the connection's other credentials and
@@ -339,6 +339,10 @@ export function configureOAuthCallback(app: Express, store: Store, key: string, 
     if (flow.channel) {
       try {
         const rows = await finishChannel(store, flow.w, flow.channel, req.query.code, redirectUri(), flow.verifier);
+        if (!Array.isArray(rows)) {
+          res.clearCookie(COOKIE, { path: "/api/oauth" });
+          return res.redirect(`/#channel-choose=${encodeURIComponent(rows.pending)}`);
+        }
         for (const r of rows) store.audit(flow.w, r.name, "channel.connected", r.name);
         res.clearCookie(COOKIE, { path: "/api/oauth" });
         return res.redirect(`/#channel-connected=${encodeURIComponent(flow.channel)}~${rows.length}`);
@@ -442,6 +446,27 @@ export function configureOAuthRoutes(app: Express, store: Store, key: string, pe
     res.cookie(COOKIE, `${payload}.${sign(key, payload)}`, { httpOnly: true, secure: production, sameSite: "lax", maxAge: LIFETIME, path: "/api/oauth" });
     store.audit(identity.workspace, identity.user, "channel.connect-started", p.name);
     res.json({ url: authorizeUrl(p, redirectUri(), flow.state, b64(createHash("sha256").update(flow.verifier).digest())) });
+  });
+
+  // A sign-in that brought several accounts: which ones to connect.
+  app.get("/api/channels/pending/:id", permit("configure"), (req, res) => {
+    const { identity } = caller(req);
+    try {
+      res.json(channelChoices(identity.workspace, String(req.params.id)));
+    } catch (error) {
+      throw Object.assign(new Error((error as Error).message), { status: 410 });
+    }
+  });
+  app.post("/api/channels/pending/:id", permit("configure"), (req, res) => {
+    const { identity } = caller(req);
+    const chosen = Array.isArray(req.body?.accounts) ? req.body.accounts.filter((a: unknown) => typeof a === "string").slice(0, 200) : [];
+    try {
+      const rows = saveChosen(store, identity.workspace, String(req.params.id), chosen);
+      for (const r of rows) store.audit(identity.workspace, r.name, "channel.connected", r.name);
+      res.json({ connected: rows.length });
+    } catch (error) {
+      throw Object.assign(new Error((error as Error).message), { status: 400 });
+    }
   });
 
   app.post("/api/connections/:id/oauth/disconnect", permit("configure"), (req, res) => {

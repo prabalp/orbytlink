@@ -102,6 +102,29 @@ it("connects a LinkedIn account in one sign-in and calls its API with the token,
   expect((await request("/api/state")).data.apis).toHaveLength(1);
 });
 
+it("asks which Search Console properties to connect when a sign-in brings several, and connects only those", async () => {
+  process.env.YOUTUBE_CLIENT_ID = "yt-id";
+  process.env.YOUTUBE_CLIENT_SECRET = "yt-secret";
+  reply = (url) => {
+    if (url === "https://oauth2.googleapis.com/token") return Response.json({ access_token: "g-token", refresh_token: "g-refresh", expires_in: 3600 });
+    if (url === "https://www.googleapis.com/webmasters/v3/sites")
+      return Response.json({ siteEntry: [{ siteUrl: "sc-domain:one.example", permissionLevel: "siteOwner" }, { siteUrl: "sc-domain:two.example", permissionLevel: "siteFullUser" }] });
+  };
+  const { done } = await connect("google-search-console");
+  const id = decodeURIComponent(String(done.headers.location).match(/^\/#channel-choose=(.+)$/)![1]);
+  expect((await request("/api/state")).data.apis).toHaveLength(0);
+  const choices = (await request(`/api/channels/pending/${id}`)).data;
+  expect(choices.accounts.map((a: any) => a.id)).toEqual(["sc-domain:one.example", "sc-domain:two.example"]);
+  expect(JSON.stringify(choices)).not.toContain("g-token");
+  expect((await request(`/api/channels/pending/${id}`, { accounts: [] })).status).toBe(400);
+  expect((await request(`/api/channels/pending/${id}`, { accounts: ["sc-domain:two.example"] })).data).toEqual({ connected: 1 });
+  const apis = (await request("/api/state")).data.apis;
+  expect(apis.map((a: any) => a.name)).toEqual(["Google Search Console · sc-domain:two.example"]);
+  expect((await request(`/api/channels/pending/${id}`)).status).toBe(410);
+  delete process.env.YOUTUBE_CLIENT_ID;
+  delete process.env.YOUTUBE_CLIENT_SECRET;
+});
+
 it("turns a Facebook sign-in into one account per Page, each with its own Page token", async () => {
   reply = (url) => {
     if (url.startsWith("https://graph.facebook.com/v23.0/oauth/access_token?")) {

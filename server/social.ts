@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { isIP } from "node:net";
 import { lookup } from "node:dns/promises";
 import type { Store, Row } from "./store.js";
@@ -34,6 +35,8 @@ export type Provider = {
   // A short-lived token traded for a long-lived one, where the platform has that step.
   longLived?: (t: Tokens, p: Provider) => Promise<Tokens>;
   refresh: "standard" | "instagram" | "threads" | "none";
+  // After sign-in with several accounts, ask which to connect instead of connecting them all.
+  pick?: boolean;
   accounts: (t: Tokens) => Promise<Account[]>;
   docsUrl: string;
   guide: string;
@@ -381,6 +384,7 @@ Uploading video files needs a binary upload, which this connection can't do.`,
     hosts: ["accounts.google.com", "oauth2.googleapis.com", "www.googleapis.com"],
     api: { baseUrl: "https://www.googleapis.com/webmasters/v3", auth: "bearer", bodyFormat: "json" },
     refresh: "standard",
+    pick: true,
     async accounts(t) {
       const r = await getJson(this, "https://www.googleapis.com/webmasters/v3/sites", t.access);
       const sites: { siteUrl?: string; permissionLevel?: string }[] = Array.isArray(r.siteEntry) ? r.siteEntry : [];
@@ -560,7 +564,7 @@ export function authorizeUrl(p: Provider, redirect: string, state: string, chall
 }
 
 // The code becomes tokens, then one stored API per account (a Facebook login brings each Page).
-export async function finishChannel(store: Store, w: string, providerId: string, code: string, redirect: string, verifier: string) {
+export async function finishChannel(store: Store, w: string, providerId: string, code: string, redirect: string, verifier: string): Promise<Row[] | { pending: string }> {
   const p = providerById(providerId);
   if (!p || !providerConfigured(p)) throw fail("This platform isn't set up on this server.");
   let t = await tokenRequest(p, { grant_type: "authorization_code", code, redirect_uri: redirect, ...(p.pkce ? { code_verifier: verifier } : {}) });
@@ -574,7 +578,40 @@ export async function finishChannel(store: Store, w: string, providerId: string,
           ? "No Instagram account linked to a Facebook Page was shared. Link the Instagram account to a Page you manage, then reconnect and choose that Page."
           : `${p.name} returned no account.`,
     );
+  if (p.pick && accounts.length > 1) {
+    const now = Date.now();
+    for (const [k, v] of pendingPicks) if (v.exp < now) pendingPicks.delete(k);
+    const id = randomUUID();
+    pendingPicks.set(id, { w, provider: p.id, accounts, t, exp: now + PICK_LIFETIME });
+    return { pending: id };
+  }
   return accounts.map((a) => saveChannel(store, w, p, a, t));
+}
+
+// A sign-in that brought several accounts waits here, in memory only, until an admin chooses
+// which to connect. A restart or ten minutes drops it and they connect again.
+const PICK_LIFETIME = 10 * 60 * 1000;
+const pendingPicks = new Map<string, { w: string; provider: string; accounts: Account[]; t: Tokens; exp: number }>();
+const pendingFor = (w: string, id: string) => {
+  const v = pendingPicks.get(id);
+  if (!v || v.w !== w || v.exp < Date.now()) {
+    pendingPicks.delete(id);
+    throw fail("That sign-in has expired. Connect again.");
+  }
+  return v;
+};
+export function channelChoices(w: string, id: string) {
+  const v = pendingFor(w, id);
+  const p = providerById(v.provider)!;
+  return { provider: p.id, name: p.name, accounts: v.accounts.map((a) => ({ id: a.id, name: a.name, note: a.note })) };
+}
+export function saveChosen(store: Store, w: string, id: string, chosen: string[]) {
+  const v = pendingFor(w, id);
+  const p = providerById(v.provider)!;
+  const picked = v.accounts.filter((a) => chosen.includes(a.id));
+  if (!picked.length) throw fail("Choose at least one.");
+  pendingPicks.delete(id);
+  return picked.map((a) => saveChannel(store, w, p, a, v.t));
 }
 
 function saveChannel(store: Store, w: string, p: Provider, a: Account, t: Tokens) {

@@ -431,6 +431,17 @@ export function App() {
     const done = location.hash.match(/^#oauth-connected=([A-Za-z0-9-]+)$/);
     const failed = location.hash.match(/^#oauth-error=([a-z-]+)(?:~(.*))?$/);
     const channel = location.hash.match(/^#channel-connected=([a-z-]+)~(\d+)$/);
+    const choose = location.hash.match(/^#channel-choose=([0-9a-f-]{36})$/);
+    if (choose) {
+      oauthHandled.current = true;
+      history.replaceState(null, "", "#connections");
+      setPage("connections");
+      api(`/channels/pending/${choose[1]}`).then(
+        (c) => setDialog({ type: "channel-choose", data: { id: choose[1], ...c } }),
+        (e) => setError((e as Error).message),
+      );
+      return;
+    }
     if (channel) {
       oauthHandled.current = true;
       history.replaceState(null, "", "#connections");
@@ -869,6 +880,7 @@ export function App() {
             api: dialog.data?.id ? `Edit ${dialog.data.name}` : dialog.data?._preset ? `Connect ${dialog.data.name}` : "Add API",
             "api-detail": dialog.data?.name,
             "delete-api": "Remove API",
+            "channel-choose": `Choose what to connect · ${dialog.data?.name}`,
             workflow: dialog.data?.proposal ? "Review proposed fix" : dialog.data?.id ? "Edit workflow" : dialog.data?.template ? "New workflow from template" : "New workflow",
             run: `Run · ${dialog.data?.name}`,
             "run-detail": `Run · ${dialog.data?.workflow}`,
@@ -963,6 +975,16 @@ export function App() {
               onCancel={close}
               onSave={(disabledTools: string[]) =>
                 act(() => api(`/connections/${dialog.data!.id}/tools`, { disabledTools }, "PUT"), "Tool access updated")
+              }
+            />
+          )}
+          {dialog.type === "channel-choose" && (
+            <ChannelChoose
+              data={dialog.data!}
+              busy={busy}
+              onCancel={close}
+              onSave={(accounts: string[]) =>
+                act(() => api(`/channels/pending/${dialog.data!.id}`, { accounts }).then((r) => ({ toast: `${r.connected} ${dialog.data!.name} ${r.connected === 1 ? "account" : "accounts"} connected.` })))
               }
             />
           )}
@@ -2819,6 +2841,35 @@ function ToolsForm({ data: c, busy, onSave, onCancel }: any) {
         {!tools.length && <p className="muted">No tools match.</p>}
       </div>
       <FormActions busy={busy} onCancel={onCancel} label="Save tool access" />
+    </form>
+  );
+}
+// A sign-in that brought several accounts (Search Console properties): connect only the chosen ones.
+function ChannelChoose({ data, busy, onCancel, onSave }: { data: Data; busy: boolean; onCancel: () => void; onSave: (accounts: string[]) => void }) {
+  const accounts = data.accounts as { id: string; name: string; note: string }[];
+  const [on, setOn] = useState<Set<string>>(new Set());
+  const toggle = (id: string) => {
+    const next = new Set(on);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setOn(next);
+  };
+  return (
+    <form className="form-body" onSubmit={(e) => { e.preventDefault(); onSave([...on]); }}>
+      <div className="toolbar">
+        <span>{on.size} of {accounts.length} selected</span>
+        <button type="button" className="text-button" onClick={() => setOn(new Set(accounts.map((a) => a.id)))}>Select all</button>
+        <button type="button" className="text-button" onClick={() => setOn(new Set())}>Clear</button>
+      </div>
+      <div className="tool-list">
+        {accounts.map((a) => (
+          <label className="check-row" key={a.id}>
+            <input type="checkbox" checked={on.has(a.id)} onChange={() => toggle(a.id)} />
+            <span><code>{a.name}</code><small>{a.note.split(". ")[0].replace(/\.$/, "")}</small></span>
+          </label>
+        ))}
+      </div>
+      <FormActions busy={busy || !on.size} onCancel={onCancel} label="Connect selected" />
     </form>
   );
 }
