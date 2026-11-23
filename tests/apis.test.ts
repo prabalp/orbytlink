@@ -220,3 +220,26 @@ it("fetches the site's logo once on save, safely, without the key", async () => 
   await api("/api/apis", billing({ name: "Evil", baseUrl: "https://evil-logo.example/v1", docsUrl: "" }));
   expect(calls.some((c) => c.url.hostname === "internal.evil.test")).toBe(false);
 });
+
+it("gives an MCP connection its site's logo once on save, and fills it in for older ones on test", async () => {
+  const mcp = (patch: Record<string, unknown> = {}) => ({ name: "Mail Orbyt", kind: "mcp", endpoint: "https://mail.billing.example/mcp", auth: "none", ...patch });
+  const c = (await api("/api/connections", mcp())).data;
+  expect(c.logo).toBe(`data:image/png;base64,${PNG.toString("base64")}`);
+  expect(calls.filter((x) => x.url.hostname === "billing.example").every((x) => !new Headers(x.init.headers).has("authorization"))).toBe(true);
+  // Saving again on the same host keeps it without another lookup.
+  const before = calls.length;
+  const again = (await api(`/api/connections/${c.id}`, mcp({ name: "Mail Orbyt 2" }), "PUT")).data;
+  expect(again.logo).toBe(c.logo);
+  expect(calls.length).toBe(before);
+  // No icon anywhere: no logo, remembered as null. A client can't set one itself.
+  const plain = (await api("/api/connections", mcp({ name: "Plain", endpoint: "https://plain.example/mcp", logo: "data:image/png;base64,AAAA" }))).data;
+  expect(plain.logo).toBeNull();
+  // A connection saved before logos existed has none until it is tested.
+  const old = store.put(workspace, "connections", { name: "Old", kind: "mcp", endpoint: "https://mail.billing.example/mcp", auth: "none", enabled: true, status: "Not tested", tools: [] });
+  expect(old.logo).toBeUndefined();
+  const tested = (await api(`/api/connections/${old.id}/test`, {})).data;
+  expect(tested.logo).toBe(c.logo);
+  // A redirect to a private address is checked like any other hop.
+  await api("/api/connections", mcp({ name: "Evil", endpoint: "https://evil-logo.example/mcp" }));
+  expect(calls.some((x) => x.url.hostname === "internal.evil.test")).toBe(false);
+});

@@ -344,7 +344,7 @@ export function createApp(
     store.audit(i.workspace, i.user, "connection.removed", c.name);
     res.json({ ok: true });
   });
-  function saveConnection(req: Request, res: Response) {
+  async function saveConnection(req: Request, res: Response) {
     const i = identity(res),
       w = i.workspace;
     const data = connectionSchema.parse(req.body);
@@ -358,10 +358,15 @@ export function createApp(
       JSON.stringify([existing.auth, existing.endpoint, existing.oauth ?? null]) !==
         JSON.stringify([safe.auth, safe.endpoint, safe.oauth ?? null]);
     if (oauthChanged) dropOAuth(store, w, existing!.id, !clientSecret);
+    // The server's own site mark, looked up once (like an API's) and again only if it moves host.
+    // A miss is remembered as null; an app from the catalog keeps its bundled brand mark instead.
+    const movedHost = !!existing && !!existing.endpoint && !!safe.endpoint && new URL(existing.endpoint).hostname !== new URL(safe.endpoint).hostname;
+    const logo = !safe.endpoint ? null : !existing || movedHost || existing.logo === undefined ? await fetchLogo(safe.endpoint).catch(() => null) : existing.logo;
     // Any change to where or how we connect must be verified again before clients see it.
     const row = store.put(w, "connections", {
       ...safe,
       id: existing?.id,
+      logo,
       disabledTools:
         "disabledTools" in (req.body || {})
           ? safe.disabledTools
@@ -403,6 +408,8 @@ export function createApp(
         w = i.workspace,
         c = store.get(w, "connections", String(req.params.id));
       if (!c.enabled) throw new Error("Enable the connection before testing");
+      // Connections saved before logos existed get theirs on the next test, passed or not.
+      const logo = c.logo === undefined ? (c.endpoint ? await fetchLogo(c.endpoint).catch(() => null) : null) : c.logo;
       let next;
       try {
         if (!c.endpoint) throw new Error("Endpoint is not configured");
@@ -412,6 +419,7 @@ export function createApp(
         );
         next = {
           ...c,
+          logo,
           status: "Connected",
           protocol,
           tools,
@@ -431,6 +439,7 @@ export function createApp(
               : "Verification failed. Check the endpoint, authentication, and that the server is reachable.",
           protocol: c.kind === "auto" ? null : c.kind,
           tools: [],
+          logo,
         };
       }
       store.put(w, "connections", next);

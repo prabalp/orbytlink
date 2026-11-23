@@ -668,7 +668,7 @@ export function App() {
                     <tbody>
                       {filtered.map((c: Data) => (
                         <tr key={c.id}>
-                          <td><div className="table-name"><AppLogo preset={presetFor(c)} kind={c.protocol || c.kind} /><div><strong>{c.name}</strong><small>{connectorType(c)}</small></div></div></td>
+                          <td><div className="table-name"><AppLogo preset={presetFor(c)} kind={c.protocol || c.kind} logo={c.logo} name={c.name} /><div><strong>{c.name}</strong><small>{connectorType(c)}</small></div></div></td>
                           <td>
                             {c.endpoint ? <span className="conn-url" title={c.endpoint}>{c.endpoint.replace(/^https?:\/\//, "")}</span> : <span className="conn-url muted">Not configured</span>}
                             <small>{c.hasSecret ? "Credential stored" : c.auth === "none" ? "No authentication" : c.auth === "oauth" ? (c.oauthState?.connected ? "Signed in" : "Not signed in") : "Credential missing"}</small>
@@ -1596,8 +1596,10 @@ function ListedTile({ app }: { app: ListedApp }) {
   return <BrandTile id={app.id} name={app.name} />;
 }
 // Catalog apps get their brand tile; other connections keep the generic link/API glyph.
-function AppLogo({ preset, kind }: { preset?: Preset; kind?: string }) {
+function AppLogo({ preset, kind, logo, name }: { preset?: Preset; kind?: string; logo?: string | null; name?: string }) {
   if (preset && (brands[preset.id] || logoFiles[preset.id] || monograms[preset.id])) return <BrandTile id={preset.id} name={preset.name} />;
+  // Any other MCP shows the mark fetched from its own site when it was saved.
+  if (logo) return <div className="app-icon logo" title={name}><img src={logo} alt={`${name ?? "App"} logo`} width={22} height={22} /></div>;
   return <div className="app-icon"><ConnectionIcon kind={kind} /></div>;
 }
 const presetFor = (c: Data) => catalog.find((p) => p.endpoint && p.endpoint === c.endpoint);
@@ -3238,7 +3240,7 @@ function toolIndex(s: Data): ToolInfo[] {
 // How the flow diagram names a step: the tool's title, its app and mark.
 const describeFor = (tools: ToolInfo[]): Describe => (tool) => {
   const t = tools.find((x) => x.name === tool);
-  return { title: t?.def.title || t?.def.name || tool.split("__").pop()!.replace(/_/g, " "), app: t?.app, mark: t?.connection ? <AppLogo preset={presetFor(t.connection)} kind="mcp" /> : undefined };
+  return { title: t?.def.title || t?.def.name || tool.split("__").pop()!.replace(/_/g, " "), app: t?.app, mark: t?.connection ? <AppLogo preset={presetFor(t.connection)} kind="mcp" logo={t.connection.logo} name={t.connection.name} /> : undefined };
 };
 const blankWorkflow = (shared = true) => ({ name: "", description: "", inputs: [], steps: [{ id: "step_1", tool: "", args: {} }], enabled: false, visibility: shared ? "workspace" : "private", keepLastResult: false, logData: true, schedule: null });
 const cleanWorkflow = (wf: Data) => ({
@@ -3285,7 +3287,7 @@ function AppMarks({ tools, steps }: { tools: ToolInfo[]; steps: Data[] }) {
   if (!apps.length) return null;
   return (
     <span className="app-marks">
-      {apps.slice(0, 4).map((a) => <AppLogo key={a.app} preset={a.connection && presetFor(a.connection)} kind="mcp" />)}
+      {apps.slice(0, 4).map((a) => <AppLogo key={a.app} preset={a.connection && presetFor(a.connection)} kind="mcp" logo={a.connection?.logo} name={a.app} />)}
     </span>
   );
 }
