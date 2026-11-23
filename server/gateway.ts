@@ -12,7 +12,7 @@ import type { ServiceAdapters } from "./adapters.js";
 import type { Identity } from "./schema.js";
 import { credentialFor } from "./oauth.js";
 import { addSkill, enabledSkills, skillCatalog, skillText } from "./skills.js";
-import { MIN_INSTALLS, searchRegistry } from "./skill-registry.js";
+import { frontMatter, MIN_INSTALLS, searchRegistry } from "./skill-registry.js";
 import { resumeWorkflow, runWorkflow, saveWorkflow, visibleTo, workflowInputSchema, workflowToolName, type RunOutcome } from "./workflows.js";
 import { AI_TOOL, aiConfigured, aiInputSchema, aiSummary, generate, usd } from "./ai.js";
 import { BROWSER_TOOL, browse, browseText, browserConfigured, browserInputSchema } from "./browser.js";
@@ -21,7 +21,7 @@ import { MAPS_TOOL, SCRAPE_TOOL, mapsInputSchema, scrape, scrapeInputSchema, scr
 import { CONNECT_TOOL, connectApp, connectTool } from "./connect.js";
 import { alreadySaved, captureWorkflow, keyFor, noticeRepeat, recordCall } from "./capture.js";
 import { toMarkdown, workflowFileName } from "./workflow-md.js";
-import { libraryCount, librarySearch, viewerFor } from "./library.js";
+import { authoredSchema, createAuthored, findAuthoredByName, libraryCount, librarySearch, updateAuthored, viewerFor } from "./library.js";
 import { allowedMethods, apiCall } from "./apis.js";
 import { ToolIndex, sameApp } from "./tool-search.js";
 import { origin } from "./mcp-oauth.js";
@@ -488,6 +488,24 @@ function ownTools(store: Store, w: string, identity: Identity) {
       inputSchema: { type: "object", properties: { skill: { type: "string", description: "e.g. tdd, or vercel-labs/agent-skills@react-best-practices" } }, required: ["skill"] },
       annotations: { openWorldHint: true },
     });
+  if (canConfigure(identity))
+    tools.push({
+      name: "orbytlink__write_skill",
+      title: "Write a skill",
+      description:
+        "Save a skill the user asks you to write or update, as their own private skill in OrbytLink, and turn it on for this workspace. body is the whole SKILL.md: YAML front matter with name and description, then the instructions. Writing a skill with the same name again updates it. It is private to this user and can't be shared or made public from here; they do that in OrbytLink → Skills. Only do this when the user asked for it, and never put secrets in a skill.",
+      inputSchema: {
+        type: "object",
+        properties: {
+          body: { type: "string", description: "The full SKILL.md text, starting with --- front matter (name, description)." },
+          name: { type: "string", description: "Skill name, if not in the front matter." },
+          description: { type: "string", description: "When an agent should use it, if not in the front matter." },
+          files: { type: "array", description: "Optional reference files (Markdown or text), at most 30.", items: { type: "object", properties: { path: { type: "string", description: "e.g. references/api.md" }, content: { type: "string" } }, required: ["path", "content"] } },
+        },
+        required: ["body"],
+      },
+      annotations: { idempotentHint: true },
+    });
   tools.push(connectTool);
   const apis = enabledApis(store, w);
   if (apis.length) {
@@ -742,6 +760,26 @@ async function callOwnTool(store: Store, services: ServiceAdapters, identity: Id
       return toolText(`${where}, ${on}. Its instructions follow; use them for this task.\n\n${added.text}`);
     } catch (error) {
       return toolText((error as Error).message, true);
+    }
+  }
+  if (name === "orbytlink__write_skill") {
+    if (!canConfigure(identity)) return toolText("Only an admin's agent can write skills. Ask an admin, or add it yourself in OrbytLink → Skills.", true);
+    try {
+      const viewer = viewerFor(store, identity);
+      const text = typeof args.body === "string" ? args.body : "";
+      const meta = frontMatter(text).meta;
+      const skillName = String(meta.name || args.name || "").trim();
+      // Always private: an agent can't publish instructions to other people.
+      const input = { name: skillName, description: String(meta.description || args.description || ""), body: text, files: Array.isArray(args.files) ? args.files : [], visibility: "private" as const };
+      authoredSchema.parse(input);
+      const existing = skillName ? findAuthoredByName(store, viewer, skillName) : undefined;
+      const saved = existing ? updateAuthored(store, viewer, existing, input) : createAuthored(store, viewer, input);
+      store.put(w, "skills", { id: saved.id, enabled: true });
+      store.audit(w, identity.user, "skill.written", `${saved.id} · private · by agent`);
+      return toolText(`${existing ? "Updated" : "Saved"} the skill "${saved.name}" as ${saved.id}. It is private to this user and on for this workspace; load it with orbytlink__use_skill {name: "${saved.id}"}. They can share it or edit it in OrbytLink → Skills.`);
+    } catch (error) {
+      const issues = (error as any)?.issues as { path: (string | number)[]; message: string }[] | undefined;
+      return toolText(issues ? issues.map((i) => `${i.path.join(".") || "skill"}: ${i.message}`).join("; ") : (error as Error).message, true);
     }
   }
   if (name === "orbytlink__use_skill") {

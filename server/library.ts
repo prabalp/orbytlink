@@ -287,6 +287,11 @@ export function createAuthored(store: Store, viewer: Viewer, input: unknown) {
   });
   return libraryGet(store, id, viewer)!;
 }
+// An agent that writes a skill again by the same name updates its own copy instead of adding another.
+export function findAuthoredByName(store: Store, viewer: Viewer, name: string) {
+  const r = store.db.prepare("SELECT id FROM library_skills WHERE origin='authored' AND owner=? AND lower(name)=lower(?) ORDER BY added_at LIMIT 1").get(viewer.user, name.trim()) as { id: string } | undefined;
+  return r?.id;
+}
 // Only the owner may change or delete a skill they wrote.
 function owned(store: Store, viewer: Viewer, id: string) {
   const r = store.db.prepare(`SELECT ${COLUMNS} FROM library_skills WHERE id=?`).get(id);

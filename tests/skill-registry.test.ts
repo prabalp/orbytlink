@@ -161,3 +161,42 @@ it("lets members' agents add to the shared library and use it, but not turn skil
   expect((await api("/api/state")).data.skills.some((s: any) => s.id === "changelog")).toBe(false);
   expect((await api("/api/skills/changelog", { enabled: true }, "PUT")).status).toBe(403);
 });
+
+const SKILL = "---\nname: blog-topic-picker\ndescription: Pick the next blog post from search data and write it.\n---\n# Blog topic picker\n\nPick the topic with the best score, then write the post.";
+
+it("lets an admin's agent write a private skill, turns it on, and updates it when written again", async () => {
+  const client = await connect((await api("/api/tokens", { name: "Agent", expiresInDays: 7 })).data.token);
+  expect((await client.listTools()).tools.map((t) => t.name)).toContain("orbytlink__write_skill");
+
+  const first = await client.callTool({ name: "orbytlink__write_skill", arguments: { body: SKILL } });
+  if (first.isError) throw new Error(text(first));
+  expect(first.isError).toBeFalsy();
+  expect(text(first)).toContain('Saved the skill "blog-topic-picker"');
+  const id = text(first).match(/as (blog-topic-picker-[0-9a-f]{6})\./)![1];
+  expect((await api("/api/state")).data.skills.find((s: any) => s.id === id)).toMatchObject({ enabled: true });
+  expect(text(await client.callTool({ name: "orbytlink__use_skill", arguments: { name: id } }))).toContain("Pick the topic with the best score");
+  expect((await api(`/api/skills/authored/${id}`)).data).toMatchObject({ visibility: "private" });
+
+  // Same name again: updated in place, not duplicated; asking for "public" is ignored.
+  const again = await client.callTool({ name: "orbytlink__write_skill", arguments: { body: SKILL.replace("best score", "highest score"), visibility: "public" } });
+  expect(text(again)).toContain(`Updated the skill "blog-topic-picker" as ${id}`);
+  expect(text(await client.callTool({ name: "orbytlink__use_skill", arguments: { name: id } }))).toContain("highest score");
+  expect((await api(`/api/skills/authored/${id}`)).data.visibility).toBe("private");
+  expect((await api("/api/library")).data.all).toBe(1);
+});
+
+it("explains what is missing when an agent writes an invalid skill, and keeps the tool from members' agents", async () => {
+  const client = await connect((await api("/api/tokens", { name: "Agent", expiresInDays: 7 })).data.token);
+  const bad = await client.callTool({ name: "orbytlink__write_skill", arguments: { body: "---\nname: x\n---\nshort" } });
+  expect(bad.isError).toBe(true);
+  expect(text(bad)).toMatch(/name|description|instructions/i);
+
+  expect((await api("/api/orgs", { name: "Acme" })).status).toBe(200);
+  const invite = (await api("/api/org/invites", { role: "member" })).data.token;
+  const r = await inject(app, { url: "/api/auth/register", method: "POST", body: { name: "Bobby", email: "bob@example.invalid", password: "Correct-horse-ship-2026" } });
+  cookie = String(r.headers["set-cookie"]).split(";")[0];
+  expect((await api("/api/invites/accept", { token: invite })).status).toBe(200);
+  const member = await connect((await api("/api/tokens", { name: "Agent", expiresInDays: 7 })).data.token);
+  expect((await member.listTools()).tools.map((t) => t.name)).not.toContain("orbytlink__write_skill");
+  expect(text(await member.callTool({ name: "orbytlink__write_skill", arguments: { body: SKILL } }))).toContain("Only an admin");
+});
