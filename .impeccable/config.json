@@ -11,6 +11,12 @@
         ],
         "createdAt": "2026-11-06T06:05:01.746Z",
         "reason": "Claude: styles.css L646 is the .markdown blockquote 2px neutral --input left border (standard quote styling, committed 2026-10-31), not a colored card accent"
+      },
+      {
+        "rule": "overused-font",
+        "value": "inter",
+        "createdAt": "2026-11-18T12:54:43.595Z",
+        "reason": "Project design system: CLAUDE.md and docs/DESIGN.md mandate Inter (\"12/14/16/30px type with the Inter weight mapping\"); the invite email matches the console"
       }
     ]
   }
