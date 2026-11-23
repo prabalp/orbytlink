@@ -17,7 +17,14 @@ export default ts.config(
   ...ts.configs.recommended,
   {
     files: ["scripts/**/*.mjs"],
-    languageOptions: { globals: { process: "readonly", console: "readonly", setTimeout: "readonly", Buffer: "readonly" } },
+    languageOptions: { globals: { process: "readonly", console: "readonly", setTimeout: "readonly", Buffer: "readonly", URL: "readonly" } },
+  },
+  {
+    // The browser extension runs in Chrome, not in Node.
+    files: ["extension/**/*.js"],
+    languageOptions: {
+      globals: Object.fromEntries(["chrome", "document", "window", "location", "navigator", "crypto", "console", "setTimeout", "clearTimeout", "setInterval", "URL", "URLSearchParams", "TextEncoder", "TextDecoder", "btoa", "atob", "fetch", "AbortSignal", "Event", "KeyboardEvent", "MouseEvent", "HTMLInputElement", "HTMLTextAreaElement", "Node", "Element", "getComputedStyle", "innerHeight", "scrollY"].map((n) => [n, "readonly"])),
+    },
   },
   {
     files: ["**/*.ts", "**/*.tsx"],

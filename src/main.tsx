@@ -742,7 +742,7 @@ export function App() {
               onToolMode={(t: Data, toolMode: string) => act(() => api(`/tokens/${t.id}`, { toolMode }, "PUT"), toolModeSaved[toolMode] || "Saved", false)} />
           )}
           {title === "Catalog" && (
-            <CatalogPage key={page} initialView={page === "apis" ? "api" : page === "ai-models" ? "models" : page === "browser" || page === "scraper" ? "scraper" : page === "instant" ? "instant" : page === "social" ? "api" : "mcp"} state={s} canConfigure={canConfigure} search={search} setSearch={setSearch} onConnect={(p: Preset) => setDialog({ type: "connection", data: presetDraft(p) })} onApi={(p: ApiPreset) => setDialog({ type: "api", data: presetApiDraft(p) })} onModel={(m: ModelRow) => setDialog({ type: "model", data: m })} />
+            <CatalogPage onRefresh={() => void refresh()} key={page} initialView={page === "apis" ? "api" : page === "ai-models" ? "models" : page === "browser" || page === "scraper" ? "scraper" : page === "instant" ? "instant" : page === "social" ? "api" : "mcp"} state={s} canConfigure={canConfigure} search={search} setSearch={setSearch} onConnect={(p: Preset) => setDialog({ type: "connection", data: presetDraft(p) })} onApi={(p: ApiPreset) => setDialog({ type: "api", data: presetApiDraft(p) })} onModel={(m: ModelRow) => setDialog({ type: "model", data: m })} />
           )}
           {title === "Skills" && (
             <SkillsPage state={s} busy={busy} canConfigure={canConfigure} search={search} setSearch={setSearch} onOpen={(skill: Data) => setDialog({ type: "skill", data: skill })} onToggle={(skill: Data, enabled: boolean) => act(() => api(`/skills/${skill.id}`, { enabled }, "PUT"), enabled ? `${skill.title} is on for your agents` : `${skill.title} is off`, false)} onChanged={() => void refresh()} notify={setToast} />
@@ -1917,6 +1917,81 @@ function SocialView({ channels, canConfigure, heading }: { channels: Data[]; can
     </section>
   );
 }
+// The person's own Chrome profiles, paired through the extension. Agents use these first (their real
+// logins), then fall back to the server's browser below.
+function YourBrowsers({ state: s, onRefresh }: any) {
+  const devices: Data[] = s.browser?.devices || [];
+  const [pairing, setPairing] = useState<{ code: string; expiresAt: string } | null>(null);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  // While a code is showing, look for the new browser so the box closes by itself once it pairs.
+  useEffect(() => {
+    if (!pairing) return;
+    const t = setInterval(onRefresh, 3000);
+    return () => clearInterval(t);
+  }, [pairing, onRefresh]);
+  useEffect(() => {
+    if (pairing && devices.some((d) => Date.parse(d.createdAt) >= Date.parse(pairing.expiresAt) - 10 * 60_000)) setPairing(null);
+  }, [devices, pairing]);
+  const start = async () => {
+    setBusy(true);
+    setError("");
+    try {
+      setPairing(await api("/devices/pair", {}));
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  const remove = async (d: Data) => {
+    setError("");
+    try {
+      await api(`/devices/${d.id}`, undefined, "DELETE");
+      onRefresh();
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+  return (
+    <section className="panel">
+      <div className="section-heading">
+        <h2>Your browsers</h2>
+        <button className="secondary compact" disabled={busy} onClick={start}><Plus size={15} /> Add my browser</button>
+      </div>
+      <p className="muted browser-note">Agents work in your own Chrome first, with the sites you’re already signed in to, and fall back to the server’s browser when yours is closed. You approve every site, and nothing new is bought, sent or deleted without asking.</p>
+      {error && <p className="auth-field-error browser-note" role="alert">{error}</p>}
+      {pairing && (
+        <div className="browser-note">
+          <ol className="muted">
+            <li><a href="/orbytlink-extension.zip" download>Download the extension</a> and unzip it.</li>
+            <li>In Chrome open <code>chrome://extensions</code>, turn on Developer mode, choose Load unpacked and pick the folder. Do this in each Chrome profile you want to use.</li>
+            <li>Click the OrbytLink icon and type this code (good for 10 minutes): <strong><code>{pairing.code}</code></strong></li>
+          </ol>
+        </div>
+      )}
+      {devices.length > 0 ? (
+        <div className="table-scroll">
+          <table>
+            <thead><tr><th>Profile</th><th>Status</th><th>Last seen</th><th><span className="sr-only">Remove</span></th></tr></thead>
+            <tbody>
+              {devices.map((d) => (
+                <tr key={d.id}>
+                  <td>{d.label}{d.privateWindow ? <small> · private window</small> : null}</td>
+                  <td><span className={`status ${d.online ? "good" : ""}`}><i />{d.online ? "Online" : "Offline"}</span></td>
+                  <td>{d.lastSeen ? new Date(d.lastSeen).toLocaleString() : "Not yet"}</td>
+                  <td><button className="icon-button" aria-label={`Remove ${d.label}`} onClick={() => remove(d)}><Trash2 size={15} /></button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        !pairing && <p className="muted browser-note">No browser added yet. Agents use the server’s browser, which opens public pages only.</p>
+      )}
+    </section>
+  );
+}
 // A real browser for tasks with no API or MCP server. It is a tool, not a connection, so this is its status page.
 function BrowserView({ state: s }: any) {
   const on = !!s.browser?.configured;
@@ -1925,7 +2000,7 @@ function BrowserView({ state: s }: any) {
   return (
     <section className="panel">
       <div className="section-heading">
-        <h2>Browser</h2>
+        <h2>Server browser</h2>
         <span className="count">{on ? "On" : "Not switched on"}</span>
       </div>
       <p className="muted browser-note">For tasks with no app to connect: reading a page, checking a price, filling a form.</p>
@@ -1933,9 +2008,9 @@ function BrowserView({ state: s }: any) {
         <div className="table-scroll">
           <table>
             <tbody>
-              <tr><td>Price</td><td>About ${per.toFixed(4)} per page action, charged from your AI credit</td></tr>
+              <tr><td>Price</td><td>Your own browser: about ${(( s.browser?.microPerDecision || 0) / 1_000_000).toFixed(4)} per page action (the decision only). The server’s browser: about ${per.toFixed(4)}. Charged from your AI credit.</td></tr>
               {s.browser.models?.length > 0 && <tr><td>Decision model</td><td>{s.browser.models.map((m: Data) => m.name).join(", then ")}</td></tr>}
-              <tr><td>Limits</td><td>Up to {s.browser.maxSteps} actions per run, public pages only</td></tr>
+              <tr><td>Limits</td><td>Up to {s.browser.maxSteps} actions per run. The server’s browser opens public pages only; your own browser can use sites you’re signed in to.</td></tr>
               <tr><td>Credit</td><td>${((s.ai?.balance || 0) / 1_000_000).toFixed(2)} available</td></tr>
             </tbody>
           </table>
@@ -1947,7 +2022,7 @@ function BrowserView({ state: s }: any) {
   );
 }
 // Views of the catalog: MCP servers (with apps coming soon), APIs, and AI models with their prices.
-function CatalogPage({ state: s, canConfigure, search, setSearch, onConnect, onApi, onModel, initialView = "mcp" }: any) {
+function CatalogPage({ state: s, canConfigure, search, setSearch, onConnect, onApi, onModel, onRefresh, initialView = "mcp" }: any) {
   const [view, setView] = useState<CatalogView>(initialView);
   const [segment, setSegment] = useState("All");
   const q = search.toLowerCase();
@@ -1975,6 +2050,7 @@ function CatalogPage({ state: s, canConfigure, search, setSearch, onConnect, onA
       <>
         {viewSwitch}
         <ScraperView state={s} />
+        <YourBrowsers state={s} onRefresh={onRefresh} />
         <BrowserView state={s} />
       </>
     );

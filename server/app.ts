@@ -21,6 +21,7 @@ import { authoredDetail, createAuthored, deleteAuthored, initializeLibrary, libr
 import { MIN_INSTALLS, searchRegistry } from "./skill-registry.js";
 import { AI_TOOL, aiConfigured, aiSummary, generate, saveAiSettings } from "./ai.js";
 import { BROWSER_TOOL, browserConfigured, browserSummary } from "./browser.js";
+import { configureDevices, deviceSummary, removeDevice, startPairing } from "./devices.js";
 import { catalogUpdatedAt, ensureCatalog, publicModels } from "./catalog.js";
 import { workspaceUsage } from "./ledger.js";
 import { configureAdmin, isOperator } from "./admin.js";
@@ -167,6 +168,8 @@ export function createApp(
       next(e);
     }
   });
+  // The "Your browser" extension signs in with a pairing code, then its own device token.
+  configureDevices(app, store, rateLimit({ windowMs: 60000, limit: 90 }));
   async function verify(token: string): Promise<Identity> {
     let payload;
     try {
@@ -269,7 +272,7 @@ export function createApp(
           .filter((r) => r.user === i.user || listedFor(store, i).some((wf) => wf.id === r.workflowId && visibleTo(wf, i)))
           .slice(0, 50),
         ai: aiSummary(store, i.workspace),
-        browser: browserSummary(store),
+        browser: { ...browserSummary(store), configured: browserConfigured(store, i.workspace), devices: deviceSummary(store, i.workspace) },
         // Only the server's operators see the admin portal link.
         ...(isOperator(store, i) ? { operator: true } : {}),
         scraper: scraperSummary(store, i.workspace),
@@ -277,7 +280,7 @@ export function createApp(
         // Steps can also call stored APIs, AI models and other workflows, besides app tools.
         workflowStepTools: [
           ...(aiConfigured(store) ? [{ name: AI_TOOL, title: "Ask an AI model", app: "AI models", args: ["model", "prompt", "system", "maxTokens", "temperature", "json"] }] : []),
-          ...(browserConfigured(store) ? [{ name: BROWSER_TOOL, title: "Use a web browser", app: "Browser", args: ["url", "goal", "values", "maxSteps"] }] : []),
+          ...(browserConfigured(store, i.workspace) ? [{ name: BROWSER_TOOL, title: "Use a web browser", app: "Browser", args: ["url", "goal", "values", "maxSteps", "where", "device"] }] : []),
           ...(enabledApis(store, i.workspace).length
             ? [{ name: API_REQUEST_TOOL, title: "Call a stored API", app: "APIs", args: ["api", "method", "path", "query", "body"], apis: enabledApis(store, i.workspace).map((a) => a.slug) }]
             : []),
@@ -297,6 +300,15 @@ export function createApp(
         })),
       }),
     );
+  });
+  app.post("/api/devices/pair", permit("call"), (_req, res) => {
+    const i = identity(res);
+    res.json(startPairing(store, i.workspace, i.user));
+  });
+  app.delete("/api/devices/:id", permit("call"), (req, res) => {
+    const i = identity(res);
+    removeDevice(store, i.workspace, i.user, String(req.params.id));
+    res.json({ ok: true });
   });
   app.post("/api/tokens", permit("call"), (req, res) => {
     if (identity(res).authMethod !== "email") {

@@ -372,6 +372,8 @@ export function mcpCors(req: Request, res: Response, next: NextFunction) {
 // Cross-origin POSTs are allowed where no cookie is involved: the OAuth endpoints, and /mcp with a token.
 export function crossOriginAllowed(req: Request) {
   if (/^\/oauth\/(token|register|revoke)$/.test(req.path)) return true;
+  // The browser extension authenticates with a pairing code or its own bearer token, never a cookie.
+  if (/^\/api\/device\/(register|poll|result)$/.test(req.path)) return true;
   const auth = req.headers.authorization || "";
   return req.path === "/mcp" && /^Bearer /.test(auth) && auth !== "Bearer cookie-session";
 }

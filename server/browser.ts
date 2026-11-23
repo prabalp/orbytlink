@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { isIP } from "node:net";
 import { lookup } from "node:dns/promises";
 import { z } from "zod";
@@ -9,6 +9,7 @@ import { hostAllowed, isPublicAddress } from "./adapters.js";
 import { BROWSER_STEP, decisionModels, liveRoutes, priceOf } from "./catalog.js";
 import { recordCall } from "./ledger.js";
 import { scraperConfigured } from "./scraper.js";
+import { hasDevices, pickDevice, sendCommand } from "./devices.js";
 
 // A browser for tasks that have no API or MCP server. The page lives in the scraper's stealth Chromium
 // (a session there); the choosing happens here, with DECISION models only: each step OrbytLink shows
@@ -19,11 +20,15 @@ import { scraperConfigured } from "./scraper.js";
 //
 // The decision models are an ordered list in the catalog (`npm run account -- catalog decision …`);
 // the first one that answers is used, so a model or source being down just moves on to the next.
+// Where the page lives: the person's own browser (the "Your browser" extension, with their real
+// logins) when one is connected, otherwise the server's. A run in their own browser costs only its
+// decisions; the server's browser adds a fee per action.
 // Billing: each decision at its catalog price, plus the catalog price of a browser step (item
 // orbytlink/browser-step) per page action. The step fee for every allowed step is held up front and
 // settled to the steps taken; both are written to the ledger.
 export const BROWSER_TOOL = "orbytlink__browse";
-export const browserConfigured = (store: Store) => scraperConfigured() && decisionModels(store).length > 0;
+// On when decision models exist and there is some browser to drive: the server's, or the workspace's own.
+export const browserConfigured = (store: Store, w?: string) => decisionModels(store).length > 0 && (scraperConfigured() || (!!w && hasDevices(store, w)));
 // A browser step's price and cost, per step, in micro-USD, from the catalog.
 const perStep = (store: Store) => Math.round((priceOf(store, BROWSER_STEP).input ?? 0) * 1_000_000);
 const stepCost = (store: Store) => {
@@ -53,6 +58,8 @@ export const browserInputSchema = {
     goal: { type: "string", description: "What to do or find, in plain words, e.g. 'Search for Zurich to London flights on 12 Dec and open the cheapest'." },
     values: { type: "array", items: { type: "string" }, description: "Every piece of text the browser may need to type, e.g. [\"Zurich\", \"London\", \"12/12/2026\"] or a search term. The browser can only type these." },
     maxSteps: { type: "integer", description: `Most page actions (clicks, typing, scrolling) to allow, 1-${MAX_STEPS}; default 15.` },
+    where: { type: "string", enum: ["auto", "local", "server"], description: "auto (default): the person's own browser when connected, else the server's. local: only their own browser (it can use their logins). server: only the server's browser, public pages." },
+    device: { type: "string", description: "With a local browser: the name of the browser profile to use, e.g. \"Work\". Leave out for the one connected." },
   },
   required: ["url", "goal"],
 };
@@ -61,6 +68,8 @@ const schema = z.object({
   goal: z.string().trim().min(3).max(4000),
   values: z.array(z.string().trim().min(1).max(500)).max(20).default([]),
   maxSteps: z.number().int().min(1).max(MAX_STEPS).default(15),
+  where: z.enum(["auto", "local", "server"]).default("auto"),
+  device: z.string().trim().max(40).optional(),
 });
 const fail = (message: string, status = 409) => Object.assign(new Error(message), { status, safe: true });
 
@@ -72,6 +81,17 @@ export async function publicPage(value: string) {
   const addresses = isIP(host) ? [{ address: host }] : await lookup(host, { all: true }).catch(() => []);
   if (!addresses.length || addresses.some((a) => !isPublicAddress(a.address))) throw fail("That address is private or could not be found. The browser only opens public websites.", 400);
   // BROWSER_BLOCK_HOSTS lets an operator keep the browser off particular sites.
+  if (process.env.BROWSER_BLOCK_HOSTS && hostAllowed(u.hostname, process.env.BROWSER_BLOCK_HOSTS)) throw fail("The browser is not allowed to open that site.", 400);
+  return u;
+}
+
+// A run in the person's own browser may open any https site (it is their browser and they approve each
+// site in it), but still not a bare address on a private network.
+export function localPage(value: string) {
+  const u = new URL(value);
+  if (u.protocol !== "https:" || u.username || u.password) throw fail("Start from an https page without a username or password in the address.", 400);
+  const host = u.hostname.replace(/^\[|\]$/g, "");
+  if (isIP(host) ? !isPublicAddress(host) : host === "localhost" || host.endsWith(".local") || host.endsWith(".internal") || !host.includes(".")) throw fail("That address is on a private network.", 400);
   if (process.env.BROWSER_BLOCK_HOSTS && hostAllowed(u.hostname, process.env.BROWSER_BLOCK_HOSTS)) throw fail("The browser is not allowed to open that site.", 400);
   return u;
 }
@@ -107,13 +127,19 @@ Use field values and the actions already taken; don't repeat a step that is alre
 Fill required fields before submitting. After typing into a search or autocomplete box, choose its matching suggestion or click the search button.
 Don't toggle a checkbox or option already in the wanted state. DONE only when the page visibly shows everything the goal asks for.
 BLOCKED when nothing offered can make progress (a login wall, a captcha, the information isn't on this site). Never sign in, buy, or enter personal data.`;
+const NEXT_LOCAL = `Pick the ONE operation that best advances the user's whole goal from the CURRENT page.
+Use field values and the actions already taken; don't repeat a step that is already done.
+Fill required fields before submitting. After typing into a search or autocomplete box, choose its matching suggestion or click the search button.
+Don't toggle a checkbox or option already in the wanted state. DONE only when the page visibly shows everything the goal asks for.
+This is the user's own browser. When the page asks the user to sign in (a password field is shown), choose WAIT_FOR_USER: the user signs in themselves. Never type a password. BLOCKED when nothing offered can make progress (a captcha, the information isn't on this site).`;
 const TARGET = (op: string) =>
   `If the next operation is ${op}, which element should it act on? Another question picks the operation; this one only picks its target. Use the goal, field values, nearby text and recent actions. Don't pick a field that already holds the wanted value.`;
 export type StepPlan = { questions: DecisionQuestion[]; operations: string[] };
-export function planStep(s: PageState, values: string[], steps: number): StepPlan {
+export function planStep(s: PageState, values: string[], steps: number, local = false): StepPlan {
   const usable = s.elements.filter((e) => !e.disabled);
   const clickable = usable.filter((e) => e.tag !== "select" && !(typable(e) && e.tag !== "input"));
-  const fields = values.length ? usable.filter(typable) : [];
+  // In the person's own browser the model is never offered a password field to type into.
+  const fields = values.length ? usable.filter((e) => typable(e) && !(local && e.type === "password")) : [];
   const selects = usable.filter((e) => e.tag === "select" && e.options?.length);
   const ops: Record<string, string> = {};
   if (clickable.length) ops.CLICK = "Click a link, button, tab, checkbox, menu item or suggestion.";
@@ -122,10 +148,11 @@ export function planStep(s: PageState, values: string[], steps: number): StepPla
   if (s.scroll + s.viewport < s.height - 20) ops.SCROLL_DOWN = "Scroll down to see more of the page.";
   if (s.scroll > 20) ops.SCROLL_UP = "Scroll back up.";
   if (steps > 0) ops.BACK = "Go back to the previous page.";
+  if (local && s.elements.some((e) => e.type === "password" && !e.disabled)) ops.WAIT_FOR_USER = "The page needs the user to sign in. Wait while they do it.";
   ops.DONE = "The goal is fully met and the page shows it.";
   ops.BLOCKED = "No offered operation can make progress.";
   const choice = (name: string, instructions: string, choices: { value: string; description?: string }[]): DecisionQuestion => ({ type: "choice", name, instructions, choices: choices.slice(0, 255) });
-  const questions: DecisionQuestion[] = [choice("operation", NEXT, Object.entries(ops).map(([value, description]) => ({ value, description })))];
+  const questions: DecisionQuestion[] = [choice("operation", local ? NEXT_LOCAL : NEXT, Object.entries(ops).map(([value, description]) => ({ value, description })))];
   if (ops.CLICK) questions.push(choice("click_target", TARGET("CLICK"), clickable.map((e) => ({ value: String(e.i), description: describe(e) }))));
   if (ops.TYPE) {
     questions.push(choice("type_target", TARGET("TYPE"), fields.map((e) => ({ value: String(e.i), description: describe(e) }))));
@@ -151,6 +178,7 @@ export function readAnswers(plan: StepPlan, answers: Record<string, DecisionAnsw
   if (op === "DONE" || op === "BLOCKED") return { done: true, blocked: op === "BLOCKED" };
   if (op === "SCROLL_DOWN" || op === "SCROLL_UP") return { action: "scroll", direction: op === "SCROLL_UP" ? "up" : "down", label: `scroll ${op === "SCROLL_UP" ? "up" : "down"}` };
   if (op === "BACK") return { action: "back", label: "go back" };
+  if (op === "WAIT_FOR_USER") return { action: "wait_for_user", label: "wait for you to sign in" };
   if (op === "CLICK") {
     const e = el(pick("click_target"));
     return e ? { action: "click", index: e.i, label: `click [${e.i}] "${e.label}"` } : null;
@@ -172,31 +200,111 @@ export function readAnswers(plan: StepPlan, answers: Record<string, DecisionAnsw
   return null;
 }
 
-export type BrowseResult = { status: "done" | "stopped" | "failed"; result: string; steps: number; finalUrl?: string; costMicro: number; models?: string[] };
+export type BrowseResult = { status: "done" | "stopped" | "failed"; result: string; steps: number; finalUrl?: string; costMicro: number; models?: string[]; where?: string };
+// One page to drive, wherever it lives: the server's browser (the scraper sidecar) or a device.
+type Acted = { ok: boolean; error: string | null; state: PageState; stop?: boolean };
+type Driver = { local: boolean; name: string; open(url: string): Promise<PageState>; act(a: Record<string, unknown>): Promise<Acted>; close(): Promise<void> };
+const serverDriver = (): Driver => {
+  let sid = "";
+  return {
+    local: false,
+    name: "the server's browser",
+    async open(url) {
+      const o = await sidecar<{ id: string; state: PageState }>("POST", "/session", { url, timeoutSeconds: 30 });
+      sid = o.id;
+      return o.state;
+    },
+    act: (a) => sidecar<Acted>("POST", `/session/${sid}/act`, a),
+    async close() {
+      if (sid) await sidecar("DELETE", `/session/${sid}`, undefined, 10_000).catch(() => undefined);
+    },
+  };
+};
+const WAIT_MS = 190_000;
+const deviceDriver = (id: string, label: string): Driver => {
+  // Every command of one run carries the same session id, so two runs on one device never mix tabs.
+  const session = randomBytes(9).toString("base64url");
+  return {
+  local: true,
+  name: `your browser "${label}"`,
+  async open(url) {
+    const r = await sendCommand(id, { type: "open", session, url }, 90_000);
+    if (!r.ok || !r.state) throw fail(r.error || "Your browser couldn't open that page.");
+    return r.state as PageState;
+  },
+  async act(a) {
+    const r = await sendCommand(id, { type: "act", session, ...a }, a.action === "wait_for_user" ? WAIT_MS + 15_000 : 60_000);
+    return { ok: r.ok, error: r.error ?? null, state: r.state as PageState, stop: r.stop };
+  },
+  async close() {
+    await sendCommand(id, { type: "close", session }, 10_000, 3_000).catch(() => undefined);
+  },
+  };
+};
+
 export async function browse(store: Store, identity: Identity, input: unknown, via: "agent" | "workflow"): Promise<BrowseResult> {
   const w = identity.workspace;
-  if (!browserConfigured(store)) throw fail("The browser is not switched on for this OrbytLink server yet.");
+  if (!browserConfigured(store, w)) throw fail("The browser is not switched on for this OrbytLink server yet.");
   const req = schema.parse(input);
-  const start = await publicPage(req.url);
-  const fee = perStep(store);
-  const hold = req.maxSteps * fee;
   const s = aiSummary(store, w);
   if (!s.enabled) throw fail("An admin has turned AI and browser use off for this workspace.");
-  const need = hold + 3 * decisionEstimate(store);
-  if (s.balance < need) throw fail(`Not enough credit: this run needs at least $${usd(need).toFixed(4)} and the balance is $${usd(s.balance).toFixed(4)}.`, 402);
-  if (s.monthlyLimit !== null && s.monthSpent + need > s.monthlyLimit) throw fail(`This run would pass the workspace's monthly limit of $${usd(s.monthlyLimit).toFixed(2)}.`, 402);
-  addBalance(store, w, -hold);
-  addMonth(store, w, hold);
-  const deadline = Date.now() + RUN_MS;
+  // Where to run: the person's own browser first (it has their logins), the server's as the fallback.
+  const device = req.where === "server" ? undefined : pickDevice(store, w, req.device);
+  if (req.where === "local" && !device)
+    throw fail(req.device ? `No connected browser is named "${req.device}". Open the extension in that Chrome profile, or leave the name out.` : "No browser of yours is connected. Install the OrbytLink extension and keep Chrome open.");
+  // Money check for a run with this per-action fee: the fee for every allowed step is held up front.
+  const reserve = (perAction: number) => {
+    const held = req.maxSteps * perAction;
+    const need = held + 3 * decisionEstimate(store);
+    if (s.balance < need) throw fail(`Not enough credit: this run needs at least $${usd(need).toFixed(4)} and the balance is $${usd(s.balance).toFixed(4)}.`, 402);
+    if (s.monthlyLimit !== null && s.monthSpent + need > s.monthlyLimit) throw fail(`This run would pass the workspace's monthly limit of $${usd(s.monthlyLimit).toFixed(2)}.`, 402);
+    return held;
+  };
+  let driver: Driver | undefined;
+  let first: PageState | undefined;
+  let fee = 0;
+  let hold = 0;
+  if (device) {
+    const start = localPage(req.url);
+    reserve(0);
+    const d = deviceDriver(device.id, device.label);
+    try {
+      first = await d.open(start.href);
+      driver = d;
+    } catch (error) {
+      // Only "not connected" falls back; a page the person refused or that failed to load does not.
+      if (!(error as any)?.offline || req.where === "local" || !scraperConfigured()) throw error;
+    }
+  }
+  if (!driver) {
+    if (!scraperConfigured()) throw fail("The browser is not switched on for this OrbytLink server yet.");
+    const start = await publicPage(req.url);
+    fee = perStep(store);
+    hold = reserve(fee);
+    const d = serverDriver();
+    addBalance(store, w, -hold);
+    addMonth(store, w, hold);
+    try {
+      first = await d.open(start.href);
+      driver = d;
+    } catch (error) {
+      addBalance(store, w, hold);
+      addMonth(store, w, -hold);
+      throw error;
+    }
+  }
+  const run = driver;
+  const local = run.local;
+  let state = first as PageState;
+  let deadline = Date.now() + (local ? 150_000 : RUN_MS);
   let steps = 0,
     modelCost = 0,
-    sid = "",
-    state: PageState | undefined;
+    waits = 0;
   const history: { label: string; changed: boolean; ok: boolean }[] = [];
   const used = new Set<string>();
   const log = () => history.map((h, n) => `${n + 1}. ${h.label}${h.ok ? "" : " (failed)"}${h.changed ? "" : " (page unchanged)"}`).join("\n");
   // The caller reads the answer off the final page: decision models don't write text.
-  const finalPage = () => (state ? `Final page: ${state.title}\n${state.url}\n\n${state.text.slice(0, 12_000)}` : "");
+  const finalPage = () => `Final page: ${state.title}\n${state.url}\n\n${state.text.slice(0, 12_000)}`;
   const end = (status: BrowseResult["status"], note: string): BrowseResult => ({
     status,
     result: [note, history.length ? `Steps taken:\n${log()}` : "", finalPage()].filter(Boolean).join("\n\n").slice(0, 20_000),
@@ -204,14 +312,12 @@ export async function browse(store: Store, identity: Identity, input: unknown, v
     finalUrl: state?.url?.slice(0, 500),
     costMicro: steps * fee + modelCost,
     models: [...used],
+    where: run.name,
   });
   try {
-    const opened = await sidecar<{ id: string; state: PageState }>("POST", "/session", { url: start.href, timeoutSeconds: 30 });
-    sid = opened.id;
-    state = opened.state;
     while (steps < req.maxSteps) {
       if (Date.now() > deadline - 8_000) return end("stopped", "Ran out of time before the goal was met.");
-      const plan = planStep(state, req.values, steps);
+      const plan = planStep(state, req.values, steps, local && waits < 2);
       const input = `Goal: ${req.goal}\n\nValues the user gave for typing: ${req.values.length ? req.values.map((v) => JSON.stringify(v)).join(", ") : "(none)"}\n\nActions so far:\n${log() || "(none yet)"}\n\n${pageText(state)}`;
       // One step: the first decision model that answers with offered options.
       let action: Action | null = null;
@@ -236,9 +342,15 @@ export async function browse(store: Store, identity: Identity, input: unknown, v
       steps++;
       const before = fingerprint(state);
       const { label, ...act } = action;
-      const r = await sidecar<{ ok: boolean; error: string | null; state: PageState }>("POST", `/session/${sid}/act`, act);
-      state = r.state;
+      const waiting = act.action === "wait_for_user";
+      const since = Date.now();
+      if (waiting) waits++;
+      const r = await run.act(act);
+      // Time spent waiting for the person to sign in doesn't count against the run.
+      if (waiting) deadline += Date.now() - since;
+      if (r.state) state = r.state;
       history.push({ label, ok: r.ok, changed: fingerprint(state) !== before });
+      if (r.stop) return end("stopped", "You stopped the browser.");
       // Three actions in a row that changed nothing: it's stuck.
       if (history.length >= 3 && history.slice(-3).every((h) => !h.changed)) return end("stopped", "The last three actions changed nothing on the page.");
     }
@@ -248,11 +360,13 @@ export async function browse(store: Store, identity: Identity, input: unknown, v
     if ((error as any)?.safe) return end("failed", (error as Error).message);
     throw fail("The browser hit an error and could not finish.", 502);
   } finally {
-    if (sid) await sidecar("DELETE", `/session/${sid}`, undefined, 10_000).catch(() => undefined);
+    await run.close();
     const charged = steps * fee;
-    addBalance(store, w, hold - charged);
-    addMonth(store, w, charged - hold);
-    if (steps) {
+    if (hold) {
+      addBalance(store, w, hold - charged);
+      addMonth(store, w, charged - hold);
+    }
+    if (steps && fee) {
       const unit = stepCost(store);
       recordCall(store, { workspace: w, user: identity.user, via, item: BROWSER_STEP, kind: "service", source: "orbytlink", ref: "browser-step", status: "ok", unitsIn: steps, costMicro: unit === null ? null : unit * steps, costBasis: "computed", chargedMicro: charged });
     }
@@ -260,4 +374,4 @@ export async function browse(store: Store, identity: Identity, input: unknown, v
 }
 // What an agent or a workflow step reads back. "stopped" means the step limit or time ran out first.
 export const browseText = (r: BrowseResult) =>
-  `${r.status === "done" ? "" : r.status === "failed" ? "The browser could not finish this task. " : "The browser stopped before the goal was met. "}${r.result || "(no result)"}`;
+  `${r.where && r.where !== "the server's browser" ? `(Ran in ${r.where}.) ` : ""}${r.status === "done" ? "" : r.status === "failed" ? "The browser could not finish this task. " : "The browser stopped before the goal was met. "}${r.result || "(no result)"}`;

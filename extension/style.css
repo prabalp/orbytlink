@@ -1,0 +1,26 @@
+:root { --bg:#fff; --text:#0d0d0d; --muted:#6e6e73; --border:#e8e8ea; --raised:#fafafa; --btn:#0d0d0d; --btn-fg:#fff; --danger:#b42318; --ok:#067647; }
+@media (prefers-color-scheme: dark) { :root { --bg:#000; --text:#edf2f5; --muted:#9f9f9f; --border:#232323; --raised:#0a0a0b; --btn:#fff; --btn-fg:#222; --danger:#f97066; --ok:#47cd89; } }
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:var(--text); font:14px/20px "Inter", system-ui, -apple-system, "Segoe UI", sans-serif; letter-spacing:-0.1px; }
+main { padding:16px; display:grid; gap:16px; }
+body.tab main { max-width:640px; margin:32px auto; }
+body:not(.tab) { width:360px; }
+h1 { margin:0; font-size:16px; line-height:24px; font-weight:500; }
+h2 { margin:0 0 8px; font-size:12px; line-height:16px; font-weight:500; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+p { margin:0; color:var(--muted); }
+section { border:1px solid var(--border); border-radius:8px; background:var(--raised); padding:12px; display:grid; gap:8px; }
+label { display:grid; gap:4px; font-size:12px; color:var(--muted); }
+input[type=text], input[type=password], input:not([type]) { width:100%; height:32px; padding:0 10px; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--text); font:inherit; }
+input[type=checkbox] { margin-right:8px; }
+.check { display:flex; align-items:flex-start; font-size:14px; color:var(--text); }
+button { height:32px; padding:0 12px; border:0; border-radius:8px; background:var(--btn); color:var(--btn-fg); font:500 14px/20px inherit; cursor:pointer; }
+button.secondary { background:transparent; color:var(--text); border:1px solid var(--border); }
+button:disabled { opacity:.5; cursor:default; }
+.row { display:flex; gap:8px; align-items:center; justify-content:space-between; }
+.dot { display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:6px; background:var(--muted); }
+.dot.on { background:var(--ok); }
+.error { color:var(--danger); }
+ul { list-style:none; margin:0; padding:0; display:grid; gap:4px; }
+li { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+li button { height:24px; padding:0 8px; font-size:12px; }
+.hint { font-size:12px; }

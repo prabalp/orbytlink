@@ -529,12 +529,12 @@ function ownTools(store: Store, w: string, identity: Identity) {
       annotations: { openWorldHint: true },
     });
   // A real browser for web tasks no app or API covers; billed per page action from the same credit.
-  if (browserConfigured(store) && aiSummary(store, w).enabled)
+  if (browserConfigured(store, w) && aiSummary(store, w).enabled)
     tools.push({
       name: BROWSER_TOOL,
       title: "Use a web browser",
       description:
-        "Open a public website in a real browser and carry out a task there (search, fill a form, click through pages), then get back the final page to read the answer from. Use it only when no connected app, API or MCP tool can do the job. Give a start url, a specific goal, and in values every piece of text it may need to type (search terms, form entries): it can type only those. Each step is charged to this workspace's credit. It cannot log in to sites and opens public pages only.",
+        "Carry out a task in a real web browser (search, fill a form, click through pages, read a page behind a login), then get back the final page to read the answer from. It runs first in the user's own browser (the OrbytLink extension, with the sites they are already signed in to) and falls back to a server browser that opens public pages only. Use it only when no connected app, API or MCP tool can do the job. Give a start url, a specific goal, and in values every piece of text it may need to type (search terms, form entries): it can type only those. It never types passwords: if a site needs a sign-in the user does it themselves, and the user is asked to approve each new site and any buying, sending or deleting. where: auto (default), local (only their own browser) or server; device names which of their browser profiles to use. Each step on the server's browser is charged to this workspace's credit; steps in their own browser cost only the decisions.",
       inputSchema: browserInputSchema,
       annotations: { openWorldHint: true },
     });
@@ -806,7 +806,7 @@ async function callOwnTool(store: Store, services: ServiceAdapters, identity: Id
   }
   if (name === "orbytlink__create_workflow") {
     try {
-      const known = new Set([...gatewayTools(store, w).map((t) => t.name), ...visibleWorkflowTools(store, identity).map((t) => t.name), ...(enabledApis(store, w).length ? [API_REQUEST_TOOL] : []), ...(aiConfigured(store) ? [AI_TOOL] : []), ...(browserConfigured(store) ? [BROWSER_TOOL] : []), SCRAPE_TOOL, ...(scraperConfigured() ? [MAPS_TOOL] : []), ...(instantConfigured() ? [INSTANT_CALL] : [])]);
+      const known = new Set([...gatewayTools(store, w).map((t) => t.name), ...visibleWorkflowTools(store, identity).map((t) => t.name), ...(enabledApis(store, w).length ? [API_REQUEST_TOOL] : []), ...(aiConfigured(store) ? [AI_TOOL] : []), ...(browserConfigured(store, w) ? [BROWSER_TOOL] : []), SCRAPE_TOOL, ...(scraperConfigured() ? [MAPS_TOOL] : []), ...(instantConfigured() ? [INSTANT_CALL] : [])]);
       const unknown = ((args.steps as any[]) || []).map((s) => s?.tool).filter((t) => !known.has(t));
       if (unknown.length) return toolText(`Unknown tools: ${unknown.join(", ")}. Use names exactly as listed by this server.`, true);
       const row = saveWorkflow(store, identity, { visibility: "private", ...args, enabled: false, schedule: null }, undefined, "agent");

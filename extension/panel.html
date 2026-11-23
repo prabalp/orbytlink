@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>OrbytLink: Your browser</title><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="style.css"></head>
+<body>
+<main>
+  <div class="row"><h1>OrbytLink: Your browser</h1><span id="state" class="hint"></span></div>
+
+  <section id="pairing" hidden>
+    <h2>Connect this Chrome profile</h2>
+    <p>In OrbytLink open Catalog, then Browser, choose "Add my browser" and type the code here.</p>
+    <label>Code<input id="code" type="text" placeholder="ABCD-1234" autocomplete="off" spellcheck="false"></label>
+    <label>Name for this profile<input id="label" type="text" placeholder="Work" maxlength="40"></label>
+    <label id="serverRow" hidden>Server<input id="server" type="text" spellcheck="false"></label>
+    <div class="row"><button id="pair">Connect</button><button id="advanced" class="secondary">Server…</button></div>
+    <p id="pairError" class="error hint"></p>
+  </section>
+
+  <section id="connected" hidden>
+    <h2>Connected</h2>
+    <div class="row"><span id="name"></span><button id="unpair" class="secondary">Disconnect</button></div>
+    <p id="connError" class="error hint"></p>
+  </section>
+
+  <section id="options" hidden>
+    <h2>Private window</h2>
+    <label class="check"><input id="private" type="checkbox"><span>Use a private window for tasks<br><span class="hint" style="color:var(--muted)">Starts signed out, so it also works when you keep several profiles. OrbytLink waits while you sign in, or fills a login saved below.</span></span></label>
+    <p id="incognitoNote" class="hint error" hidden>Turn on "Allow in Incognito" for this extension in chrome://extensions → OrbytLink → Details.</p>
+  </section>
+
+  <section id="sites" hidden>
+    <h2>Sites you allowed</h2>
+    <ul id="siteList"></ul>
+    <p id="noSites" class="hint">None yet. OrbytLink asks the first time it opens a site.</p>
+  </section>
+
+  <section id="vault" hidden>
+    <h2>Saved sign-ins (this computer only)</h2>
+    <p class="hint">Encrypted with a passphrase only you know. Never sent to OrbytLink. Locked again when Chrome closes.</p>
+    <div id="locked">
+      <label>Passphrase<input id="pass" type="password" autocomplete="off"></label>
+      <div class="row"><button id="unlock"></button><span id="vaultError" class="error hint"></span></div>
+    </div>
+    <div id="unlocked" hidden>
+      <ul id="loginList"></ul>
+      <label>Site<input id="host" type="text" placeholder="github.com" spellcheck="false"></label>
+      <label>Username or email<input id="user" type="text" autocomplete="off"></label>
+      <label>Password<input id="secret" type="password" autocomplete="new-password"></label>
+      <div class="row"><button id="save">Save sign-in</button><button id="lock" class="secondary">Lock</button></div>
+    </div>
+  </section>
+</main>
+<script src="panel.js" type="module"></script>
+</body>
+</html>

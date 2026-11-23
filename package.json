@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "catalog": "node --import tsx scripts/build-connect-index.mjs",
-    "predev": "npm run -s catalog",
-    "prebuild": "npm run -s catalog",
+    "predev": "npm run -s catalog && npm run -s extension",
+    "prebuild": "npm run -s catalog && npm run -s extension",
     "dev": "node --env-file-if-exists=.env --import tsx server/index.ts",
     "build": "tsc --noEmit && vite build && tsc -p tsconfig.server.json",
     "start": "NODE_ENV=production node --env-file-if-exists=.env build/server/index.js",
@@ -15,7 +15,8 @@
     "lint": "eslint .",
     "test:e2e": "playwright test",
     "account": "node --env-file-if-exists=.env --import tsx server/account.ts",
-    "account:production": "NODE_ENV=production node --env-file-if-exists=.env build/server/account.js"
+    "account:production": "NODE_ENV=production node --env-file-if-exists=.env build/server/account.js",
+    "extension": "node scripts/pack-extension.mjs"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.32.2",
