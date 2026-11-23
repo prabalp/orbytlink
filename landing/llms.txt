@@ -26,6 +26,7 @@ OrbytLink is a gateway for AI agents. A team connects each app once (an MCP serv
 - [Terms of service](https://orbytlink.com/terms): terms for using OrbytLink
 - [Pricing](https://orbytlink.com/pricing): free gateway in early access; AI models paid from prepaid credit at provider price plus 5%
 - [Refund policy](https://orbytlink.com/refund): unused credit refundable within 14 days
+- [About](https://orbytlink.com/about): what OrbytLink is and the company behind it, Orbytlabs
 - [Contact](https://orbytlink.com/contact): hello@orbytlink.com
 
 ## Optional
