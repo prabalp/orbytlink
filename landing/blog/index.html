@@ -135,6 +135,30 @@ tbody tr:last-child td { border-bottom: 0; }
 .related h2 { margin: 24px 0 0; font-size: 14px; line-height: 20px; font-weight: 500; color: var(--muted); }
 .related .post-row { padding: 16px 0; }
 .empty { margin-top: 48px; color: var(--muted); }
+.body .note > :first-child { margin-top: 0; }
+.body .note ul { margin-top: 8px; }
+.body .note p, .body .note li { font-size: 16px; line-height: 26px; }
+.body .note strong { display: inline; }
+.body th, .body td { white-space: normal; vertical-align: top; min-width: 140px; }
+.body thead th { white-space: nowrap; }
+.body tbody th { font-weight: 500; color: var(--text); background: none; min-width: 120px; }
+.body h3 { margin-top: 28px; }
+.fig { margin: 24px 0 0; }
+.fig svg { display: block; width: 100%; height: auto; border-radius: 12px; background: var(--raised); box-shadow: inset 0 0 0 1px var(--border); }
+.fig figcaption { margin-top: 8px; font-size: 14px; line-height: 20px; color: var(--muted); }
+.fig .box { fill: var(--bg); stroke: var(--border-strong); stroke-width: 1.5; }
+.fig .hub { fill: var(--btn-bg); stroke: none; }
+.fig .line { stroke: var(--tert); stroke-width: 1.5; fill: none; }
+.fig .line-hi { stroke: var(--link); stroke-width: 2; fill: none; }
+.fig .t { fill: var(--text); font: 500 16px var(--font); }
+.fig .t2 { fill: var(--text-2); font: 400 14px var(--font); }
+.fig .th { fill: var(--btn-fg); font: 500 16px var(--font); }
+.fig .th2 { fill: var(--btn-fg); font: 400 13px var(--font); opacity: .8; }
+.fig .bar { fill: var(--tert); }
+.fig .bar-hi { fill: var(--link); }
+.fig .tag-ok { fill: var(--link); font: 500 13px var(--font); }
+.fig .tag-cost { fill: var(--text-2); font: 500 13px var(--font); }
+.fig .arrow { fill: var(--tert); }
 </style>
 <script type="application/ld+json">{"@context":"https://schema.org","@type":"Blog","name":"OrbytLink Blog","url":"https://orbytlink.com/blog/","publisher":{"@type":"Organization","name":"Orbytlabs"}}</script>
 </head>
@@ -153,7 +177,7 @@ tbody tr:last-child td { border-bottom: 0; }
     <h1>Blog</h1>
     <p class="lead">Practical guides on connecting AI agents to your apps through one endpoint.</p>
     <div class="posts">
-      <a class="post-row" href="/blog/claude-mcp-sales-prospecting-one-endpoint/"><h2>Claude MCP for Sales Prospecting: One Endpoint for Your Stack</h2><p>Connect Claude to your CRM and enrichment tools through one MCP endpoint. Keep credentials out of agents and credit spend under approval.</p><div class="meta">November 23, 2026 · 4 min read</div></a>
+      <a class="post-row" href="/blog/claude-mcp-sales-prospecting-one-endpoint/"><h2>Claude MCP for Sales Prospecting: Cut Tool Overload and Credit Spend</h2><p>Connect Claude to Apollo, Clay and HubSpot through one MCP gateway. Load fewer tool tokens, put approval on credits and keep keys out of agents.</p><div class="meta">November 23, 2026 · 9 min read</div></a>
     </div>
   </div>
 </main>

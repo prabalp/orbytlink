@@ -1,0 +1,8 @@
+<svg viewBox="0 0 640 270" xmlns="http://www.w3.org/2000/svg">
+<text class="t2" x="95" y="22" text-anchor="middle">Agents</text><text class="t2" x="545" y="22" text-anchor="middle">Apps</text>
+<line class="line-hi" x1="170" y1="66" x2="250" y2="100"/><line class="line-hi" x1="170" y1="136" x2="250" y2="136"/><line class="line-hi" x1="170" y1="206" x2="250" y2="172"/><line class="line-hi" x1="390" y1="100" x2="470" y2="66"/><line class="line-hi" x1="390" y1="136" x2="470" y2="136"/><line class="line-hi" x1="390" y1="172" x2="470" y2="206"/>
+<rect class="box" x="20" y="44" width="150" height="44" rx="8"/><text class="t" x="95.0" y="71" text-anchor="middle">Claude (you)</text><rect class="box" x="20" y="114" width="150" height="44" rx="8"/><text class="t" x="95.0" y="141" text-anchor="middle">Cursor</text><rect class="box" x="20" y="184" width="150" height="44" rx="8"/><text class="t" x="95.0" y="211" text-anchor="middle">Claude (teammate)</text><rect class="box" x="470" y="44" width="150" height="44" rx="8"/><text class="t" x="545.0" y="71" text-anchor="middle">Apollo</text><rect class="box" x="470" y="114" width="150" height="44" rx="8"/><text class="t" x="545.0" y="141" text-anchor="middle">HubSpot</text><rect class="box" x="470" y="184" width="150" height="44" rx="8"/><text class="t" x="545.0" y="211" text-anchor="middle">Clay</text>
+<rect class="hub" x="250" y="76" width="140" height="120" rx="12"/>
+<text class="th" x="320" y="130" text-anchor="middle">OrbytLink</text><text class="th2" x="320" y="152" text-anchor="middle">one endpoint</text>
+<text class="t2" x="320" y="256" text-anchor="middle">3 + 3 = 6 connections, and credentials stay in OrbytLink</text>
+</svg>

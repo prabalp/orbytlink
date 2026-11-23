@@ -1,0 +1,9 @@
+<svg viewBox="0 0 640 210" xmlns="http://www.w3.org/2000/svg">
+<text class="t2" x="20" y="28">All 58 tools from 5 servers loaded up front</text>
+<rect class="bar" x="20" y="40" width="440" height="32" rx="6"/>
+<text class="t" x="472" y="62">≈ 55K tokens</text>
+<text class="t2" x="20" y="118">With tool search: the search tool plus the 3 to 5 tools needed</text>
+<rect class="bar-hi" x="20" y="130" width="70" height="32" rx="6"/>
+<text class="t" x="102" y="152">≈ 8.7K tokens</text>
+<text class="t2" x="20" y="194">Anthropic's example: GitHub, Slack, Sentry, Grafana and Splunk servers</text>
+</svg>

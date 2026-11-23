@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0"><channel>
 <title>OrbytLink Blog</title><link>https://orbytlink.com/blog/</link><description>Guides on connecting AI agents to your apps through one MCP endpoint.</description><language>en</language>
-<item><title>Claude MCP for Sales Prospecting: One Endpoint for Your Stack</title><link>https://orbytlink.com/blog/claude-mcp-sales-prospecting-one-endpoint/</link><guid>https://orbytlink.com/blog/claude-mcp-sales-prospecting-one-endpoint/</guid><pubDate>Mon, 23 Nov 2026 09:00:00 GMT</pubDate><description>Connect Claude to your CRM and enrichment tools through one MCP endpoint. Keep credentials out of agents and credit spend under approval.</description></item>
+<item><title>Claude MCP for Sales Prospecting: Cut Tool Overload and Credit Spend</title><link>https://orbytlink.com/blog/claude-mcp-sales-prospecting-one-endpoint/</link><guid>https://orbytlink.com/blog/claude-mcp-sales-prospecting-one-endpoint/</guid><pubDate>Mon, 23 Nov 2026 09:00:00 GMT</pubDate><description>Connect Claude to Apollo, Clay and HubSpot through one MCP gateway. Load fewer tool tokens, put approval on credits and keep keys out of agents.</description></item>
 </channel></rss>
