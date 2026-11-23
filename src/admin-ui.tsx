@@ -199,7 +199,7 @@ function OverviewPage({ subtitle }: { subtitle: string }) {
           </div>
           <Breakdown title="Top items" rows={data.topItems} keyLabel="Item" />
           <Breakdown title="By day" rows={[...data.byDay].reverse()} keyLabel="Day" />
-          <ProviderBalances providers={data.providers} />
+          <ProviderBalances providers={data.providers} instant={data.instant || []} />
         </>
       )}
     </>
@@ -230,19 +230,29 @@ function Breakdown({ title, rows, keyLabel }: { title: string; rows: Data[]; key
     </section>
   );
 }
-function ProviderBalances({ providers }: { providers: Data[] }) {
+function ProviderBalances({ providers, instant }: { providers: Data[]; instant: Data[] }) {
+  const low = (micro: number | null) => micro !== null && micro < 5_000_000;
   return (
     <section className="panel">
-      <div className="section-heading"><h2>Provider balances</h2><a className="text-button" href="#providers">Manage</a></div>
+      <div className="section-heading"><h2>Credit left at providers</h2><a className="text-button" href="#providers">Manage</a></div>
       <div className="table-scroll">
         <table>
-          <thead><tr><th>Provider</th><th>Balance</th><th>How it’s known</th></tr></thead>
+          <thead><tr><th>Provider</th><th>Used for</th><th>Balance</th><th>How it’s known</th></tr></thead>
           <tbody>
             {providers.map((p) => (
               <tr key={p.id}>
                 <td><strong>{p.name}</strong><small>{p.id}</small></td>
-                <td className={p.balance_micro !== null && p.balance_micro < 5_000_000 && p.balance_mode !== "postpaid" ? "tone-bad" : undefined}>{p.balance_mode === "postpaid" ? "Postpaid" : p.balance_micro === null ? "Not recorded" : money(p.balance_micro)}</td>
+                <td className="muted">AI models</td>
+                <td className={p.balance_mode !== "postpaid" && low(p.balance_micro) ? "tone-bad" : undefined}>{p.balance_mode === "postpaid" ? "Postpaid" : p.balance_micro === null ? "Not recorded" : money(p.balance_micro)}</td>
                 <td className="muted">{p.balance_mode === "api" ? `Read from its API${p.balance_checked_at ? ` · ${when(p.balance_checked_at)}` : ""}` : p.balance_mode === "manual" ? "Recorded here; calls are taken off" : "Billed afterwards"}</td>
+              </tr>
+            ))}
+            {instant.map((w) => (
+              <tr key={`instant-${w.source}`}>
+                <td><strong>Tool source {String(w.source).toUpperCase()}</strong><small>{w.source}</small></td>
+                <td className="muted">Instant tools</td>
+                <td className={w.configured && w.wallet && low(w.wallet.micro) ? "tone-bad" : undefined}>{!w.configured ? "Not set up" : w.wallet ? money(w.wallet.micro) : "Not recorded"}</td>
+                <td className={w.down ? "tone-bad" : "muted"}>{w.down ? "Resting after failures" : w.wallet ? `${w.wallet.from === "api" ? "Read from its API" : "Recorded here; calls are taken off"} · ${when(w.wallet.checkedAt)}` : w.configured ? "Set its wallet with npm run account -- instant wallet" : "Add its key to turn it on"}</td>
               </tr>
             ))}
           </tbody>

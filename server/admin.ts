@@ -256,8 +256,11 @@ function overview(store: Store, days: number) {
     .get(since(days)) as Record<string, number>;
   const credit = store.db.prepare("SELECT COALESCE(SUM(json_extract(data,'$.micro')),0) AS micro, COUNT(*) AS n FROM records WHERE kind='ai_credits' AND id='balance'").get() as { micro: number; n: number };
   const providers = sources(store);
+  // The Instant tools' wholesale sources keep their own wallets; they count here too.
+  const instant = walletReport(store);
   const alerts: string[] = [];
   for (const p of providers) if (p.balance_mode !== "postpaid" && p.balance_micro !== null && p.balance_micro < 5_000_000) alerts.push(`${p.name} balance is $${usd(p.balance_micro).toFixed(2)}.`);
+  for (const w of instant) if (w.configured && w.wallet && w.wallet.micro < 5_000_000) alerts.push(`Tool source ${w.source.toUpperCase()} balance is $${usd(w.wallet.micro).toFixed(2)}.`);
   const losing = catalogRows(store).filter((r) => r.live && r.margin_pct !== null && r.margin_pct < 0);
   if (losing.length) alerts.push(`${losing.length} item${losing.length === 1 ? "" : "s"} sell below cost: ${losing.slice(0, 5).map((r) => r.name).join(", ")}${losing.length > 5 ? "…" : ""}.`);
   if (t.costUnknown) alerts.push(`${t.costUnknown} paid call${t.costUnknown === 1 ? "" : "s"} have no cost on record.`);
@@ -270,6 +273,7 @@ function overview(store: Store, days: number) {
     topItems: report(store, { days, by: "item" }).slice(0, 10),
     creditHeld: credit.micro,
     providers,
+    instant,
     alerts,
   };
 }

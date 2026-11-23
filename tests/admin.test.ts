@@ -7,6 +7,8 @@ import { Store } from "../server/store";
 import { grantCredits } from "../server/ai";
 import { grantOperator, parseCsv } from "../server/admin";
 import { priceOf } from "../server/catalog";
+import { setWallet } from "../server/instant";
+import { setSources, sources } from "../server/instant/sources";
 import type { ServiceAdapters } from "../server/adapters";
 import { inject } from "./inject";
 
@@ -150,4 +152,20 @@ it("records provider top-ups, pins routes, grants workspace credit, and shows co
   const o = (await api("/api/admin/overview?days=7")).data;
   expect(o).toMatchObject({ days: 7, creditHeld: 5_000_000, totals: { calls: 0 } });
   expect((await api("/api/admin/audit")).data.entries.map((e: any) => e.action)).toEqual(["credit.grant", "route.set", "provider.set"]);
+});
+
+it("lists the Instant tool sources beside the model providers, and warns when a configured source runs low", async () => {
+  grantOperator(store, "alice@example.invalid");
+  const original = sources();
+  setSources([{ id: "a", configured: () => true }, { id: "b", configured: () => false }] as any);
+  try {
+    setWallet(store, "a", 2);
+    const o = (await api("/api/admin/overview?days=7")).data;
+    expect(o.instant.map((w: any) => [w.source, w.configured, w.wallet?.micro ?? null])).toEqual([["a", true, 2_000_000], ["b", false, null]]);
+    expect(o.alerts).toContain("Tool source A balance is $2.00.");
+    setWallet(store, "a", 50);
+    expect((await api("/api/admin/overview?days=7")).data.alerts.some((a: string) => a.startsWith("Tool source"))).toBe(false);
+  } finally {
+    setSources(original);
+  }
 });
