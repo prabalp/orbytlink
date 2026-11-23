@@ -109,7 +109,7 @@ Controls 8px, notes, code blocks and tables 12px/8px as on the inner pages. Imag
 - **Callout (`.note`)**: 16×20 padding, 12px radius, `raised` background, 14/22 text. For “Heads up” and “Related” asides, at most one per post.
 - **Code block**: `raised` background, 1px border, 12px radius, 16px padding, horizontal scroll, no syntax-colour theme beyond `text` and `muted`. Include a copy button only on blocks of three or more lines.
 - **Table**: the inner-page table (14/20, `raised` header, 1px row borders) inside a scrolling wrapper.
-- **Images and diagrams**: optional, one per post at most before the first `h2`. Prefer inline SVG that uses theme tokens. Every image has alt text, explicit width/height, and loads lazily unless it is the first. No stock photography, no generated hero art, no screenshots with real customer data.
+- **Figures**: SVG files in `landing/blog-src/figures/`, referenced as `![what it shows](figures/name.svg "Caption")`. The generator inlines them, adds `role="img"` and the alt text, and styles them with the `.fig` classes (`box`, `hub`, `line`, `t`, `t2`, `bar`, ...) so they follow light and dark. Use a figure where a picture explains the mechanism or a number (a diagram, a comparison bar), not as decoration. Illustrative numbers are labelled as such in the caption. Every image has alt text, explicit width/height, and loads lazily unless it is the first. No stock photography, no generated hero art, no screenshots with real customer data.
 - **Buttons**: the existing `.btn` (32px high, 14/20 weight 500, `btn-bg`).
 
 Motion is limited to the 300ms colour transitions already used on the site. No scroll effects, reveal animations or autoplay media.
@@ -139,7 +139,7 @@ Rules:
 
 - `slug` is permanent. Renaming a post needs a redirect in `landing/_redirects`.
 - Posts dated in the future are not emitted, so a batch can be queued and one goes live per day when the site is rebuilt.
-- Markdown subset: `h2`/`h3`, paragraphs, lists, bold, inline code, fenced code, tables, blockquote (rendered as a callout), links, images. No raw HTML.
+- Markdown subset: `h2`/`h3`, paragraphs, lists, bold, inline code, fenced code, tables, blockquote (rendered as a callout, and it may contain a list), links, figures. No raw HTML.
 - One author voice: “we” (Orbytlabs). No bylines.
 
 ## Build and publishing
@@ -165,8 +165,9 @@ Daily routine: write the file, run `node scripts/build-blog.mjs`, check the post
 ## Writing guidance
 
 - Lead with the answer or the problem in the first two sentences. Titles say what the reader will learn, in plain words, under 70 characters.
-- 600 to 1,200 words. One idea per post; link to earlier posts instead of repeating them.
+- 600 to 1,200 words for a normal post; a comparison or guide meant to rank can run to about 2,000. One idea per post; link to earlier posts instead of repeating them.
 - Only claim what the product does today. Describe planned features as planned, and label illustrative numbers as illustrative, as in the landing rules. No invented customer stories or benchmarks.
+- For a post meant to rank: put a short "Key takeaways" callout after the intro, a comparison table where there is a real choice, and an FAQ of real questions at the end, and cite the primary source for every number.
 - Prefer concrete examples: the actual tool call, config or workflow, not an abstraction of it.
 - Avoid em dashes, filler openers (“In today's fast-paced world”) and closing summaries that repeat the post.
 

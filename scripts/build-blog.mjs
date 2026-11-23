@@ -25,7 +25,7 @@ const longDate = (d) => new Date(`${d}T00:00:00Z`).toLocaleDateString("en-US", {
 // ── Markdown (the subset the blog allows) ───────────────────────────────────
 const stash = [];
 function inline(text) {
-  let s = text.replace(/`([^`]+)`/g, (_, c) => `\u0000${stash.push(`<code>${esc(c)}</code>`) - 1}\u0000`);
+  let s = text.replace(/`([^`]+)`/g, (_, c) => `\uE000${stash.push(`<code>${esc(c)}</code>`) - 1}\uE000`);
   s = esc(s);
   s = s.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g, (_, alt, src) => {
     if (!alt.trim()) fail("image", `${src} has no alt text`);
@@ -37,24 +37,33 @@ function inline(text) {
     return `<a href="${href}"${external ? ' rel="noopener"' : ""}>${label}</a>`;
   });
   s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>").replace(/(^|[\s(])\*([^*\s][^*]*)\*(?=[\s).,;:!?]|$)/g, "$1<em>$2</em>");
-  return s.replace(/\u0000(\d+)\u0000/g, (_, i) => stash[Number(i)]);
+  return s.replace(/\uE000(\d+)\uE000/g, (_, i) => stash[Number(i)]);
 }
 let links = [];
-function render(md) {
-  const lines = md.replace(/\r\n/g, "\n").split("\n");
+// A figure is an SVG file in landing/blog-src/figures/, written with the theme's CSS variables and
+// inlined so it follows light and dark. In a post: ![what it shows](figures/name.svg "Caption").
+function figure(alt, file, caption) {
+  const path = join(SRC, file);
+  if (!existsSync(path)) return fail("figure", `${file} doesn't exist`), "";
+  let svg = readFileSync(path, "utf8").trim();
+  if (!svg.startsWith("<svg") || /<script|on\w+=/i.test(svg)) fail("figure", `${file} must be a plain <svg> with no scripts`);
+  if (!alt.trim()) fail("figure", `${file} has no alt text`);
+  svg = svg.replace(/^<svg/, `<svg role="img" aria-label="${esc(alt)}"`);
+  return `<figure class="fig">${svg}${caption ? `<figcaption>${inline(caption)}</figcaption>` : ""}</figure>`;
+}
+function blocks(lines, ctx) {
   const html = [];
-  const headings = [];
   let i = 0;
-  let first = true;
   const para = [];
   const flush = () => {
     if (!para.length) return;
-    html.push(`<p${first ? ' class="intro"' : ""}>${inline(para.join(" "))}</p>`);
-    first = false;
+    html.push(`<p${ctx.first ? ' class="intro"' : ""}>${inline(para.join(" "))}</p>`);
+    ctx.first = false;
     para.length = 0;
   };
   while (i < lines.length) {
     const line = lines[i];
+    let m;
     if (!line.trim()) {
       flush();
       i++;
@@ -70,17 +79,21 @@ function render(md) {
       const level = line.startsWith("###") ? 3 : 2;
       const text = line.replace(/^#{2,3} /, "").trim();
       const id = slugOf(text);
-      if (level === 2) headings.push({ id, text });
+      if (level === 2) ctx.headings.push({ id, text });
       html.push(`<h${level} id="${id}">${inline(text)}</h${level}>`);
       i++;
     } else if (/^#\s/.test(line)) {
       fail("markdown", "use ## for sections; the title comes from front matter");
       i++;
+    } else if ((m = line.match(/^!\[([^\]]*)\]\((figures\/[a-z0-9-]+\.svg)(?:\s+"([^"]+)")?\)\s*$/))) {
+      flush();
+      html.push(figure(m[1], m[2], m[3]));
+      i++;
     } else if (/^>/.test(line)) {
       flush();
       const quote = [];
       while (i < lines.length && /^>/.test(lines[i])) quote.push(lines[i++].replace(/^>\s?/, ""));
-      html.push(`<div class="note">${inline(quote.join(" "))}</div>`);
+      html.push(`<aside class="note">${blocks(quote, { first: false, headings: [] }).join("\n")}</aside>`);
     } else if (/^\s*([-*]|\d+\.)\s/.test(line)) {
       flush();
       const ordered = /^\s*\d+\./.test(line);
@@ -94,8 +107,8 @@ function render(md) {
       i += 2;
       const rows = [];
       while (i < lines.length && /^\|/.test(lines[i])) rows.push(cells(lines[i++]));
-      html.push(`<div class="table-wrap"><table><thead><tr>${head.map((c) => `<th>${inline(c)}</th>`).join("")}</tr></thead><tbody>${rows.map((r) => `<tr>${r.map((c) => `<td>${inline(c)}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`);
-    } else if (/<[a-z!/]/i.test(line) && /^\s*</.test(line)) {
+      html.push(`<div class="table-wrap"><table><thead><tr>${head.map((c) => `<th>${inline(c)}</th>`).join("")}</tr></thead><tbody>${rows.map((r) => `<tr>${r.map((c, n) => (n === 0 ? `<th scope="row">${inline(c)}</th>` : `<td>${inline(c)}</td>`)).join("")}</tr>`).join("")}</tbody></table></div>`);
+    } else if (/^\s*</.test(line) && /<[a-z!/]/i.test(line)) {
       fail("markdown", "raw HTML isn't allowed in posts");
       i++;
     } else {
@@ -104,7 +117,12 @@ function render(md) {
     }
   }
   flush();
-  return { html: html.join("\n        "), headings };
+  return html;
+}
+function render(md) {
+  const ctx = { first: true, headings: [] };
+  const html = blocks(md.replace(/\r\n/g, "\n").split("\n"), ctx);
+  return { html: html.join("\n        "), headings: ctx.headings };
 }
 
 // ── The shell, taken from about.html ────────────────────────────────────────
@@ -148,6 +166,30 @@ const blogStyle = `<style>
 .related h2 { margin: 24px 0 0; font-size: 14px; line-height: 20px; font-weight: 500; color: var(--muted); }
 .related .post-row { padding: 16px 0; }
 .empty { margin-top: 48px; color: var(--muted); }
+.body .note > :first-child { margin-top: 0; }
+.body .note ul { margin-top: 8px; }
+.body .note p, .body .note li { font-size: 16px; line-height: 26px; }
+.body .note strong { display: inline; }
+.body th, .body td { white-space: normal; vertical-align: top; min-width: 140px; }
+.body thead th { white-space: nowrap; }
+.body tbody th { font-weight: 500; color: var(--text); background: none; min-width: 120px; }
+.body h3 { margin-top: 28px; }
+.fig { margin: 24px 0 0; }
+.fig svg { display: block; width: 100%; height: auto; border-radius: 12px; background: var(--raised); box-shadow: inset 0 0 0 1px var(--border); }
+.fig figcaption { margin-top: 8px; font-size: 14px; line-height: 20px; color: var(--muted); }
+.fig .box { fill: var(--bg); stroke: var(--border-strong); stroke-width: 1.5; }
+.fig .hub { fill: var(--btn-bg); stroke: none; }
+.fig .line { stroke: var(--tert); stroke-width: 1.5; fill: none; }
+.fig .line-hi { stroke: var(--link); stroke-width: 2; fill: none; }
+.fig .t { fill: var(--text); font: 500 16px var(--font); }
+.fig .t2 { fill: var(--text-2); font: 400 14px var(--font); }
+.fig .th { fill: var(--btn-fg); font: 500 16px var(--font); }
+.fig .th2 { fill: var(--btn-fg); font: 400 13px var(--font); opacity: .8; }
+.fig .bar { fill: var(--tert); }
+.fig .bar-hi { fill: var(--link); }
+.fig .tag-ok { fill: var(--link); font: 500 13px var(--font); }
+.fig .tag-cost { fill: var(--text-2); font: 500 13px var(--font); }
+.fig .arrow { fill: var(--tert); }
 </style>`;
 
 function page({ title, description, path, type = "website", body, extraHead = "", crumbs }) {
@@ -230,7 +272,7 @@ if (existsSync(SRC)) {
     const { html, headings } = render(m[2].trim());
     const text = m[2].replace(/```[\s\S]*?```/g, " ");
     const words = (text.match(/[\p{L}\p{N}'-]+/gu) || []).length;
-    posts.push({ ...meta, html, headings, links: [...links], minutes: Math.max(1, Math.round(words / 220)), file });
+    posts.push({ ...meta, html, headings, links: [...links], minutes: Math.max(1, Math.round(words / 220)), words, file });
   }
 }
 posts.sort((a, b) => b.date.localeCompare(a.date) || a.slug.localeCompare(b.slug));
@@ -287,7 +329,8 @@ for (const p of posts) {
       type: "article",
       crumbs: `<a href="/">Home</a> / <a href="/blog/">Blog</a> / ${esc(p.title)}`,
       extraHead: `<meta property="article:published_time" content="${published}">
-<script type="application/ld+json">${JSON.stringify({ "@context": "https://schema.org", "@type": "BlogPosting", headline: p.title, description: p.summary, datePublished: published, dateModified: modified, mainEntityOfPage: `${SITE}/blog/${p.slug}/`, author: { "@type": "Organization", name: "Orbytlabs" }, publisher: { "@type": "Organization", name: "Orbytlabs" } })}</script>
+<script type="application/ld+json">${JSON.stringify({ "@context": "https://schema.org", "@type": "BlogPosting", headline: p.title, description: p.summary, datePublished: published, dateModified: modified, mainEntityOfPage: `${SITE}/blog/${p.slug}/`, image: `${SITE}/og-image.png?v=2`, keywords: p.tags.join(", "), wordCount: p.words, author: { "@type": "Organization", name: "Orbytlabs" }, publisher: { "@type": "Organization", name: "Orbytlabs" } })}</script>
+<script type="application/ld+json">${JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [{ "@type": "ListItem", position: 1, name: "Home", item: `${SITE}/` }, { "@type": "ListItem", position: 2, name: "Blog", item: `${SITE}/blog/` }, { "@type": "ListItem", position: 3, name: p.title, item: `${SITE}/blog/${p.slug}/` }] })}</script>
 ${toc ? "" : "<style>.layout { grid-template-columns: minmax(0, 704px); }</style>"}`,
       body: `    <h1>${esc(p.title)}</h1>
     <div class="meta">${longDate(published)}${modified !== published ? ` · Updated ${longDate(modified)}` : ""} · ${p.minutes} min read</div>
