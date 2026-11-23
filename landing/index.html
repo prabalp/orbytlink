@@ -1039,7 +1039,7 @@ section { position: relative; }
       note.textContent = "Enter a valid work email, like you@company.com."; note.classList.add("err"); form.email.focus(); return;
     }
     note.classList.remove("err"); note.textContent = "Opening your workspace…";
-    location.href = "https://app.orbytlink.com/#signup=" + encodeURIComponent(email);
+    location.href = "https://app.orbytlink.com/" + (window.olQuery ? window.olQuery() : "") + "#signup=" + encodeURIComponent(email);
   });
 
   /* Footer status: is the gateway reachable? */
@@ -1051,5 +1051,6 @@ section { position: relative; }
 })();
 </script>
 <script src="redesign.js"></script>
+<script src="/ref.js" defer></script>
 </body>
 </html>

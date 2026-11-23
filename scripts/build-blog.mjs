@@ -233,6 +233,7 @@ ${body}
   </div>
 </main>
 ${footer}
+<script src="/ref.js" defer></script>
 </body>
 </html>
 `;
