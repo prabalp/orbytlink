@@ -429,7 +429,7 @@ export function App() {
   useEffect(() => {
     if (!state || oauthHandled.current) return;
     const done = location.hash.match(/^#oauth-connected=([A-Za-z0-9-]+)$/);
-    const failed = location.hash.match(/^#oauth-error=([a-z-]+)$/);
+    const failed = location.hash.match(/^#oauth-error=([a-z-]+)(?:~(.*))?$/);
     const channel = location.hash.match(/^#channel-connected=([a-z-]+)~(\d+)$/);
     if (channel) {
       oauthHandled.current = true;
@@ -444,7 +444,13 @@ export function App() {
     history.replaceState(null, "", "#connections");
     setPage("connections");
     if (failed) {
-      setError(oauthErrors[failed[1]] || oauthErrors["oauth-failed"]);
+      let why = "";
+      try {
+        why = failed[2] ? decodeURIComponent(failed[2]).slice(0, 200).replace(/\.$/, "") : "";
+      } catch {
+        // malformed reason: show the plain message
+      }
+      setError(`${oauthErrors[failed[1]] || oauthErrors["oauth-failed"]}${why ? ` Reason: ${why}.` : ""}`);
       return;
     }
     api(`/connections/${done![1]}/test`, {}).then(

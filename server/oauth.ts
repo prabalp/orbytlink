@@ -184,7 +184,10 @@ async function tokenRequest(store: Store, w: string, c: Row, r: Resolved, params
   // Slack answers 200 with ok:false, and nests user tokens under authed_user.
   const access = j?.access_token ?? j?.authed_user?.access_token;
   if (!res.ok || j?.ok === false || j?.error || typeof access !== "string")
-    throw Object.assign(new Error("Token request failed"), { oauthError: String(j?.error || res.status) });
+    throw Object.assign(new Error("Token request failed"), {
+      oauthError: String(j?.error || res.status),
+      oauthDetail: typeof j?.error_description === "string" ? j.error_description : undefined,
+    });
   const refresh = j.refresh_token ?? j.authed_user?.refresh_token;
   const lifetime = Number(j.expires_in ?? j.authed_user?.expires_in);
   return {
@@ -285,27 +288,53 @@ function readCookie(req: Request, name: string) {
 // without the Strict session cookie, so this route authenticates from the signed flow cookie.
 export function configureOAuthCallback(app: Express, store: Store, key: string, limit: RequestHandler) {
   app.get("/api/oauth/callback", limit, async (req, res) => {
-    const fail = (code: string) => {
+    // Every failure is logged with its reason, and a known connection keeps it (record + audit),
+    // so a failed sign-in can be diagnosed after the fact. The reason also reaches the UI.
+    let known: { w: string; id: string; name: string; user: string } | undefined;
+    const fail = (code: string, reason: string) => {
+      const why = reason.replace(/\s+/g, " ").trim().slice(0, 300);
+      console.warn(`[oauth] sign-in failed (${code})${known ? ` for ${known.name}` : ""}: ${why}`);
+      if (known) {
+        try {
+          const c = store.get(known.w, "connections", known.id);
+          store.put(known.w, "connections", { ...c, error: `Sign-in failed: ${why}` });
+          store.audit(known.w, known.user, "connection.authorize-failed", `${known.name}: ${why}`.slice(0, 400));
+        } catch {
+          // the connection was removed meanwhile
+        }
+      }
       res.clearCookie(COOKIE, { path: "/api/oauth" });
-      res.redirect(`/#oauth-error=${code}`);
+      res.redirect(`/#oauth-error=${code}~${encodeURIComponent(why.slice(0, 200))}`);
+    };
+    const providerError = () => {
+      const e = typeof req.query.error === "string" ? req.query.error : "error";
+      const d = typeof req.query.error_description === "string" ? req.query.error_description : "";
+      return `the app answered ${e}${d ? `: ${d}` : ""}`;
     };
     const raw = readCookie(req, COOKIE) || "";
     const [payload, mac] = raw.split(".");
     const expected = payload ? sign(key, payload) : "";
     if (!payload || !mac || mac.length !== expected.length || !timingSafeEqual(Buffer.from(mac), Buffer.from(expected)))
-      return fail("oauth-failed");
+      return fail("oauth-failed", req.query.error ? providerError() : "the sign-in cookie is missing; start Connect again in the same browser");
     let flow: { state: string; verifier: string; w: string; id: string; account: string; exp: number; channel?: string };
     try {
       flow = JSON.parse(Buffer.from(payload, "base64url").toString());
     } catch {
-      return fail("oauth-failed");
+      return fail("oauth-failed", "the sign-in cookie is unreadable");
     }
-    if (flow.exp < Date.now() || req.query.state !== flow.state)
-      return fail("oauth-failed");
-    if (req.query.error) return fail(req.query.error === "access_denied" ? "oauth-cancelled" : "oauth-failed");
-    if (typeof req.query.code !== "string") return fail("oauth-failed");
+    if (!flow.channel) {
+      try {
+        known = { w: flow.w, id: flow.id, name: store.get(flow.w, "connections", flow.id).name, user: flow.account };
+      } catch {
+        // removed before the provider sent the browser back
+      }
+    }
+    if (flow.exp < Date.now()) return fail("oauth-failed", "the sign-in took too long; start Connect again");
+    if (req.query.state !== flow.state) return fail("oauth-failed", "the sign-in state did not match; start Connect again");
+    if (req.query.error) return fail(req.query.error === "access_denied" ? "oauth-cancelled" : "oauth-failed", providerError());
+    if (typeof req.query.code !== "string") return fail("oauth-failed", "the app sent no authorization code");
     // The person who started this must still be an admin of the workspace.
-    if (roleIn(store, flow.account, flow.w) !== "admin") return fail("oauth-forbidden");
+    if (roleIn(store, flow.account, flow.w) !== "admin") return fail("oauth-forbidden", "the person who started this is not an admin");
     // A social account (same callback, so the operator registers one redirect URI everywhere).
     if (flow.channel) {
       try {
@@ -315,13 +344,13 @@ export function configureOAuthCallback(app: Express, store: Store, key: string, 
         return res.redirect(`/#channel-connected=${encodeURIComponent(flow.channel)}~${rows.length}`);
       } catch (error) {
         console.warn(`[social] ${flow.channel} sign-in failed: ${(error as Error).message} ${(error as any).oauthError || ""}`);
-        return fail(/No Facebook Pages|no YouTube channel|No Instagram account/.test((error as Error).message) ? "channel-empty" : "oauth-failed");
+        return fail(/No Facebook Pages|no YouTube channel|No Instagram account/.test((error as Error).message) ? "channel-empty" : "oauth-failed", (error as Error).message);
       }
     }
     try {
       const c = store.get(flow.w, "connections", flow.id);
       const resolved = c.oauthState?.resolved as Resolved | undefined;
-      if (c.auth !== "oauth" || !resolved) return fail("oauth-failed");
+      if (c.auth !== "oauth" || !resolved) return fail("oauth-failed", "the connection has no sign-in in progress");
       const t = await tokenRequest(store, flow.w, c, resolved, {
         grant_type: "authorization_code",
         code: req.query.code,
@@ -335,8 +364,9 @@ export function configureOAuthCallback(app: Express, store: Store, key: string, 
       store.audit(flow.w, c.name, "connection.authorized", c.name);
       res.clearCookie(COOKIE, { path: "/api/oauth" });
       res.redirect(`/#oauth-connected=${c.id}`);
-    } catch {
-      fail("oauth-failed");
+    } catch (error) {
+      const e = error as Error & { oauthError?: string; oauthDetail?: string };
+      fail("oauth-failed", e.oauthError ? `the token exchange failed: ${e.oauthError}${e.oauthDetail ? ` (${e.oauthDetail})` : ""}` : e.message);
     }
   });
 }

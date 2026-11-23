@@ -206,5 +206,5 @@ it("says what to do when no Page with a linked Instagram account was shared", as
     if (url.startsWith("https://graph.facebook.com/v23.0/me/accounts")) return Response.json({ data: [{ id: "222", name: "Plain Page", access_token: "p" }] });
   };
   const { done } = await connect("instagram");
-  expect(done.headers.location).toBe("/#oauth-error=channel-empty");
+  expect(done.headers.location).toMatch(/^\/#oauth-error=channel-empty~/);
 });

@@ -131,11 +131,11 @@ it("rejects forged, missing, replayed-state and cancelled callbacks", async () =
   const start = await request(`/api/connections/${id}/oauth/start`, {});
   const state = new URL(start.data.url).searchParams.get("state");
   const cb = (qs: string, c?: string) => inject(app, { url: `/api/oauth/callback?${qs}`, headers: { Cookie: c ?? "" } });
-  expect((await cb(`code=x&state=${state}`)).headers.location).toBe("/#oauth-error=oauth-failed");
-  expect((await cb(`code=x&state=wrong`, cookieOf(start, "orbyt_oauth"))).headers.location).toBe("/#oauth-error=oauth-failed");
+  expect((await cb(`code=x&state=${state}`)).headers.location).toMatch(/^\/#oauth-error=oauth-failed~/);
+  expect((await cb(`code=x&state=wrong`, cookieOf(start, "orbyt_oauth"))).headers.location).toMatch(/^\/#oauth-error=oauth-failed~/);
   const tampered = cookieOf(start, "orbyt_oauth").replace(/.$/, (ch) => (ch === "A" ? "B" : "A"));
-  expect((await cb(`code=x&state=${state}`, tampered)).headers.location).toBe("/#oauth-error=oauth-failed");
-  expect((await cb(`error=access_denied&state=${state}`, cookieOf(start, "orbyt_oauth"))).headers.location).toBe("/#oauth-error=oauth-cancelled");
+  expect((await cb(`code=x&state=${state}`, tampered)).headers.location).toMatch(/^\/#oauth-error=oauth-failed~/);
+  expect((await cb(`error=access_denied&state=${state}`, cookieOf(start, "orbyt_oauth"))).headers.location).toMatch(/^\/#oauth-error=oauth-cancelled~/);
   expect(fetchCalls.some((c) => c.url.includes("token"))).toBe(false);
   expect((await request("/api/state")).data.connections[0].oauthState.connected).toBeFalsy();
 });
@@ -310,5 +310,31 @@ it("sends Slack-style tokens correctly: user_scope, basic auth, nested user toke
   expect(store.secret(workspace, `${id}:oauth-access`)).toBe("xoxp-1");
   // A provider that says ok:false is a failure even with HTTP 200.
   mockProvider((url) => (url.includes("oauth.v2.user.access") ? Response.json({ ok: false, error: "invalid_code" }) : undefined));
-  expect((await authorize(id)).done.headers.location).toBe("/#oauth-error=oauth-failed");
+  expect((await authorize(id)).done.headers.location).toMatch(/^\/#oauth-error=oauth-failed~/);
+});
+
+it("keeps the reason a sign-in failed: in the redirect, on the connection and in the audit log", async () => {
+  const id = await addConnection();
+  vi.spyOn(console, "warn").mockImplementation(() => {});
+  // The provider sends the browser back with an error.
+  const start = await request(`/api/connections/${id}/oauth/start`, {});
+  const state = new URL(start.data.url).searchParams.get("state");
+  const back = await inject(app, {
+    url: `/api/oauth/callback?error=invalid_scope&error_description=Scope%20not%20allowed&state=${state}`,
+    headers: { Cookie: cookieOf(start, "orbyt_oauth") },
+  });
+  expect(decodeURIComponent(String(back.headers.location))).toBe("/#oauth-error=oauth-failed~the app answered invalid_scope: Scope not allowed");
+  let c = (await request("/api/state")).data.connections[0];
+  expect(c.error).toBe("Sign-in failed: the app answered invalid_scope: Scope not allowed");
+  // The token exchange fails: the provider's error and description are kept.
+  mockProvider((url) =>
+    url === "https://oauth2.googleapis.com/token" ? Response.json({ error: "invalid_grant", error_description: "Bad code" }, { status: 400 }) : undefined,
+  );
+  const { done } = await authorize(id);
+  expect(decodeURIComponent(String(done.headers.location))).toBe("/#oauth-error=oauth-failed~the token exchange failed: invalid_grant (Bad code)");
+  c = (await request("/api/state")).data.connections[0];
+  expect(c.error).toMatch(/invalid_grant \(Bad code\)/);
+  const audit = store.list(workspace, "audit").map((a: any) => `${a.action} ${a.target}`);
+  expect(audit).toContain("connection.authorize-failed Google Drive: the token exchange failed: invalid_grant (Bad code)");
+  expect(vi.mocked(console.warn)).toHaveBeenCalledWith(expect.stringMatching(/\[oauth\] sign-in failed \(oauth-failed\) for Google Drive/));
 });
