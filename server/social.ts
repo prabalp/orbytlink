@@ -365,6 +365,45 @@ New top-level comment: POST /commentThreads with part=snippet and {"snippet":{"v
 Uploading video files needs a binary upload, which this connection can't do.`,
   },
   {
+    // Google ships no Search Console MCP server, but the API is official, so it connects like
+    // YouTube does: the same Google OAuth client, a different scope.
+    id: "google-search-console",
+    name: "Google Search Console",
+    env: "GOOGLE_SEARCH_CONSOLE",
+    envFallback: "YOUTUBE",
+    authorizeUrl: "https://accounts.google.com/o/oauth2/v2/auth",
+    tokenUrl: "https://oauth2.googleapis.com/token",
+    tokenAuth: "body",
+    scopes: ["https://www.googleapis.com/auth/webmasters.readonly"],
+    scopeSep: " ",
+    pkce: true,
+    authParams: { access_type: "offline", prompt: "consent", include_granted_scopes: "true" },
+    hosts: ["accounts.google.com", "oauth2.googleapis.com", "www.googleapis.com"],
+    api: { baseUrl: "https://www.googleapis.com/webmasters/v3", auth: "bearer", bodyFormat: "json" },
+    refresh: "standard",
+    async accounts(t) {
+      const r = await getJson(this, "https://www.googleapis.com/webmasters/v3/sites", t.access);
+      const sites: { siteUrl?: string; permissionLevel?: string }[] = Array.isArray(r.siteEntry) ? r.siteEntry : [];
+      if (!sites.length) throw fail("This Google account has no Search Console properties.");
+      return sites.map((s) => ({
+        id: String(s.siteUrl),
+        name: String(s.siteUrl),
+        note: `Permission: ${s.permissionLevel || "unknown"}. Put ${encodeURIComponent(String(s.siteUrl))} in the path where {siteUrl} appears.`,
+      }));
+    },
+    docsUrl: "https://developers.google.com/webmaster-tools/v1/searchanalytics/query",
+    note: "Read your site's search performance: queries, pages, clicks, impressions and average position. Read-only.",
+    endpoints: [
+      { method: "GET", path: "/sites", summary: "Properties this account can read" },
+      { method: "POST", path: "/sites/{siteUrl}/searchAnalytics/query", summary: "Search performance rows (startDate, endDate, dimensions, rowLimit)" },
+      { method: "GET", path: "/sites/{siteUrl}/sitemaps", summary: "Submitted sitemaps and their status" },
+    ],
+    guide: `{siteUrl} is URL-encoded: a Domain property is sc-domain%3Aexample.com, a URL-prefix property is https%3A%2F%2Fexample.com%2F.
+Search performance: POST /sites/{siteUrl}/searchAnalytics/query with {"startDate":"2026-10-01","endDate":"2026-11-20","dimensions":["query","page"],"rowLimit":1000}.
+Dimensions: query, page, country, device, date. Rows carry clicks, impressions, ctr and position.
+Data lags 2-3 days and reaches back about 16 months; a request returns at most 25,000 rows (page with startRow).`,
+  },
+  {
     id: "tiktok",
     name: "TikTok",
     env: "TIKTOK",

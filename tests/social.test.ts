@@ -62,6 +62,15 @@ it("builds each platform's sign-in link the way that platform wants it", () => {
   expect(new URL(authorizeUrl(providerById("reddit")!, "https://a.example/cb", "s", "c")).searchParams.get("duration")).toBe("permanent");
 });
 
+it("signs in to Search Console with the YouTube Google client and only the read-only scope", () => {
+  process.env.YOUTUBE_CLIENT_ID = "yt-id";
+  const gsc = new URL(authorizeUrl(providerById("google-search-console")!, "https://app.example/cb", "s", "c"));
+  delete process.env.YOUTUBE_CLIENT_ID;
+  expect(gsc.searchParams.get("client_id")).toBe("yt-id");
+  expect(gsc.searchParams.get("scope")).toBe("https://www.googleapis.com/auth/webmasters.readonly");
+  expect(gsc.searchParams.get("access_type")).toBe("offline");
+});
+
 it("connects a LinkedIn account in one sign-in and calls its API with the token, which no one sees", async () => {
   reply = (url) => {
     if (url === "https://www.linkedin.com/oauth/v2/accessToken") return Response.json({ access_token: "li-token", expires_in: 5184000, scope: "openid,profile,w_member_social" });
