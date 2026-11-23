@@ -29,6 +29,13 @@ OrbytLink is a gateway for AI agents. A team connects each app once (an MCP serv
 - [About](https://orbytlink.com/about): what OrbytLink is and the company behind it, Orbytlabs
 - [Contact](https://orbytlink.com/contact): hello@orbytlink.com
 
+<!-- blog:start -->
+## Blog
+
+- [Claude MCP for Sales Prospecting: One Endpoint for Your Stack](https://orbytlink.com/blog/claude-mcp-sales-prospecting-one-endpoint/): Connect Claude to your CRM and enrichment tools through one MCP endpoint. Keep credentials out of agents and credit spend under approval.
+
+<!-- blog:end -->
+
 ## Optional
 
 - [Open the app](https://app.orbytlink.com/): sign up and connect an agent
