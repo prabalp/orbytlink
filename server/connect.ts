@@ -59,7 +59,18 @@ function steps(e: ConnectEntry): string[] {
 const socialAliases: Record<string, string[]> = { linkedin: ["linkedin", "linkedin profile"], "linkedin-page": ["linkedin page", "linkedin company", "linkedin company page"], facebook: ["facebook", "facebook page", "fb", "meta"], instagram: ["instagram", "insta", "ig"], threads: ["threads"], youtube: ["youtube"], tiktok: ["tiktok", "tik tok"], reddit: ["reddit"], pinterest: ["pinterest"], x: ["x", "twitter", "x twitter"] };
 function socialMatch(query: string) {
   const q = query.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
-  return providers.filter((p) => (socialAliases[p.id] || [p.id]).some((a) => q === a || q === `${a} account`)).slice(0, 2);
+  const exact = providers.filter((p) => (socialAliases[p.id] || [p.id]).some((a) => q === a || q === `${a} account`));
+  if (exact.length) return exact.slice(0, 2);
+  // "LinkedIn posting", "post to my linkedin": the platform named among other words. Longest alias
+  // first, so "linkedin company page" finds LinkedIn Page rather than LinkedIn.
+  // Short or everyday words (x, ig, meta, threads) only count on their own.
+  const vague = new Set(["meta", "threads", "x twitter"]);
+  const padded = ` ${q} `;
+  const hits = providers
+    .map((p) => ({ p, len: Math.max(0, ...(socialAliases[p.id] || [p.id]).filter((a) => a.length > 3 && !vague.has(a) && padded.includes(` ${a} `)).map((a) => a.length)) }))
+    .filter((h) => h.len > 0)
+    .sort((a, b) => b.len - a.len);
+  return hits.slice(0, 1).map((h) => h.p);
 }
 function socialResults(store: Store, workspace: string, canConfigure: boolean, query: string) {
   const rows = store.list(workspace, "apis").filter((r) => r.channel);

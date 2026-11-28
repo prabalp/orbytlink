@@ -133,7 +133,7 @@ export function gatewayServer(
     if (!allowed) return { tools: [] };
     const tools = gatewayTools(store, w);
     if (mode === "all") return { tools: [...tools.map(listed), ...ownTools(store, w, identity)] };
-    return { tools: [...discoveryTools(tools), ...pinnedTools(store, w, tools).map(listed), ...ownTools(store, w, identity)] };
+    return { tools: [...discoveryTools(tools, storedApis(store, w)), ...pinnedTools(store, w, tools).map(listed), ...ownTools(store, w, identity)] };
   });
   server.setRequestHandler(ListPromptsRequestSchema, async () => ({
     prompts: allowed
@@ -242,9 +242,27 @@ function appSummaries(tools: GatewayTool[]): AppSummary[] {
   }
   return [...apps.values()];
 }
-function discoveryTools(tools: GatewayTool[]) {
+// Stored APIs (social accounts among them) have no MCP tools of their own: agents reach them with
+// orbytlink__api_docs and orbytlink__api_request. Discovery names them too, so an agent that searches
+// for "LinkedIn" learns it is connected instead of concluding it isn't.
+type StoredApi = { api: string; name: string; access: string };
+function storedApis(store: Store, w: string): StoredApi[] {
+  return enabledApis(store, w).map(({ slug, api }) => ({ api: slug, name: api.name, access: api.access === "write" ? "read and write" : "read only" }));
+}
+const words = (s: string) => s.toLowerCase().split(/[^a-z0-9]+/).filter((x) => x.length > 1);
+function apisMatching(apis: StoredApi[], text: string) {
+  const wanted = new Set(words(text));
+  const whole = text.toLowerCase().replace(/[^a-z0-9]+/g, "");
+  return apis.filter((a) => words(a.name).some((x) => x.length > 2 && wanted.has(x)) || (!!whole && a.name.toLowerCase().replace(/[^a-z0-9]+/g, "") === whole));
+}
+const apiHint = (apis: StoredApi[]) => ({
+  apis,
+  next: "These are stored APIs, not MCP tools: read one with orbytlink__api_docs {api}, then call it with orbytlink__api_request {api, method, path, body}. The gateway adds the account's key.",
+});
+function discoveryTools(tools: GatewayTool[], apis: StoredApi[] = []) {
   const apps = appSummaries(tools);
-  const appList = apps.map((a) => `- ${a.app} (${a.tools} tools)`).join("\n") || "- none connected yet";
+  const appList =
+    [...apps.map((a) => `- ${a.app} (${a.tools} tools)`), ...apis.map((a) => `- ${a.name} (stored API "${a.api}": use orbytlink__api_docs and orbytlink__api_request)`)].join("\n") || "- none connected yet";
   return [
     {
       name: "orbytlink__find_tools",
@@ -276,7 +294,7 @@ function discoveryTools(tools: GatewayTool[]) {
     {
       name: "orbytlink__list_apps",
       title: "List connected apps",
-      description: "List the apps connected to this workspace, with how many tools each has and a few of their names.",
+      description: "List the apps connected to this workspace, with how many tools each has and a few of their names, and the stored APIs and social accounts (called with orbytlink__api_request).",
       inputSchema: { type: "object", properties: {} },
       annotations: { readOnlyHint: true },
     },
@@ -284,9 +302,14 @@ function discoveryTools(tools: GatewayTool[]) {
 }
 function listApps(store: Store, w: string) {
   const apps = appSummaries(gatewayTools(store, w));
-  if (!apps.length) return "No apps are connected and verified yet. Connect one in OrbytLink → Connections.";
+  const apis = storedApis(store, w);
+  if (!apps.length && !apis.length) return "No apps are connected and verified yet. Connect one in OrbytLink → Connections.";
   return JSON.stringify(
-    { apps: apps.map((a) => ({ app: a.app, toolPrefix: `${a.prefix}__`, tools: a.tools, examples: a.examples })), next: "Use orbytlink__find_tools to find a tool and its input schema." },
+    {
+      apps: apps.map((a) => ({ app: a.app, toolPrefix: `${a.prefix}__`, tools: a.tools, examples: a.examples })),
+      ...(apis.length ? { apis } : {}),
+      next: `Use orbytlink__find_tools to find a tool and its input schema.${apis.length ? " Stored APIs and social accounts are read with orbytlink__api_docs and called with orbytlink__api_request." : ""}`,
+    },
     null,
     1,
   );
@@ -297,8 +320,12 @@ function findTools(store: Store, w: string, args: Record<string, unknown>) {
   const app = typeof args.app === "string" ? args.app.slice(0, 80) : "";
   const limit = Math.min(20, Math.max(1, Number.isInteger(args.limit) ? (args.limit as number) : 8));
   if (!query && !app) return toolText("Give a query (the action, in a few words) or an app name.", true);
-  if (app && !tools.some((t) => sameApp(t.connection.name, t.name, app)))
+  const apis = storedApis(store, w);
+  if (app && !tools.some((t) => sameApp(t.connection.name, t.name, app))) {
+    const stored = apisMatching(apis, app);
+    if (stored.length) return toolText(JSON.stringify({ app, connected: true, ...apiHint(stored) }, null, 1));
     return toolText(`No connected app is named "${app}". Connected: ${appSummaries(tools).map((a) => a.app).join(", ") || "none"}. To connect it, call orbytlink__connect_app with {"app": "${app.replace(/"/g, "")}"}.`, true);
+  }
   const byName = new Map(tools.map((t) => [t.name, t]));
   // An app with no query is a directory: every name, no schemas, to keep it short.
   if (!query) {
@@ -317,9 +344,13 @@ function findTools(store: Store, w: string, args: Record<string, unknown>) {
     inputs: Object.keys(t.tool.inputSchema?.properties || {}),
   })));
   const hits = index.search(query, limit, app || undefined);
+  const stored = app ? [] : apisMatching(apis, query);
   if (!hits.length)
-    return toolText(`No tools match "${query}". Try other words, or orbytlink__list_apps to see what is connected.`);
+    return stored.length
+      ? toolText(JSON.stringify({ tools: [], ...apiHint(stored) }, null, 1))
+      : toolText(`No tools match "${query}". Try other words, or orbytlink__list_apps to see what is connected.`);
   return toolText(JSON.stringify({
+    ...(stored.length ? { apis: stored } : {}),
     tools: hits.map((h) => {
       const t = byName.get(h.name)!;
       return {

@@ -6,6 +6,8 @@ import type { ServiceAdapters } from "../server/adapters";
 import { connectApp } from "../server/connect";
 import { authorizeUrl, providerById } from "../server/social";
 import { inject } from "./inject";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 
 let store: Store, app: ReturnType<typeof createApp>["app"], cookie: string, workspace: string;
 const services: ServiceAdapters = { test: vi.fn(), call: vi.fn() };
@@ -239,4 +241,39 @@ it("says what to do when no Page with a linked Instagram account was shared", as
   };
   const { done } = await connect("instagram");
   expect(done.headers.location).toMatch(/^\/#oauth-error=channel-empty~/);
+});
+
+// A connected account is a stored API, not an MCP connection: discovery must still say it is there.
+it("tells agents a connected social account is connected, wherever they look", async () => {
+  reply = (url) => {
+    if (url.includes("/oauth/v2/accessToken")) return Response.json({ access_token: "li-token", expires_in: 5_184_000 });
+    if (url.endsWith("/v2/userinfo")) return Response.json({ sub: "abc", name: "Tripty Example" });
+  };
+  await connect("linkedin");
+  const out: any = connectApp(store, workspace, true, { app: "LinkedIn posting" });
+  expect(out.results[0]).toMatchObject({ app: "LinkedIn", status: "Already connected" });
+  expect((connectApp(store, workspace, true, { app: "linkedin company page" }) as any).results[0].app).toBe("LinkedIn Page");
+  expect((connectApp(store, workspace, true, { app: "slack threads" }) as any).results.every((r: any) => r.type !== "Social account")).toBe(true);
+
+  const token = (await request("/api/tokens", { name: "Agent", expiresInDays: 7 })).data.token as string;
+  const client = new Client({ name: "agent-test", version: "1.0.0" });
+  await client.connect(
+    new StreamableHTTPClientTransport(new URL("https://gateway.example/mcp"), {
+      requestInit: { headers: { Authorization: `Bearer ${token}` } },
+      fetch: async (_input, init) => {
+        const r = await inject(app, { url: "/mcp", method: init?.method || "POST", headers: Object.fromEntries(new Headers(init?.headers)), body: init?.body ? JSON.parse(String(init.body)) : undefined });
+        return new Response(r.text, { status: r.status, headers: Object.fromEntries(Object.entries(r.headers).filter(([k]) => !["transfer-encoding", "content-length"].includes(k)).map(([k, v]) => [k, String(v)])) });
+      },
+    }),
+  );
+  const text = async (name: string, args: Record<string, unknown>) => (((await client.callTool({ name, arguments: args })).content as any)[0].text as string);
+  const apps = JSON.parse(await text("orbytlink__list_apps", {}));
+  expect(apps.apis).toEqual([{ api: "linkedin_tripty_example", name: "LinkedIn · Tripty Example", access: "read and write" }]);
+  const byApp = JSON.parse(await text("orbytlink__find_tools", { app: "LinkedIn" }));
+  expect(byApp).toMatchObject({ connected: true, apis: [{ api: "linkedin_tripty_example" }] });
+  const byQuery = JSON.parse(await text("orbytlink__find_tools", { query: "publish a post on linkedin" }));
+  expect(byQuery.apis[0].api).toBe("linkedin_tripty_example");
+  expect(byQuery.next).toMatch(/orbytlink__api_request/);
+  // With few tools everything is listed directly, the API tools among them.
+  expect((await client.listTools()).tools.map((t) => t.name)).toContain("orbytlink__api_request");
 });
