@@ -277,3 +277,47 @@ it("tells agents a connected social account is connected, wherever they look", a
   // With few tools everything is listed directly, the API tools among them.
   expect((await client.listTools()).tools.map((t) => t.name)).toContain("orbytlink__api_request");
 });
+
+it("connects Google Analytics with the YouTube Google client, read-only, one account per chosen GA4 property", async () => {
+  process.env.YOUTUBE_CLIENT_ID = "yt-id";
+  process.env.YOUTUBE_CLIENT_SECRET = "yt-secret";
+  const link = new URL(authorizeUrl(providerById("google-analytics")!, "https://app.example/cb", "s", "c"));
+  expect(link.searchParams.get("client_id")).toBe("yt-id");
+  expect(link.searchParams.get("scope")).toBe("https://www.googleapis.com/auth/analytics.readonly");
+  expect(link.searchParams.get("code_challenge")).toBe("c");
+  reply = (url) => {
+    if (url === "https://oauth2.googleapis.com/token") return Response.json({ access_token: "ga-token", refresh_token: "ga-refresh", expires_in: 3600 });
+    if (url.startsWith("https://analyticsadmin.googleapis.com/v1beta/accountSummaries?pageSize=200&pageToken=p2"))
+      return Response.json({ accountSummaries: [{ displayName: "Client", propertySummaries: [{ property: "properties/222", displayName: "client.example" }] }] });
+    if (url.startsWith("https://analyticsadmin.googleapis.com/v1beta/accountSummaries"))
+      return Response.json({ accountSummaries: [{ displayName: "Agency", propertySummaries: [{ property: "properties/111", displayName: "agency.example" }] }], nextPageToken: "p2" });
+    if (url === "https://analyticsdata.googleapis.com/v1beta/properties/222:runReport") return Response.json({ rows: [{ metricValues: [{ value: "42" }] }] });
+  };
+  const { done } = await connect("google-analytics");
+  const id = decodeURIComponent(String(done.headers.location).match(/^\/#channel-choose=(.+)$/)![1]);
+  const choices = (await request(`/api/channels/pending/${id}`)).data;
+  expect(choices.accounts.map((a: any) => [a.id, a.name])).toEqual([["111", "agency.example"], ["222", "client.example"]]);
+  expect((await request(`/api/channels/pending/${id}`, { accounts: ["222"] })).data).toEqual({ connected: 1 });
+  const [api] = (await request("/api/state")).data.apis;
+  expect(api).toMatchObject({ name: "Google Analytics · client.example", baseUrl: "https://analyticsdata.googleapis.com/v1beta" });
+  expect(store.secret(workspace, api.id)).toBe("ga-token");
+  expect(store.secret(workspace, `${api.id}:oauth-refresh`)).toBe("ga-refresh");
+  // Agents asking for it are told it is connected.
+  expect((connectApp(store, workspace, true, { app: "Google Analytics" }) as any).results[0]).toMatchObject({ app: "Google Analytics", status: "Already connected" });
+  expect((connectApp(store, workspace, true, { app: "search console" }) as any).results[0].app).toBe("Google Search Console");
+  delete process.env.YOUTUBE_CLIENT_ID;
+  delete process.env.YOUTUBE_CLIENT_SECRET;
+});
+
+it("says plainly when a Google account has no GA4 property", async () => {
+  process.env.YOUTUBE_CLIENT_ID = "yt-id";
+  process.env.YOUTUBE_CLIENT_SECRET = "yt-secret";
+  reply = (url) => {
+    if (url === "https://oauth2.googleapis.com/token") return Response.json({ access_token: "ga-token", expires_in: 3600 });
+    if (url.startsWith("https://analyticsadmin.googleapis.com/")) return Response.json({});
+  };
+  const { done } = await connect("google-analytics");
+  expect(decodeURIComponent(String(done.headers.location))).toContain("no Google Analytics 4 properties");
+  delete process.env.YOUTUBE_CLIENT_ID;
+  delete process.env.YOUTUBE_CLIENT_SECRET;
+});

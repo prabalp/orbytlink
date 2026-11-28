@@ -92,7 +92,11 @@ export async function send(p: Provider, url: string, init: RequestInit = {}) {
 }
 const getJson = async (p: Provider, url: string, token?: string, headers: Record<string, string> = {}) => {
   const r = await send(p, url, { headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...headers } });
-  if (!r.ok) throw Object.assign(fail(`${p.name} answered HTTP ${r.status}.`), { oauthError: String(r.json?.error?.message || r.json?.error || r.status) });
+  if (!r.ok) {
+    // The platform's own reason, e.g. Google's "API has not been used in project … or it is disabled".
+    const why = typeof r.json?.error?.message === "string" ? r.json.error.message.replace(/\s+/g, " ").slice(0, 160) : "";
+    throw Object.assign(fail(`${p.name} answered HTTP ${r.status}${why ? `: ${why}` : ""}.`), { oauthError: String(r.json?.error?.message || r.json?.error || r.status) });
+  }
   return r.json;
 };
 
@@ -406,6 +410,64 @@ Uploading video files needs a binary upload, which this connection can't do.`,
 Search performance: POST /sites/{siteUrl}/searchAnalytics/query with {"startDate":"2026-10-01","endDate":"2026-11-20","dimensions":["query","page"],"rowLimit":1000}.
 Dimensions: query, page, country, device, date. Rows carry clicks, impressions, ctr and position.
 Data lags 2-3 days and reaches back about 16 months; a request returns at most 25,000 rows (page with startRow).`,
+  },
+  {
+    // Google Analytics 4, like Search Console: the same Google OAuth client, read-only scope. The
+    // Admin API lists the properties at sign-in; agents then call the Data API for reports.
+    id: "google-analytics",
+    name: "Google Analytics",
+    env: "GOOGLE_ANALYTICS",
+    envFallback: "YOUTUBE",
+    authorizeUrl: "https://accounts.google.com/o/oauth2/v2/auth",
+    tokenUrl: "https://oauth2.googleapis.com/token",
+    tokenAuth: "body",
+    scopes: ["https://www.googleapis.com/auth/analytics.readonly"],
+    scopeSep: " ",
+    pkce: true,
+    authParams: { access_type: "offline", prompt: "consent", include_granted_scopes: "true" },
+    hosts: ["accounts.google.com", "oauth2.googleapis.com", "analyticsadmin.googleapis.com", "analyticsdata.googleapis.com"],
+    api: { baseUrl: "https://analyticsdata.googleapis.com/v1beta", auth: "bearer", bodyFormat: "json" },
+    refresh: "standard",
+    pick: true,
+    async accounts(t) {
+      const out: Account[] = [];
+      let page = "";
+      // Every account's properties, a page at a time (200 per page; stop at 1,000).
+      for (let i = 0; i < 5; i++) {
+        const r = await getJson(this, `https://analyticsadmin.googleapis.com/v1beta/accountSummaries?pageSize=200${page ? `&pageToken=${encodeURIComponent(page)}` : ""}`, t.access);
+        for (const a of Array.isArray(r.accountSummaries) ? r.accountSummaries : [])
+          for (const pr of Array.isArray(a.propertySummaries) ? a.propertySummaries : []) {
+            const id = String(pr.property || "").replace(/^properties\//, "");
+            if (!/^\d+$/.test(id)) continue;
+            out.push({
+              id,
+              name: String(pr.displayName || id),
+              handle: a.displayName ? String(a.displayName) : undefined,
+              note: `GA4 property ${id}${a.displayName ? ` in the account "${a.displayName}"` : ""}. Use properties/${id} in paths, e.g. POST /properties/${id}:runReport.`,
+            });
+          }
+        page = typeof r.nextPageToken === "string" ? r.nextPageToken : "";
+        if (!page) break;
+      }
+      if (!out.length) throw fail("This Google account has no Google Analytics 4 properties.");
+      return out;
+    },
+    docsUrl: "https://developers.google.com/analytics/devguides/reporting/data/v1/rest/v1beta/properties/runReport",
+    note: "Read your GA4 reports: users, sessions, conversions, traffic sources, pages and real-time activity. Read-only.",
+    endpoints: [
+      { method: "POST", path: "/properties/{propertyId}:runReport", summary: "A report (dateRanges, dimensions, metrics, limit, orderBys)" },
+      { method: "POST", path: "/properties/{propertyId}:runRealtimeReport", summary: "Activity in the last 30 minutes (dimensions, metrics)" },
+      { method: "POST", path: "/properties/{propertyId}:batchRunReports", summary: "Up to 5 reports in one call (requests)" },
+      { method: "GET", path: "/properties/{propertyId}/metadata", summary: "Every dimension and metric this property offers, custom ones included" },
+    ],
+    guide: `{propertyId} is the number in this account's description; paths read /properties/123456789:runReport.
+Report: POST /properties/<id>:runReport with {"dateRanges":[{"startDate":"28daysAgo","endDate":"today"}],"dimensions":[{"name":"sessionDefaultChannelGroup"}],"metrics":[{"name":"sessions"},{"name":"totalUsers"},{"name":"conversions"}],"limit":100}.
+Top pages: dimensions [{"name":"pagePath"}], metrics [{"name":"screenPageViews"}], "orderBys":[{"metric":{"metricName":"screenPageViews"},"desc":true}].
+Traffic sources: dimensions sessionSource, sessionMedium, sessionCampaignName. By day: dimension date.
+Filter: "dimensionFilter":{"filter":{"fieldName":"country","stringFilter":{"value":"India"}}}.
+Real time: POST /properties/<id>:runRealtimeReport with {"dimensions":[{"name":"country"}],"metrics":[{"name":"activeUsers"}]}.
+Dates take YYYY-MM-DD, today, yesterday or NdaysAgo. Unsure of a name? GET /properties/<id>/metadata lists them all.
+Rows come back as dimensionValues and metricValues in the order asked for.`,
   },
   {
     id: "tiktok",

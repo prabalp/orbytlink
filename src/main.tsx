@@ -1855,7 +1855,7 @@ function ScraperView({ state: s }: any) {
 }
 // Social accounts, connected by signing in on the platform (the operator registers the app once).
 const startChannel = async (provider: string): Promise<string> => (await api(`/channels/${provider}/start`, {})).url;
-const socialLogo: Record<string, string> = { linkedin: "linkedin", "linkedin-page": "linkedin", facebook: "facebook", instagram: "instagram", threads: "threads", youtube: "youtube", "google-search-console": "google-search-console", tiktok: "tiktok", reddit: "reddit", pinterest: "pinterest", x: "x-twitter" };
+const socialLogo: Record<string, string> = { linkedin: "linkedin", "linkedin-page": "linkedin", facebook: "facebook", instagram: "instagram", threads: "threads", youtube: "youtube", "google-search-console": "google-search-console", "google-analytics": "google-analytics-ga4", tiktok: "tiktok", reddit: "reddit", pinterest: "pinterest", x: "x-twitter" };
 function SocialLogo({ id, name }: { id: string; name: string }) {
   const logo = brands[socialLogo[id]] || moreApps.find((a) => a.id === socialLogo[id])?.logo;
   if (!logo) return <BrandTile id={`social-${id}`} name={name} />;

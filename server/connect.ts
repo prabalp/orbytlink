@@ -56,7 +56,7 @@ function steps(e: ConnectEntry): string[] {
 }
 
 // Social platforms connect by signing in with the server's own app: one click, no keys or forms.
-const socialAliases: Record<string, string[]> = { linkedin: ["linkedin", "linkedin profile"], "linkedin-page": ["linkedin page", "linkedin company", "linkedin company page"], facebook: ["facebook", "facebook page", "fb", "meta"], instagram: ["instagram", "insta", "ig"], threads: ["threads"], youtube: ["youtube"], tiktok: ["tiktok", "tik tok"], reddit: ["reddit"], pinterest: ["pinterest"], x: ["x", "twitter", "x twitter"] };
+const socialAliases: Record<string, string[]> = { linkedin: ["linkedin", "linkedin profile"], "linkedin-page": ["linkedin page", "linkedin company", "linkedin company page"], facebook: ["facebook", "facebook page", "fb", "meta"], instagram: ["instagram", "insta", "ig"], threads: ["threads"], youtube: ["youtube"], "google-search-console": ["google search console", "search console", "gsc"], "google-analytics": ["google analytics", "google analytics 4", "google analytics ga4", "ga4", "analytics"], tiktok: ["tiktok", "tik tok"], reddit: ["reddit"], pinterest: ["pinterest"], x: ["x", "twitter", "x twitter"] };
 function socialMatch(query: string) {
   const q = query.toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
   const exact = providers.filter((p) => (socialAliases[p.id] || [p.id]).some((a) => q === a || q === `${a} account`));
@@ -64,7 +64,7 @@ function socialMatch(query: string) {
   // "LinkedIn posting", "post to my linkedin": the platform named among other words. Longest alias
   // first, so "linkedin company page" finds LinkedIn Page rather than LinkedIn.
   // Short or everyday words (x, ig, meta, threads) only count on their own.
-  const vague = new Set(["meta", "threads", "x twitter"]);
+  const vague = new Set(["meta", "threads", "x twitter", "analytics"]);
   const padded = ` ${q} `;
   const hits = providers
     .map((p) => ({ p, len: Math.max(0, ...(socialAliases[p.id] || [p.id]).filter((a) => a.length > 3 && !vague.has(a) && padded.includes(` ${a} `)).map((a) => a.length)) }))
