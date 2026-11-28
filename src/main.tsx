@@ -1870,8 +1870,11 @@ const socialGroups: Record<string, { name: string; options: Record<string, strin
   linkedin: { name: "LinkedIn", options: { linkedin: "Personal profile", "linkedin-page": "Company page" } },
 };
 const socialGroupOf = (id: string) => Object.keys(socialGroups).find((g) => id in socialGroups[g].options);
-// The social platforms in Catalog → APIs: just logo and name; clicking opens a small popup with the rest.
-function SocialView({ channels, canConfigure, heading }: { channels: Data[]; canConfigure: boolean; heading: boolean }) {
+// Sign-in platforms that aren't social networks get their own section in Catalog → APIs.
+const channelSection: Record<string, string> = { "google-analytics": "Analytics", "google-search-console": "Analytics" };
+const sectionOf = (id: string) => channelSection[id] || "Social";
+// The sign-in platforms in Catalog → APIs: just logo and name; clicking opens a small popup with the rest.
+function SocialView({ channels, canConfigure, heading, title = "Social" }: { channels: Data[]; canConfigure: boolean; heading: boolean; title?: string }) {
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [open, setOpen] = useState("");
@@ -1899,8 +1902,8 @@ function SocialView({ channels, canConfigure, heading }: { channels: Data[]; can
     setError("");
   };
   return (
-    <section className="catalog-segment" aria-label="Social">
-      {heading && <h2>Social</h2>}
+    <section className="catalog-segment" aria-label={title}>
+      {heading && <h2>{title}</h2>}
       <div className="catalog-grid">
         {cards.map((c) => (
           <button type="button" className="catalog-card" key={c.group} aria-label={c.name} onClick={() => setOpen(c.group)}>
@@ -2089,7 +2092,9 @@ function CatalogPage({ state: s, canConfigure, search, setSearch, onConnect, onA
   if (view === "api") {
     const apisShown = apiPresets.filter((p) => (segment === "All" || p.category === segment) && `${p.name} ${p.description} ${p.category}`.toLowerCase().includes(q));
     const added = (p: ApiPreset) => s.apis.some((a: Data) => presetForApi(a)?.id === p.id);
-    const socialShown: Data[] = (s.channels || []).filter((c: Data) => (segment === "All" || segment === "Social") && `${c.name} social ${c.note}`.toLowerCase().includes(q));
+    const channelsShown: Data[] = (s.channels || []).filter((c: Data) => (segment === "All" || segment === sectionOf(c.id)) && `${c.name} ${sectionOf(c.id)} ${c.note}`.toLowerCase().includes(q));
+    const socialShown = channelsShown.filter((c) => sectionOf(c.id) === "Social");
+    const analyticsShown = channelsShown.filter((c) => sectionOf(c.id) === "Analytics");
     return (
       <>
         {viewSwitch}
@@ -2097,13 +2102,14 @@ function CatalogPage({ state: s, canConfigure, search, setSearch, onConnect, onA
           search={search}
           setSearch={setSearch}
           placeholder="Search APIs…"
-          count={`${apisShown.length + socialShown.length} APIs`}
+          count={`${apisShown.length + channelsShown.length} APIs`}
           control={(
             <div className="catalog-select-wrap">
               <label className="sr-only" htmlFor="api-category">Filter APIs by category</label>
               <select id="api-category" value={segment} onChange={(event) => setSegment(event.target.value)}>
                 <option value="All">All APIs</option>
                 <option value="Social">Social</option>
+                <option value="Analytics">Analytics</option>
                 {apiCategories.map((c) => <option key={c} value={c}>{c}</option>)}
               </select>
               <ChevronDown size={16} />
@@ -2111,6 +2117,7 @@ function CatalogPage({ state: s, canConfigure, search, setSearch, onConnect, onA
           )}
         />
         {socialShown.length > 0 && <SocialView channels={socialShown} canConfigure={canConfigure} heading={segment === "All"} />}
+        {analyticsShown.length > 0 && <SocialView channels={analyticsShown} canConfigure={canConfigure} heading={segment === "All"} title="Analytics" />}
         {apiCategories.map((cat) => {
           const items = apisShown.filter((p) => p.category === cat);
           if (!items.length) return null;
@@ -2139,7 +2146,7 @@ function CatalogPage({ state: s, canConfigure, search, setSearch, onConnect, onA
             </section>
           );
         })}
-        {!apisShown.length && !socialShown.length && <section className="panel"><Empty icon={LayoutGrid} title="No APIs found">Try another search, or add any HTTPS API yourself from Connections.</Empty></section>}
+        {!apisShown.length && !channelsShown.length && <section className="panel"><Empty icon={LayoutGrid} title="No APIs found">Try another search, or add any HTTPS API yourself from Connections.</Empty></section>}
       </>
     );
   }
